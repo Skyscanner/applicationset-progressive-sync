@@ -1,3 +1,7 @@
 domain: deployment.skyscanner.net
 repo: github.com/Skyscanner/argocd-progressive-rollout
+resources:
+- group: deployment.skyscanner.net
+  kind: ProgressiveRollout
+  version: v1alpha1
 version: "2"

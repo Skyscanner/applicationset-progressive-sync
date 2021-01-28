@@ -1,0 +1,7 @@
+apiVersion: deployment.skyscanner.net.deployment.skyscanner.net/v1alpha1
+kind: ProgressiveRollout
+metadata:
+  name: progressiverollout-sample
+spec:
+  # Add fields here
+  foo: bar
