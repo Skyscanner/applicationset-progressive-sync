@@ -8,6 +8,7 @@
 
 ## Development
 
+1. Install `pre-commit`: see <https://pre-commit.com/#install>
 1. Install `kind`: see <https://kind.sigs.k8s.io/docs/user/quick-start/#installation>
 1. Install `ArgoCD`: see <https://argoproj.github.io/argo-cd/getting_started/>
 1. Install `ApplicationSet` controller: see <https://github.com/argoproj-labs/applicationset>
