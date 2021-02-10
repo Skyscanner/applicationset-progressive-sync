@@ -7,51 +7,47 @@ on:
   pull_request:
 
 jobs:
-  lint:
+  main:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: golangci/golangci-lint-action@v2
+
+      - uses: actions/setup-go@v2
+
+      - uses: RyanSiu1995/kubebuilder-action@v1
         with:
-          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.29
+          version: 2.3.1
 
-  # main:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions/setup-go@v2
+      - name: Get dependencies
+        run: go get -t -v -d ./...
 
-  #     - name: Get dependencies
-  #       run: go get -t -v -d ./...
+      - name: Test
+        run: make test
 
-  #     - name: Test
-  #       run: make test
+      - name: Build
+        run: make manager
 
-  #     - name: Build
-  #       run: make manager
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v1
 
-  #     - name: Set up QEMU
-  #       uses: docker/setup-qemu-action@v1
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v1
 
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v1
+      # - name: Build on PR
+      #   id: docker_build
+      #   uses: docker/build-push-action@v2
+      #   with:
+      #     push: false
+      #     tags: latest
+      #   if: github.event_name == 'pull_request'
 
-  #     - name: Build on PR
-  #       id: docker_build
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         push: false
-  #         tags: latest
-  #       if: github.event_name == 'pull_request'
-
-  #     - name: Build and publish a latest docker image when merge in main
-  #       id: docker_build
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
-  #         registry: docker.pkg.github.com
-  #         repository: ${{ github.repository }}/argocd-progressive-rollout
-  #         tags: latest
-  #       if: github.event_name != 'pull_request'
+      # - name: Build and publish a latest docker image when merge in main
+      #   id: docker_build
+      #   uses: docker/build-push-action@v2
+      #   with:
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+      #     registry: docker.pkg.github.com
+      #     repository: ${{ github.repository }}/argocd-progressive-rollout
+      #     tags: latest
+      #   if: github.event_name != 'pull_request'
