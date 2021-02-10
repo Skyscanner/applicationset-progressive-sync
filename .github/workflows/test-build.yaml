@@ -48,7 +48,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: false
-          tags: latest
+          tags: main
         if: github.event_name == 'pull_request'
 
       - name: Build and publish a latest docker image when merge in main
@@ -58,5 +58,5 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: docker.pkg.github.com
           repository: ${{ github.repository }}/argocd-progressive-rollout
-          tags: latest
+          tags: main
         if: github.event_name != 'pull_request'
