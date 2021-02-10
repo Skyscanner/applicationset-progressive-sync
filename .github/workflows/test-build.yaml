@@ -2,8 +2,6 @@ name: Test and Build
 
 on:
   push:
-    branches:
-      - 'main'
   pull_request:
 
 jobs:
@@ -30,8 +28,8 @@ jobs:
           arch=$(go env GOARCH)
           curl -Ls https://go.kubebuilder.io/dl/${version}/${os}/${arch} -o /tmp/kubebuilder_${version}.tar.gz
           shasum -a 256 -c kubebuilder_sha256.txt
-          tar -xz -C /tmp/ /tmp/kubebuilder_${version}.tar.gz
-          sudo mv /tmp/kubebuilder_${version} /usr/local/kubebuilder
+          tar -xzf /tmp/kubebuilder_${version}.tar.gz -C /tmp/
+          sudo mv /tmp/kubebuilder_${version}_${os}_${arch} /usr/local/kubebuilder
           export PATH=$PATH:/usr/local/kubebuilder/bin
 
       - name: Get dependencies
