@@ -8,11 +8,17 @@ on:
 
 jobs:
   test-build:
+    name: test-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-go@v2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: go
 
       - name: Install kubebuilder
         run: |
@@ -31,6 +37,9 @@ jobs:
 
       - name: Build
         run: make manager
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
