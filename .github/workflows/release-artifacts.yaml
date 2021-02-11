@@ -25,15 +25,15 @@ jobs:
       uses: olegtarasov/get-tag@v2
       id: tagName
 
-    - name: Login to GitHub Container Registry
+    - name: Login to GitHub Packages Docker Registry
       uses: docker/login-action@v1
       with:
-        registry: ghcr.io
+        registry: docker.pkg.github.com
         username: ${{ github.repository_owner }}
-        password: ${{ secrets.CR_PAT }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and publish a tagged docker image
       uses: docker/build-push-action@v2
       with:
         push: true
-        tags: ghcr.io/skyscanner/argocd-progressive-rollout:${{ steps.tagName.outputs.tag }}
+        tags: docker.pkg.github.com/skyscanner/argocd-progressive-rollout/argocd-progressive-rollout:${{ steps.tagName.outputs.tag }}
