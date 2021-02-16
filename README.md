@@ -12,7 +12,7 @@ If we enable the `auto-sync` policy, we will update all the generated Applicatio
 
 This might not be a problem if we have only one production cluster, but organizations with tens or hundreds of clusters need to avoid a global rollout. They need to release new versions of their application in a safer way.
 
-The `argocd progressive rollout` controller allow operators and developers to decide _how_ they want to update their Applications.
+The `argocd progressive rollout` controller allows operators and developers to decide _how_ they want to update their Applications.
 
 ## Example `spec`
 
@@ -24,7 +24,7 @@ metadata:
   namespace: argocd
 # the rollout steps
 stages:
-  # human friendly name
+    # human friendly name
   - name: two clusters as canary in EMEA
     # how many targets to update in parallel
     # can be an integer or %. Default to 1
@@ -48,7 +48,7 @@ stages:
 
 ## Status: `pre-alpha`
 
-Expect breaking changes until we complete Milestone 2, when we will release the first alpha.
+Expect a non-functional controller and breaking changes until Milestone 2 is completed.
 
 ## Contributing
 
