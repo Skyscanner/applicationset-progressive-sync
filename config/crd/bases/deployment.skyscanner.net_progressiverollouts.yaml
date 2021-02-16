@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
   creationTimestamp: null
-  name: progressiverollouts.deployment.skyscanner.net.deployment.skyscanner.net
+  name: progressiverollouts.deployment.skyscanner.net
 spec:
-  group: deployment.skyscanner.net.deployment.skyscanner.net
+  group: deployment.skyscanner.net
   names:
     kind: ProgressiveRollout
     listKind: ProgressiveRolloutList

@@ -5,7 +5,7 @@ metadata:
   name: progressiverollout-editor-role
 rules:
 - apiGroups:
-  - deployment.skyscanner.net.deployment.skyscanner.net
+  - deployment.skyscanner.net
   resources:
   - progressiverollouts
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - deployment.skyscanner.net.deployment.skyscanner.net
+  - deployment.skyscanner.net
   resources:
   - progressiverollouts/status
   verbs:

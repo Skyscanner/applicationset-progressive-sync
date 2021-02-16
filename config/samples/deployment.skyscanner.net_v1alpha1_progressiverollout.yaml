@@ -1,4 +1,4 @@
-apiVersion: deployment.skyscanner.net.deployment.skyscanner.net/v1alpha1
+apiVersion: deployment.skyscanner.net/v1alpha1
 kind: ProgressiveRollout
 metadata:
   name: go-infrabin

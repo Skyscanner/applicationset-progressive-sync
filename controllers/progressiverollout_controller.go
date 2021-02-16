@@ -35,8 +35,8 @@ type ProgressiveRolloutReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=deployment.skyscanner.net.deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=deployment.skyscanner.net.deployment.skyscanner.net,resources=progressiverollouts/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts/status,verbs=get;update;patch
 
 func (r *ProgressiveRolloutReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
