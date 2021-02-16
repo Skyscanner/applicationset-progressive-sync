@@ -2,11 +2,9 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,37 +53,13 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			},
 		}
 		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
-		ExpectCondition(
-			&pr, deploymentskyscannernetv1alpha1.CompletedConditionType).Should(HaveStatus(metav1.ConditionTrue, "Succeeded"))
+		Eventually(func() string {
+			_ = k8sClient.Get(ctx, types.NamespacedName{
+				Namespace: pr.Namespace,
+				Name:      pr.Name,
+			}, &pr)
+			return pr.Status.Conditions[0].Type
+		}).Should(Equal(deploymentskyscannernetv1alpha1.CompletedCondition))
+
 	})
 })
-
-// statusString returns a formatted string with a condition status and reason
-func statusString(s metav1.ConditionStatus, r string) string {
-	return fmt.Sprintf("Status: %s, Reason: %s", s, r)
-}
-
-// HaveStatus is a gomega matcher for a condition status and reason
-func HaveStatus(s metav1.ConditionStatus, r string) gomegatypes.GomegaMatcher {
-	return Equal(statusString(s, r))
-}
-
-// ExpectCondition returns a condition status and reason
-func ExpectCondition(
-	pr *deploymentskyscannernetv1alpha1.ProgressiveRollout, ct deploymentskyscannernetv1alpha1.ProgressiveRolloutConditionType,
-) AsyncAssertion {
-	return Eventually(func() string {
-		_ = k8sClient.Get(
-			context.Background(),
-			types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace},
-			pr,
-		)
-
-		c := pr.Status.GetCondition(ct)
-		if c == nil {
-			return ""
-		}
-
-		return statusString(c.Status, c.Reason)
-	})
-}
