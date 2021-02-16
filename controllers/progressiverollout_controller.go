@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,11 +39,23 @@ type ProgressiveRolloutReconciler struct {
 // +kubebuilder:rbac:groups=deployment.skyscanner.net.deployment.skyscanner.net,resources=progressiverollouts/status,verbs=get;update;patch
 
 func (r *ProgressiveRolloutReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("progressiverollout", req.NamespacedName)
+	ctx := context.Background()
+	log := r.Log.WithValues("progressiverollout", req.NamespacedName)
 
-	// your logic here
+	// Get the ProgressiveRollout object
+	pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+	if err := r.Get(ctx, req.NamespacedName, &pr); err != nil {
+		log.Error(err, "unable to fetch ProgressiveRollout", "object", pr.Name)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
+	// Rollout completed
+	completed := pr.Status.NewCondition(deploymentskyscannernetv1alpha1.CompletedType, v1.ConditionTrue, "Completed")
+	pr.Status.SetCondition(&completed)
+	if err := r.Client.Status().Update(ctx, &pr); err != nil {
+		r.Log.V(1).Info("failed to update object status", "name", pr.Name, "namespace", pr.Namespace)
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 

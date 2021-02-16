@@ -64,6 +64,69 @@ type ProgressiveRolloutTargets struct {
 type ProgressiveRolloutStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []ProgressiveRolloutCondition `json:"conditions,omitempty"`
+}
+
+// ProgressiveRolloutCondition defines a ProgressiveRollout condition
+type ProgressiveRolloutCondition struct {
+	// Type of Progressive Rollout condition
+	Type ProgressiveRolloutConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown
+	Status metav1.ConditionStatus `json:"status"`
+	// Reason is a one-word CamelCase reason for the condition's last transition
+	Reason string `json:"reason,omitempty"`
+	// LastTransitionTime of this condition
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
+type ProgressiveRolloutConditionType string
+
+const CompletedType ProgressiveRolloutConditionType = "Completed"
+
+// NewCondition creates a new ProgressiveRolloutCondition
+func (prs *ProgressiveRolloutStatus) NewCondition(ct ProgressiveRolloutConditionType, s metav1.ConditionStatus, r string) ProgressiveRolloutCondition {
+	return ProgressiveRolloutCondition{
+		Type:               ct,
+		Status:             s,
+		Reason:             r,
+		LastTransitionTime: metav1.Now(),
+	}
+}
+
+// GetCondition returns a ProgressiveRolloutCondition with the provided type if it exists, nil otherwise.
+func (prs *ProgressiveRolloutStatus) GetCondition(ct ProgressiveRolloutConditionType) *ProgressiveRolloutCondition {
+	for _, c := range prs.Conditions {
+		if c.Type == ct {
+			return &c
+		}
+	}
+	return nil
+}
+
+// SetCondition adds/replaces the given condition. If the condition already exists, has the same status and reason, we don't update it.
+func (prs *ProgressiveRolloutStatus) SetCondition(c *ProgressiveRolloutCondition) {
+	currentCondition := prs.GetCondition(c.Type)
+	if currentCondition != nil && currentCondition.Status == c.Status && currentCondition.Reason == c.Reason {
+		return
+	}
+	prs.Conditions = append(prs.filterOutCondition(c.Type), *c)
+}
+
+// RemoveCondition removes the condition with the provided type from the status.
+func (prs *ProgressiveRolloutStatus) RemoveCondition(ct ProgressiveRolloutConditionType) {
+	prs.Conditions = prs.filterOutCondition(ct)
+}
+
+// filterOutCondition returns a new slice of conditions without conditions with the provided type.
+func (prs *ProgressiveRolloutStatus) filterOutCondition(ct ProgressiveRolloutConditionType) []ProgressiveRolloutCondition {
+	var newConditions []ProgressiveRolloutCondition
+	for _, c := range prs.Conditions {
+		if c.Type == ct {
+			continue
+		}
+		newConditions = append(newConditions, c)
+	}
+	return newConditions
 }
 
 // +kubebuilder:object:root=true
