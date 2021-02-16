@@ -42,7 +42,16 @@ var _ = Describe("ProgressiveRollout Status", func() {
 				Expect(status.Conditions[0]).To(Equal(first))
 				Expect(len(status.Conditions)).To(Equal(1))
 			})
+		})
 
+		Describe("GetCondition", func() {
+
+			It("should return a condition by type", func() {
+				status := &ProgressiveRolloutStatus{}
+				empty := status.NewCondition(CompletedType, metav1.ConditionTrue, "")
+				status.SetCondition(&empty)
+				Expect(*status.GetCondition(CompletedType)).To(Equal(empty))
+			})
 		})
 	})
 })
