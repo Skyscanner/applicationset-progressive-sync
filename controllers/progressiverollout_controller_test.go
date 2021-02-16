@@ -40,7 +40,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
 		ExpectCondition(
-			&pr, deploymentskyscannernetv1alpha1.CompletedType).Should(HaveStatus(metav1.ConditionTrue, "Completed"))
+			&pr, deploymentskyscannernetv1alpha1.CompletedType).Should(HaveStatus(metav1.ConditionTrue, "Succeeded"))
 	})
 })
 
