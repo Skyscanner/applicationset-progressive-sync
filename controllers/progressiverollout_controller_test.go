@@ -14,14 +14,25 @@ import (
 	"time"
 )
 
-const timeout = time.Second * 7
+const (
+	timeout = time.Second * 7
+)
 
 var _ = Describe("ProgressiveRollout Controller", func() {
 
+	var namespace *corev1.Namespace
 	apiGroup := "argoproj.io/v1alpha1"
 	ctx := context.Background()
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
+
+	BeforeEach(func() {
+		namespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "argocd"},
+		}
+		err := k8sClient.Create(context.Background(), namespace)
+		Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
+	})
 
 	// We should replace this test with better ones as we deploy the controller
 	It("should reconcile", func() {
