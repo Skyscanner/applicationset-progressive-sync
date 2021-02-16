@@ -17,7 +17,9 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -28,8 +30,34 @@ type ProgressiveRolloutSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ProgressiveRollout. Edit ProgressiveRollout_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// SourceRef references the resource, example an ApplicationSet, which owns ArgoCD Applications
+	//+kubebuilder:validation:Required
+	SourceRef corev1.TypedLocalObjectReference `json:"sourceRef"`
+	// Stages reference a list of Progressive Rollout stages
+	//+kubebuilder:validation:Required
+	Stages []*ProgressiveRolloutStage `json:"stages"`
+}
+
+// ProgressiveRolloutStage defines a rollout stage
+type ProgressiveRolloutStage struct {
+	// Name is a human friendly name for the stage
+	//+kubebuilder:validation:Required
+	Name string `json:"name"`
+	// MaxParallel is how many selected targets to update in parallel
+	//+kubebuilder:validation:Minimum:1
+	MaxParallel intstr.IntOrString `json:"maxParallel"`
+	// MaxTargets is the maximum number of selected targets to update
+	//+kubebuilder:validation:Minimum:1
+	MaxTargets intstr.IntOrString `json:"maxTargets"`
+	// Targets is the targets to update in the stage
+	//+kubebuilder:validation:Required
+	Targets ProgressiveRolloutTargets `json:"targets"`
+}
+
+type ProgressiveRolloutTargets struct {
+	// Selector is a label selector to get the clusters for the update
+	//+kubebuilder:validation:Required
+	Selector metav1.LabelSelector `json:"selector"`
 }
 
 // ProgressiveRolloutStatus defines the observed state of ProgressiveRollout
