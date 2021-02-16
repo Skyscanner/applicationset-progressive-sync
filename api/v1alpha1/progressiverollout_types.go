@@ -89,7 +89,9 @@ type ProgressiveRolloutCondition struct {
 
 type ProgressiveRolloutConditionType string
 
-const CompletedType ProgressiveRolloutConditionType = "Completed"
+const (
+	CompletedConditionType ProgressiveRolloutConditionType = "Completed"
+)
 
 // NewCondition creates a new ProgressiveRolloutCondition
 func (prs *ProgressiveRolloutStatus) NewCondition(ct ProgressiveRolloutConditionType, s metav1.ConditionStatus, r string) ProgressiveRolloutCondition {

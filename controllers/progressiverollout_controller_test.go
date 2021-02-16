@@ -11,12 +11,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"time"
 )
+
+const timeout = time.Second * 7
 
 var _ = Describe("ProgressiveRollout Controller", func() {
 
 	apiGroup := "argoproj.io/v1alpha1"
 	ctx := context.Background()
+	// See https://onsi.github.io/gomega#modifying-default-intervals
+	SetDefaultEventuallyTimeout(timeout)
 
 	// We should replace this test with better ones as we deploy the controller
 	It("should reconcile", func() {
@@ -40,7 +45,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
 		ExpectCondition(
-			&pr, deploymentskyscannernetv1alpha1.CompletedType).Should(HaveStatus(metav1.ConditionTrue, "Succeeded"))
+			&pr, deploymentskyscannernetv1alpha1.CompletedConditionType).Should(HaveStatus(metav1.ConditionTrue, "Succeeded"))
 	})
 })
 
