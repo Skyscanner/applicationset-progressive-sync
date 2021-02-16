@@ -18,9 +18,8 @@ package controllers
 
 import (
 	"context"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,7 +49,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(req ctrl.Request) (ctrl.Result,
 	}
 
 	// Rollout completed
-	completed := pr.Status.NewCondition(deploymentskyscannernetv1alpha1.CompletedType, v1.ConditionTrue, "Completed")
+	completed := pr.Status.NewCondition(deploymentskyscannernetv1alpha1.CompletedType, metav1.ConditionTrue, "Completed")
 	pr.Status.SetCondition(&completed)
 	if err := r.Client.Status().Update(ctx, &pr); err != nil {
 		r.Log.V(1).Info("failed to update object status", "name", pr.Name, "namespace", pr.Namespace)

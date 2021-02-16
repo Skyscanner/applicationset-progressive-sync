@@ -43,7 +43,7 @@ func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
-		"Utils Suite",
+		"API Suite",
 		[]Reporter{printer.NewlineReporter{}})
 }
 

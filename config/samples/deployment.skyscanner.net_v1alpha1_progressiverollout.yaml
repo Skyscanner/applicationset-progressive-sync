@@ -26,8 +26,9 @@ spec:
             matchExpression:
             - {key: region, operator: NotIn, values: [eu-west-1]}
     - name: rollout to remaining clusters
-        maxParallel: 25%
-        maxTargets: 100%
-        targets:
-          clusters:
-            selector: {}
+      maxParallel: 25%
+      maxTargets: 100%
+      targets:
+        clusters:
+          selector:
+            matchLabels: {}

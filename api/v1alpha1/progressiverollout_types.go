@@ -34,8 +34,8 @@ type ProgressiveRolloutSpec struct {
 	//+kubebuilder:validation:Required
 	SourceRef corev1.TypedLocalObjectReference `json:"sourceRef"`
 	// Stages reference a list of Progressive Rollout stages
-	//+kubebuilder:validation:Required
-	Stages []*ProgressiveRolloutStage `json:"stages"`
+	//+kubebuilder:validation:Optional
+	Stages []*ProgressiveRolloutStage `json:"stages,omitempty"`
 }
 
 // ProgressiveRolloutStage defines a rollout stage
@@ -50,11 +50,19 @@ type ProgressiveRolloutStage struct {
 	//+kubebuilder:validation:Minimum:1
 	MaxTargets intstr.IntOrString `json:"maxTargets"`
 	// Targets is the targets to update in the stage
-	//+kubebuilder:validation:Required
-	Targets ProgressiveRolloutTargets `json:"targets"`
+	//+kubebuilder:validation:Optional
+	Targets ProgressiveRolloutTargets `json:"targets,omitempty"`
 }
 
+// ProgressiveRolloutTargets defines the target of the Progressive Rollout
 type ProgressiveRolloutTargets struct {
+	// Clusters is the a cluster type of targets
+	//+kubebuilder:validation:Optional
+	Clusters Cluster `json:"clusters"`
+}
+
+// Cluster defines a target of type cluster
+type Cluster struct {
 	// Selector is a label selector to get the clusters for the update
 	//+kubebuilder:validation:Required
 	Selector metav1.LabelSelector `json:"selector"`
