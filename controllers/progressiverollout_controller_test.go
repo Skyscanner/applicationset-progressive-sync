@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	timeout = time.Second * 7
+	timeout = time.Second * 10
 )
 
 var _ = Describe("ProgressiveRollout Controller", func() {
@@ -54,12 +54,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
 		Eventually(func() string {
-			_ = k8sClient.Get(ctx, types.NamespacedName{
-				Namespace: pr.Namespace,
-				Name:      pr.Name,
-			}, &pr)
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}, &pr)).To(Succeed())
 			return pr.Status.Conditions[0].Type
 		}).Should(Equal(deploymentskyscannernetv1alpha1.CompletedCondition))
-
 	})
 })
