@@ -138,7 +138,7 @@ func (prs *ProgressiveRolloutStatus) filterOutCondition(ct ProgressiveRolloutCon
 }
 
 // +kubebuilder:object:root=true
-
+// +kubebuilder:subresource:status
 // ProgressiveRollout is the Schema for the progressiverollouts API
 type ProgressiveRollout struct {
 	metav1.TypeMeta   `json:",inline"`

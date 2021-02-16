@@ -49,7 +49,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(req ctrl.Request) (ctrl.Result,
 	}
 
 	// Rollout completed
-	completed := pr.Status.NewCondition(deploymentskyscannernetv1alpha1.CompletedType, metav1.ConditionTrue, "Completed")
+	completed := pr.Status.NewCondition(deploymentskyscannernetv1alpha1.CompletedType, metav1.ConditionTrue, "Succeeded")
 	pr.Status.SetCondition(&completed)
 	if err := r.Client.Status().Update(ctx, &pr); err != nil {
 		r.Log.V(1).Info("failed to update object status", "name", pr.Name, "namespace", pr.Namespace)
