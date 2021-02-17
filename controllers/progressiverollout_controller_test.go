@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const timeout = time.Second * 10
+const (
+	timeout  = time.Second * 10
+	interval = time.Millisecond * 10
+)
 
 var _ = Describe("ProgressiveRollout Controller", func() {
 
@@ -20,6 +23,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	ctx := context.Background()
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
+	SetDefaultEventuallyPollingInterval(interval)
 
 	BeforeEach(func() {
 		namespace := corev1.Namespace{
@@ -51,10 +55,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
 		Eventually(func() string {
-			Expect(k8sClient.Get(ctx, types.NamespacedName{
+			_ = k8sClient.Get(ctx, types.NamespacedName{
 				Namespace: pr.Namespace,
 				Name:      pr.Name,
-			}, &pr)).To(Succeed())
+			}, &pr)
 			return pr.Status.Conditions[0].Type
 		}).Should(Equal(deploymentskyscannernetv1alpha1.CompletedCondition))
 	})
