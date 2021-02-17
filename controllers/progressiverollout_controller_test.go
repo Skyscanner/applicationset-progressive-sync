@@ -12,23 +12,20 @@ import (
 	"time"
 )
 
-const (
-	timeout = time.Second * 10
-)
+const timeout = time.Second * 10
 
 var _ = Describe("ProgressiveRollout Controller", func() {
 
-	var namespace *corev1.Namespace
 	apiGroup := "argoproj.io/v1alpha1"
 	ctx := context.Background()
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
 
 	BeforeEach(func() {
-		namespace = &corev1.Namespace{
+		namespace := corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: "argocd"},
 		}
-		err := k8sClient.Create(context.Background(), namespace)
+		err := k8sClient.Create(context.Background(), &namespace)
 		Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
 	})
 
@@ -54,7 +51,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
 		Eventually(func() string {
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}, &pr)).To(Succeed())
+			Expect(k8sClient.Get(ctx, types.NamespacedName{
+				Namespace: pr.Namespace,
+				Name:      pr.Name,
+			}, &pr)).To(Succeed())
 			return pr.Status.Conditions[0].Type
 		}).Should(Equal(deploymentskyscannernetv1alpha1.CompletedCondition))
 	})
