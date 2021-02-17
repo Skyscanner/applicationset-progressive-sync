@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -13,7 +15,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 20
+	timeout  = time.Second * 10
 	interval = time.Millisecond * 100
 )
 
@@ -54,17 +56,38 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			},
 		}
 		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
-		Eventually(func() bool {
-			_ = k8sClient.Get(ctx, types.NamespacedName{
-				Namespace: pr.Namespace,
-				Name:      pr.Name,
-			}, &pr)
-			for _, c := range pr.Status.Conditions {
-				if c.Type == deploymentskyscannernetv1alpha1.CompletedCondition && c.Status == metav1.ConditionTrue && c.Reason == deploymentskyscannernetv1alpha1.StagesCompleteReason {
-					return true
-				}
-			}
-			return false
-		}).Should(BeTrue())
+
+		expected := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
+		ExpectCondition(&pr, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+
 	})
 })
+
+// statusString returns a formatted string with a condition status, reason and message
+func statusString(status metav1.ConditionStatus, reason string, message string) string {
+	return fmt.Sprintf("Status: %s, Reason: %s, Message: %s", status, reason, message)
+}
+
+// HaveStatus is a gomega matcher for a condition status, reason and message
+func HaveStatus(status metav1.ConditionStatus, reason string, message string) gomegatypes.GomegaMatcher {
+	return Equal(statusString(status, reason, message))
+}
+
+// ExpectCondition take a condition type and returns its status, reason and message
+func ExpectCondition(
+	pr *deploymentskyscannernetv1alpha1.ProgressiveRollout, ct string,
+) AsyncAssertion {
+	return Eventually(func() string {
+		_ = k8sClient.Get(
+			context.Background(),
+			types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace},
+			pr,
+		)
+		for _, c := range pr.Status.Conditions {
+			if c.Type == ct {
+				return statusString(c.Status, c.Reason, c.Message)
+			}
+		}
+		return ""
+	})
+}
