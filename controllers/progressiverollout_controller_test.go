@@ -54,12 +54,17 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			},
 		}
 		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
-		Eventually(func() string {
+		Eventually(func() bool {
 			_ = k8sClient.Get(ctx, types.NamespacedName{
 				Namespace: pr.Namespace,
 				Name:      pr.Name,
 			}, &pr)
-			return pr.Status.Conditions[0].Type
-		}).Should(Equal(deploymentskyscannernetv1alpha1.CompletedCondition))
+			for _, c := range pr.Status.Conditions {
+				if c.Type == deploymentskyscannernetv1alpha1.CompletedCondition && c.Status == metav1.ConditionTrue && c.Reason == deploymentskyscannernetv1alpha1.StagesCompleteReason {
+					return true
+				}
+			}
+			return false
+		}).Should(BeTrue())
 	})
 })
