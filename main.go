@@ -26,9 +26,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/controllers"
+	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
