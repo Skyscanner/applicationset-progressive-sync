@@ -1,8 +1,10 @@
-# permissions for end users to edit progressiverollouts.
+
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: progressiverollout-editor-role
+  creationTimestamp: null
+  name: manager-role
 rules:
 - apiGroups:
   - deployment.skyscanner.net
@@ -22,3 +24,5 @@ rules:
   - progressiverollouts/status
   verbs:
   - get
+  - patch
+  - update

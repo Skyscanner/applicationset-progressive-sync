@@ -16,7 +16,7 @@
 
 // Package v1alpha1 contains API Schema definitions for the deployment.skyscanner.net v1alpha1 API group
 // +kubebuilder:object:generate=true
-// +groupName=deployment.skyscanner.net.deployment.skyscanner.net
+// +groupName=deployment.skyscanner.net
 package v1alpha1
 
 import (
@@ -26,7 +26,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "deployment.skyscanner.net.deployment.skyscanner.net", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "deployment.skyscanner.net", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}

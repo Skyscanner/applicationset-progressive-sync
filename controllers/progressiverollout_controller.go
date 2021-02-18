@@ -18,8 +18,9 @@ package controllers
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,15 +35,26 @@ type ProgressiveRolloutReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=deployment.skyscanner.net.deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=deployment.skyscanner.net.deployment.skyscanner.net,resources=progressiverollouts/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts/status,verbs=get;update;patch
 
-func (r *ProgressiveRolloutReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("progressiverollout", req.NamespacedName)
+func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("progressiverollout", req.NamespacedName)
 
-	// your logic here
+	// Get the ProgressiveRollout object
+	pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+	if err := r.Get(ctx, req.NamespacedName, &pr); err != nil {
+		log.Error(err, "unable to fetch ProgressiveRollout", "object", pr.Name)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
+	// Rollout completed
+	completed := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
+	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
+	if err := r.Client.Status().Update(ctx, &pr); err != nil {
+		r.Log.V(1).Info("failed to update object status", "name", pr.Name, "namespace", pr.Namespace)
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
