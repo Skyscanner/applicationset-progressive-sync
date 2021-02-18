@@ -52,7 +52,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					Name:        "stage 1",
 					MaxParallel: intstr.IntOrString{IntVal: 1},
 					MaxTargets:  intstr.IntOrString{IntVal: 1},
-					Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Cluster{
+					Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
 						Selector: metav1.LabelSelector{MatchLabels: nil},
 					}},
 				}},

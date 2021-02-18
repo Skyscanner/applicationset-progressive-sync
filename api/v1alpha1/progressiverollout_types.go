@@ -58,11 +58,11 @@ type ProgressiveRolloutStage struct {
 type ProgressiveRolloutTargets struct {
 	// Clusters is the a cluster type of targets
 	//+kubebuilder:validation:Optional
-	Clusters Cluster `json:"clusters"`
+	Clusters Clusters `json:"clusters"`
 }
 
-// Cluster defines a target of type cluster
-type Cluster struct {
+// Clusters defines a target of type clusters
+type Clusters struct {
 	// Selector is a label selector to get the clusters for the update
 	//+kubebuilder:validation:Required
 	Selector metav1.LabelSelector `json:"selector"`
