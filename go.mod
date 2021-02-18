@@ -3,12 +3,13 @@ module github.com/Skyscanner/argocd-progressive-rollout
 go 1.15
 
 require (
+	github.com/argoproj/argo-cd v0.8.1-0.20210218202601-6de3cf44a4cb
 	github.com/go-logr/logr v0.3.0
-	github.com/onsi/ginkgo v1.14.1
-	github.com/onsi/gomega v1.10.2
+	github.com/onsi/ginkgo v1.14.2
+	github.com/onsi/gomega v1.10.3
 	k8s.io/api v0.20.1
 	k8s.io/apimachinery v0.20.1
-	k8s.io/client-go v0.20.1
+	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	sigs.k8s.io/controller-runtime v0.8.0
 )
 
