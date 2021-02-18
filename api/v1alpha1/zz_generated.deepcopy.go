@@ -106,13 +106,9 @@ func (in *ProgressiveRolloutSpec) DeepCopyInto(out *ProgressiveRolloutSpec) {
 	in.SourceRef.DeepCopyInto(&out.SourceRef)
 	if in.Stages != nil {
 		in, out := &in.Stages, &out.Stages
-		*out = make([]*ProgressiveRolloutStage, len(*in))
+		*out = make([]ProgressiveRolloutStage, len(*in))
 		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(ProgressiveRolloutStage)
-				(*in).DeepCopyInto(*out)
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }

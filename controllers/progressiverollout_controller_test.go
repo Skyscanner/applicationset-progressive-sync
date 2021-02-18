@@ -22,6 +22,9 @@ const (
 var _ = Describe("ProgressiveRollout Controller", func() {
 
 	apiGroup := "argoproj.io/v1alpha1"
+	testProgressiveRollout := "test-progressive-rollout"
+	testApplicationSet := "test-application-set"
+	testNamesapce := "test-namespace"
 	ctx := context.Background()
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
@@ -29,7 +32,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	BeforeEach(func() {
 		namespace := corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: "argocd"},
+			ObjectMeta: metav1.ObjectMeta{Name: testNamesapce},
 		}
 		err := k8sClient.Create(context.Background(), &namespace)
 		Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
@@ -38,14 +41,14 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	// We should replace this test with better ones as we deploy the controller
 	It("should reconcile", func() {
 		pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{
-			ObjectMeta: metav1.ObjectMeta{Name: "go-infrabin", Namespace: "argocd"},
+			ObjectMeta: metav1.ObjectMeta{Name: testProgressiveRollout, Namespace: testNamesapce},
 			Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
 				SourceRef: corev1.TypedLocalObjectReference{
 					APIGroup: &apiGroup,
 					Kind:     "ApplicationSet",
-					Name:     "go-infra",
+					Name:     testApplicationSet,
 				},
-				Stages: []*deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
+				Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
 					Name:        "stage 1",
 					MaxParallel: intstr.IntOrString{IntVal: 1},
 					MaxTargets:  intstr.IntOrString{IntVal: 1},

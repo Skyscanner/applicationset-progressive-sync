@@ -37,7 +37,7 @@ spec:
           description: ProgressiveRolloutSpec defines the desired state of ProgressiveRollout
           properties:
             sourceRef:
-              description: SourceRef references the resource, example an ApplicationSet,
+              description: SourceRef defines the resource, example an ApplicationSet,
                 which owns ArgoCD Applications
               properties:
                 apiGroup:
@@ -56,7 +56,7 @@ spec:
               - name
               type: object
             stages:
-              description: Stages reference a list of Progressive Rollout stages
+              description: Stages defines a list of Progressive Rollout stages
               items:
                 description: ProgressiveRolloutStage defines a rollout stage
                 properties:

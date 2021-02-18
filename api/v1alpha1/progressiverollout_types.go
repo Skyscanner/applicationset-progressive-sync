@@ -30,12 +30,12 @@ type ProgressiveRolloutSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// SourceRef references the resource, example an ApplicationSet, which owns ArgoCD Applications
+	// SourceRef defines the resource, example an ApplicationSet, which owns ArgoCD Applications
 	//+kubebuilder:validation:Required
 	SourceRef corev1.TypedLocalObjectReference `json:"sourceRef"`
-	// Stages reference a list of Progressive Rollout stages
+	// Stages defines a list of Progressive Rollout stages
 	//+kubebuilder:validation:Optional
-	Stages []*ProgressiveRolloutStage `json:"stages,omitempty"`
+	Stages []ProgressiveRolloutStage `json:"stages,omitempty"`
 }
 
 // ProgressiveRolloutStage defines a rollout stage
