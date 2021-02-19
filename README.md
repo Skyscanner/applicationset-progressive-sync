@@ -63,24 +63,6 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ### Update ArgoCD Application API package
 
-Because of [https://github.com/argoproj/argo-cd/issues/4055](https://github.com/argoproj/argo-cd/issues/4055) we can't add argocd to an external project's go.mod. If we try to directly import `github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1`, we get the following error
+Because of [https://github.com/argoproj/argo-cd/issues/4055](https://github.com/argoproj/argo-cd/issues/4055) we can't just run `go get github.com/argoproj/argo-cd`.
 
-```console
-go: github.com/argoproj/argo-cd@v1.8.4 requires
-	k8s.io/kubernetes@v1.19.2 requires
-	k8s.io/api@v0.0.0: reading k8s.io/api/go.mod at revision v0.0.0: unknown revision v0.0.0
-```
-
-To import/update ArgoCD we first need to run
-
-```shell
-./go-mod-hack.sh $KUBERNETES_VERSION # v1.19.2 in the example above
-```
-
-then we can import the `Application` module
-
-```go
-package main
-
-import argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
-```
+Use `hack/install-argocd-application.sh` to install the correct version of the Application API.
