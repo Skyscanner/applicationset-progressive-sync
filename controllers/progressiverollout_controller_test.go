@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
+	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -11,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"time"
 )
 
@@ -22,11 +24,13 @@ const (
 var _ = Describe("ProgressiveRollout Controller", func() {
 
 	var (
-		ctx                         context.Context
-		singleStagePR               *deploymentskyscannernetv1alpha1.ProgressiveRollout
-		namespaceName, argoApiGroup string
+		ctx                                 context.Context
+		singleStagePR                       *deploymentskyscannernetv1alpha1.ProgressiveRollout
+		namespace, argoApiGroup, appSetKind string
+		ns                                  *corev1.Namespace
 	)
 	argoApiGroup = "argoproj.io/v1alpha1"
+	appSetKind = "ApplicationSet"
 
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
@@ -34,20 +38,20 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		namespaceName = "progressiverollout-test" + randStringNumber(5)
+		namespace = "progressiverollout-test" + randStringNumber(5)
 
-		namespace := corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: namespaceName},
+		ns = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
-		err := k8sClient.Create(context.Background(), &namespace)
+		err := k8sClient.Create(context.Background(), ns)
 		Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
 
 		singleStagePR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
-			ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespaceName},
+			ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
 			Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
 				SourceRef: corev1.TypedLocalObjectReference{
 					APIGroup: &argoApiGroup,
-					Kind:     "ApplicationSet",
+					Kind:     appSetKind,
 					Name:     "single-stage-appset",
 				},
 				Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
@@ -60,11 +64,38 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				}},
 			},
 		}
+		Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
 	})
 
-	Describe("requestsForApplicationChange", func() {
-		It("should forward events for owned applications", func() {
+	AfterEach(func() {
+		err := k8sClient.Delete(context.Background(), ns)
+		Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
+	})
 
+	Describe("requestsForApplicationChange function", func() {
+		It("should forward events for owned applications", func() {
+			By("creating an owned application")
+			ownedApp := &argov1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "app",
+					Namespace: namespace,
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: argoApiGroup,
+						Kind:       appSetKind,
+						Name:       "single-stage-appset",
+						UID:        uuid.NewUUID(),
+					}},
+				},
+				Spec: argov1alpha1.ApplicationSpec{},
+			}
+			Expect(k8sClient.Create(ctx, ownedApp)).To(Succeed())
+
+			requests := reconciler.requestsForApplicationChange(ownedApp)
+			Expect(len(requests)).To(Equal(1))
+			Expect(requests[0].NamespacedName).To(Equal(types.NamespacedName{
+				Namespace: namespace,
+				Name:      "single-stage-pr",
+			}))
 		})
 
 		It("should filter out events for non-owned applications", func() {
@@ -74,8 +105,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	Describe("Reconciliation loop", func() {
 		It("should reconcile a ProgressiveRollout object", func() {
-			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
-
 			expected := singleStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(singleStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 		})
