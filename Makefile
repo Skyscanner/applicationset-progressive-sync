@@ -15,7 +15,7 @@ all: manager
 
 # Run tests
 test: generate fmt vet manifests
-	go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
+	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=coverage.out --trace --race --progress
 
 # Build manager binary
 manager: generate fmt vet

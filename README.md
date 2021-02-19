@@ -60,6 +60,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 1. Install `kind`: see <https://kind.sigs.k8s.io/docs/user/quick-start/#installation>
 1. Install `ArgoCD`: see <https://argoproj.github.io/argo-cd/getting_started/>
 1. Install `ApplicationSet` controller: see <https://github.com/argoproj-labs/applicationset>
+1. Install `ArgoCD Application` API pkg: see `hack/install-argocd-application.sh`
 
 ### Update ArgoCD Application API package
 
