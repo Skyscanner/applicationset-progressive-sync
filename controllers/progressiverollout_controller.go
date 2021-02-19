@@ -71,7 +71,7 @@ func (r *ProgressiveRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error 
 			&source.Kind{Type: &argov1alpha1.Application{}},
 			handler.EnqueueRequestsFromMapFunc(r.requestsForApplicationChange)).
 		Watches(
-			&source.Kind{Type: &corev1.Secret{}}, 			handler.EnqueueRequestsFromMapFunc(r.requestsForSecretChange)).
+			&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(r.requestsForSecretChange)).
 		Complete(r)
 }
 
@@ -81,11 +81,11 @@ func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Obj
 	ctx := context.Background()
 
 	if err := r.List(ctx, &list); err != nil {
-		r.Log.Error(err,"failed to list ProgressiveRollout")
+		r.Log.Error(err, "failed to list ProgressiveRollout")
 		return nil
 	}
 
-	for _, pr := range list.Items{
+	for _, pr := range list.Items {
 		for _, owner := range o.GetOwnerReferences() {
 			if owner.Kind == pr.Spec.SourceRef.Kind && owner.APIVersion == *pr.Spec.SourceRef.APIGroup && owner.Name == pr.Spec.SourceRef.Name {
 				// The Application is owned by an ApplicationSet

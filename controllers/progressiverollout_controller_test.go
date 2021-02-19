@@ -16,37 +16,39 @@ import (
 
 const (
 	timeout  = time.Second * 10
-	interval = time.Millisecond * 100
+	interval = time.Millisecond * 10
 )
 
 var _ = Describe("ProgressiveRollout Controller", func() {
 
-	apiGroup := "argoproj.io/v1alpha1"
-	testProgressiveRollout := "test-progressive-rollout"
-	testApplicationSet := "test-application-set"
-	testNamesapce := "test-namespace"
-	ctx := context.Background()
+	var (
+		ctx                         context.Context
+		singleStagePR               *deploymentskyscannernetv1alpha1.ProgressiveRollout
+		namespaceName, argoApiGroup string
+	)
+	argoApiGroup = "argoproj.io/v1alpha1"
+
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
 
 	BeforeEach(func() {
+		ctx = context.Background()
+		namespaceName = "progressiverollout-test" + randStringRunes(5)
+
 		namespace := corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: testNamesapce},
+			ObjectMeta: metav1.ObjectMeta{Name: namespaceName},
 		}
 		err := k8sClient.Create(context.Background(), &namespace)
 		Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
-	})
 
-	// We should replace this test with better ones as we deploy the controller
-	It("should reconcile", func() {
-		pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{
-			ObjectMeta: metav1.ObjectMeta{Name: testProgressiveRollout, Namespace: testNamesapce},
+		singleStagePR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+			ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespaceName},
 			Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
 				SourceRef: corev1.TypedLocalObjectReference{
-					APIGroup: &apiGroup,
+					APIGroup: &argoApiGroup,
 					Kind:     "ApplicationSet",
-					Name:     testApplicationSet,
+					Name:     "single-stage-appset",
 				},
 				Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
 					Name:        "stage 1",
@@ -58,11 +60,25 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				}},
 			},
 		}
-		Expect(k8sClient.Create(ctx, &pr)).To(Succeed())
+	})
 
-		expected := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
-		ExpectCondition(&pr, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+	Describe("requestsForApplicationChange", func() {
+		It("should forward events for owned applications", func() {
 
+		})
+
+		It("should filter out events for non-owned applications", func() {
+
+		})
+	})
+
+	Describe("Reconciliation loop", func() {
+		It("should reconcile a ProgressiveRollout object", func() {
+			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
+
+			expected := singleStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
+			ExpectCondition(singleStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+		})
 	})
 })
 

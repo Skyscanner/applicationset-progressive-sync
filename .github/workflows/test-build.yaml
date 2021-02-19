@@ -36,7 +36,9 @@ jobs:
         run: go mod download
 
       - name: Test
-        run: make test
+        run: |
+          export PATH=$PATH:$(go env GOBIN)
+          make test
 
       - name: Build
         run: make manager

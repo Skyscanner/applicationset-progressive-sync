@@ -15,7 +15,7 @@ all: manager
 
 # Run tests
 test: generate fmt vet manifests
-	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=coverage.out --trace --race --progress
+	$(GINKGO) -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=coverage.out --trace --race --progress
 
 # Build manager binary
 manager: generate fmt vet
@@ -77,4 +77,11 @@ ifeq (, $(shell which controller-gen))
 CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
+endif
+
+ginkgo:
+ifeq (, $(shell which ginkgo))
+GINKGO=$(GOBIN)/ginkgo
+else
+GINKGO=$(shell which ginkgo)
 endif

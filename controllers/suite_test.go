@@ -17,6 +17,7 @@
 package controllers
 
 import (
+	"math/rand"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
@@ -42,6 +43,7 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var reconciler *ProgressiveRolloutReconciler
 
 func TestController(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -77,10 +79,11 @@ var _ = BeforeSuite(func(done Done) {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&ProgressiveRolloutReconciler{
+	reconciler = &ProgressiveRolloutReconciler{
 		Client: k8sManager.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("progressiverollout"),
-	}).SetupWithManager(k8sManager)
+	}
+	err = reconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
@@ -100,3 +103,13 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+
+func randStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
