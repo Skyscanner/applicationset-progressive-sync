@@ -77,15 +77,33 @@ func (r *ProgressiveRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error 
 
 func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Object) []reconcile.Request {
 	var requests []reconcile.Request
-	requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
-		Namespace: o.GetNamespace(),
-		Name:      o.GetName(),
-	}})
+	var list deploymentskyscannernetv1alpha1.ProgressiveRolloutList
+	ctx := context.Background()
+
+	if err := r.List(ctx, &list); err != nil {
+		r.Log.Error(err,"failed to list ProgressiveRollout")
+		return nil
+	}
+
+	for _, pr := range list.Items{
+		for _, owner := range o.GetOwnerReferences() {
+			if owner.Kind == pr.Spec.SourceRef.Kind && owner.APIVersion == *pr.Spec.SourceRef.APIGroup && owner.Name == pr.Spec.SourceRef.Name {
+				// The Application is owned by an ApplicationSet
+				// referenced in the ProgressiveRollout spec
+				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
+					Namespace: pr.Namespace,
+					Name:      pr.Name,
+				}})
+			}
+		}
+	}
+
 	return requests
 }
 
 func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
 	var requests []reconcile.Request
+
 	requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
 		Namespace: o.GetNamespace(),
 		Name:      o.GetName(),
