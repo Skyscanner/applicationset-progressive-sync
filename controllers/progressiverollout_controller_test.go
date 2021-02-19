@@ -34,7 +34,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		namespaceName = "progressiverollout-test" + randStringRunes(5)
+		namespaceName = "progressiverollout-test" + randStringNumber(5)
 
 		namespace := corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: namespaceName},

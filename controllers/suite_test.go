@@ -104,12 +104,12 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 })
 
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+var numbers = []rune("1234567890")
 
-func randStringRunes(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+func randStringNumber(n int) string {
+	s := make([]rune, n)
+	for i := range s {
+		s[i] = numbers[rand.Intn(len(numbers))]
 	}
-	return string(b)
+	return string(s)
 }
