@@ -17,8 +17,10 @@ all: manager
 test: generate fmt vet manifests
 	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress
 
-test-ci: generate fmt vet manifests
-	go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
+install-ci:
+	go get -v github.com/onsi/ginkgo/ginkgo
+	go get -v github.com/onsi/gomega
+	go get -v -t ./...
 
 # Build manager binary
 manager: generate fmt vet

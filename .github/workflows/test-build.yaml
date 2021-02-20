@@ -32,8 +32,11 @@ jobs:
       - name: Get dependencies
         run: go mod download
 
+      - name: Install CI
+        run: make install-ci
+
       - name: Test
-        run: make test-ci
+        run: make test
 
       - name: Build
         run: make manager
