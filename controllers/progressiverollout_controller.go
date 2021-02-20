@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
@@ -76,9 +78,22 @@ func (r *ProgressiveRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error 
 }
 
 func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Object) []reconcile.Request {
+
+	/*
+		We trigger a reconciliation loop on an Application event if:
+		- the Application owner is referenced by a ProgressiveRollout object
+	*/
+
 	var requests []reconcile.Request
 	var list deploymentskyscannernetv1alpha1.ProgressiveRolloutList
 	ctx := context.Background()
+
+	app, ok := o.(*argov1alpha1.Application)
+	if !ok {
+		err := fmt.Errorf("expected application, got %T", o)
+		r.Log.Error(err, "failed to convert object to application")
+		return nil
+	}
 
 	if err := r.List(ctx, &list); err != nil {
 		r.Log.Error(err, "failed to list ProgressiveRollout")
@@ -86,10 +101,54 @@ func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Obj
 	}
 
 	for _, pr := range list.Items {
-		for _, owner := range o.GetOwnerReferences() {
-			if owner.Kind == pr.Spec.SourceRef.Kind && owner.APIVersion == *pr.Spec.SourceRef.APIGroup && owner.Name == pr.Spec.SourceRef.Name {
-				// The Application is owned by an ApplicationSet
-				// referenced in the ProgressiveRollout spec
+		if pr.HasOwnerReference(app.GetOwnerReferences()) {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
+				Namespace: pr.Namespace,
+				Name:      pr.Name,
+			}})
+		}
+	}
+
+	return requests
+}
+
+func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
+
+	/*
+		We trigger a reconciliation loop on a Secret event if:
+		- the Secret is an ArgoCD cluster, AND
+		- there is an Application targeting that secret/cluster, AND
+		- that Application owner is referenced by a ProgressiveRollout object
+	*/
+
+	var requests []reconcile.Request
+	var prList deploymentskyscannernetv1alpha1.ProgressiveRolloutList
+	var appList argov1alpha1.ApplicationList
+	ctx := context.Background()
+
+	s, ok := o.(*corev1.Secret)
+	if !ok {
+		err := fmt.Errorf("expected secret, got %T", o)
+		r.Log.Error(err, "failed to convert object to secret")
+		return nil
+	}
+
+	if !internal.IsArgoCDCluster(s.GetAnnotations()) {
+		return nil
+	}
+
+	if err := r.List(ctx, &prList); err != nil {
+		r.Log.Error(err, "failed to list ProgressiveRollout")
+		return nil
+	}
+	if err := r.List(ctx, &appList); err != nil {
+		r.Log.Error(err, "failed to list Application")
+		return nil
+	}
+
+	for _, pr := range prList.Items {
+		for _, app := range appList.Items {
+			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.HasOwnerReference(app.GetOwnerReferences()) {
 				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
 					Namespace: pr.Namespace,
 					Name:      pr.Name,
@@ -98,15 +157,5 @@ func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Obj
 		}
 	}
 
-	return requests
-}
-
-func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
-	var requests []reconcile.Request
-
-	requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
-		Namespace: o.GetNamespace(),
-		Name:      o.GetName(),
-	}})
 	return requests
 }
