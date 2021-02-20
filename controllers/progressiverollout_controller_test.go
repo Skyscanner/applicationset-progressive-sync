@@ -24,12 +24,12 @@ const (
 var _ = Describe("ProgressiveRollout Controller", func() {
 
 	var (
-		ctx                                 context.Context
-		singleStagePR                       *deploymentskyscannernetv1alpha1.ProgressiveRollout
-		namespace, argoApiGroup, appSetKind string
-		ns                                  *corev1.Namespace
+		ctx                                   context.Context
+		namespace, appSetApiGroup, appSetKind string
+		ns                                    *corev1.Namespace
+		ownerPR, singleStagePR                *deploymentskyscannernetv1alpha1.ProgressiveRollout
 	)
-	argoApiGroup = "argoproj.io/v1alpha1"
+	appSetApiGroup = "argoproj.io/v1alpha1"
 	appSetKind = "ApplicationSet"
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
@@ -42,29 +42,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
-		singleStagePR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
-			ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
-			Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
-				SourceRef: corev1.TypedLocalObjectReference{
-					APIGroup: &argoApiGroup,
-					Kind:     "",
-					Name:     "",
-				},
-				Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
-					Name:        "stage 1",
-					MaxParallel: intstr.IntOrString{IntVal: 1},
-					MaxTargets:  intstr.IntOrString{IntVal: 1},
-					Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
-						Selector: metav1.LabelSelector{MatchLabels: nil},
-					}},
-				}},
-			},
-		}
-	})
-
-	JustBeforeEach(func() {
 		err := k8sClient.Create(context.Background(), ns)
 		Expect(err).To(BeNil(), "failed to create test namespace")
+
 	})
 
 	AfterEach(func() {
@@ -73,21 +53,35 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	})
 
 	Describe("requestsForApplicationChange function", func() {
-		It("should forward events for owned applications", func() {
-			By("creating a progressive rollout object with sourceRef")
-			singleStagePR.Spec.SourceRef.Name = "single-stage-appset"
-			singleStagePR.Spec.SourceRef.Kind = appSetKind
-			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
 
+		BeforeEach(func() {
+			ownerPR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
+				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetApiGroup,
+						Kind:     appSetKind,
+						Name:     "owner-app-set",
+					},
+					Stages: nil,
+				}}
+			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
+		})
+
+		It("should forward events for owned applications", func() {
 			By("creating an owned application")
 			ownedApp := &argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
 					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: argoApiGroup,
+						APIVersion: appSetApiGroup,
 						Kind:       appSetKind,
-						Name:       "single-stage-appset",
+						Name:       "owner-app-set",
 						UID:        uuid.NewUUID(),
 					}},
 				},
@@ -99,18 +93,53 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(len(requests)).To(Equal(1))
 			Expect(requests[0].NamespacedName).To(Equal(types.NamespacedName{
 				Namespace: namespace,
-				Name:      "single-stage-pr",
+				Name:      "owner-pr",
 			}))
 		})
 
 		It("should filter out events for non-owned applications", func() {
+			By("creating a non-owned application")
+			nonOwnedApp := &argov1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "non-owned-app",
+					Namespace: namespace,
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: appSetApiGroup,
+						Kind:       appSetKind,
+						Name:       "not-owned",
+						UID:        uuid.NewUUID(),
+					}},
+				},
+				Spec: argov1alpha1.ApplicationSpec{},
+			}
+			Expect(k8sClient.Create(ctx, nonOwnedApp)).To(Succeed())
 
+			requests := reconciler.requestsForApplicationChange(nonOwnedApp)
+			Expect(len(requests)).To(Equal(0))
 		})
 	})
 
 	Describe("Reconciliation loop", func() {
 		It("should reconcile", func() {
 			By("creating a progressive rollout object")
+			singleStagePR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
+				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetApiGroup,
+						Kind:     "",
+						Name:     "",
+					},
+					Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
+						Name:        "stage 1",
+						MaxParallel: intstr.IntOrString{IntVal: 1},
+						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+							Selector: metav1.LabelSelector{MatchLabels: nil},
+						}},
+					}},
+				},
+			}
 			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
 
 			expected := singleStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
