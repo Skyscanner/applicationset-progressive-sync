@@ -133,7 +133,7 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 		return nil
 	}
 
-	if !internal.IsArgoCDCluster(s.GetAnnotations()) {
+	if !internal.IsArgoCDCluster(s.GetLabels()) {
 		return nil
 	}
 

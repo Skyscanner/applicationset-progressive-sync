@@ -7,8 +7,8 @@ const (
 	AppSetAPIGroup          = "argoproj.io/v1alpha1"
 )
 
-func IsArgoCDCluster(annotations map[string]string) bool {
-	val, ok := annotations[ArgoCDSecretTypeLabel]
+func IsArgoCDCluster(labels map[string]string) bool {
+	val, ok := labels[ArgoCDSecretTypeLabel]
 	if val == ArgoCDSecretTypeCluster && ok {
 		return true
 	} else {

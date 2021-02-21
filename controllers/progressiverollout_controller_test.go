@@ -141,6 +141,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 
 		It("should forward an event for a matching argocd secret", func() {
+			serverURL := "https://kubernetes.default.svc"
 			By("creating an application")
 			app := &argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
@@ -154,25 +155,64 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					}},
 				},
 				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
-					Server:    "https://kubernetes.default.svc",
+					Server:    serverURL,
 					Namespace: namespace,
 					Name:      "local-cluster",
 				}},
 			}
 			Expect(k8sClient.Create(ctx, app)).To(Succeed())
 
-			By("creating a secret")
+			By("creating a cluster secret")
+			cluster := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{internal.ArgoCDSecretTypeLabel: internal.ArgoCDSecretTypeCluster}},
+				Data:       map[string][]byte{"server": []byte(serverURL)}}
+			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 
+			requests := reconciler.requestsForSecretChange(cluster)
+			Expect(len(requests)).To(Equal(1))
 		})
 
 		It("should not forward an event for a generic secret", func() {
+			By("creating a generic secret")
+			generic := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "generic", Namespace: namespace}, Data: map[string][]byte{"secret": []byte("insecure")},
+			}
+			Expect(k8sClient.Create(ctx, generic)).To(Succeed())
 
+			requests := reconciler.requestsForSecretChange(generic)
+			Expect(len(requests)).To(Equal(0))
 		})
 
 		It("should not forward an event for an argocd secret not matching any application", func() {
+			By("creating an application")
+			app := &argov1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "app",
+					Namespace: namespace,
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: internal.AppSetAPIGroup,
+						Kind:       internal.AppSetKind,
+						Name:       "owner-app-set",
+						UID:        uuid.NewUUID(),
+					}},
+				},
+				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
+					Server:    "https://remote-url.kubernetes.io",
+					Namespace: namespace,
+					Name:      "remote-cluster",
+				}},
+			}
+			Expect(k8sClient.Create(ctx, app)).To(Succeed())
 
+			By("creating a cluster secret")
+			cluster := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{internal.ArgoCDSecretTypeLabel: internal.ArgoCDSecretTypeCluster}},
+				Data:       map[string][]byte{"server": []byte("https://kubernetes.default.svc")}}
+			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+
+			requests := reconciler.requestsForSecretChange(cluster)
+			Expect(len(requests)).To(Equal(0))
 		})
-
 	})
 
 	Describe("Reconciliation loop", func() {
