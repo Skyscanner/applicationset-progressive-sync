@@ -91,7 +91,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownedApp)).To(Succeed())
 
 			requests := reconciler.requestsForApplicationChange(ownedApp)
-			Expect(len(requests)).To(Equal(1))
+			Eventually(func() bool {
+				return len(requests) == 1
+			}).Should(BeTrue())
 			Expect(requests[0].NamespacedName).To(Equal(types.NamespacedName{
 				Namespace: namespace,
 				Name:      "owner-pr",
@@ -116,7 +118,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, nonOwnedApp)).To(Succeed())
 
 			requests := reconciler.requestsForApplicationChange(nonOwnedApp)
-			Expect(len(requests)).To(Equal(0))
+			Eventually(func() bool {
+				return len(requests) == 0
+			}).Should(BeTrue())
 		})
 	})
 
@@ -169,7 +173,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 
 			requests := reconciler.requestsForSecretChange(cluster)
-			Expect(len(requests)).To(Equal(1))
+			Eventually(func() bool {
+				return len(requests) == 1
+			}).Should(BeTrue())
 		})
 
 		It("should not forward an event for a generic secret", func() {
@@ -180,12 +186,14 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, generic)).To(Succeed())
 
 			requests := reconciler.requestsForSecretChange(generic)
-			Expect(len(requests)).To(Equal(0))
+			Eventually(func() bool {
+				return len(requests) == 0
+			}).Should(BeTrue())
 		})
 
 		It("should not forward an event for an argocd secret not matching any application", func() {
 			By("creating an application")
-			app := &argov1alpha1.Application{
+			externalApp := &argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
 					Namespace: namespace,
@@ -202,16 +210,18 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					Name:      "remote-cluster",
 				}},
 			}
-			Expect(k8sClient.Create(ctx, app)).To(Succeed())
+			Expect(k8sClient.Create(ctx, externalApp)).To(Succeed())
 
 			By("creating a cluster secret")
-			cluster := &corev1.Secret{
+			internalCluster := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{internal.ArgoCDSecretTypeLabel: internal.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte("https://kubernetes.default.svc")}}
-			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+			Expect(k8sClient.Create(ctx, internalCluster)).To(Succeed())
 
-			requests := reconciler.requestsForSecretChange(cluster)
-			Expect(len(requests)).To(Equal(0))
+			requests := reconciler.requestsForSecretChange(internalCluster)
+			Eventually(func() bool {
+				return len(requests) == 0
+			}).Should(BeTrue())
 		})
 	})
 
