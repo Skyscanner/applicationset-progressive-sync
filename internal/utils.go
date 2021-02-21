@@ -3,6 +3,8 @@ package internal
 const (
 	ArgoCDSecretTypeLabel   = "argocd.argoproj.io/secret-type"
 	ArgoCDSecretTypeCluster = "cluster"
+	AppSetKind              = "ApplicationSet"
+	AppSetAPIGroup          = "argoproj.io/v1alpha1"
 )
 
 func IsArgoCDCluster(annotations map[string]string) bool {

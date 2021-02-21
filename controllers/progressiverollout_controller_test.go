@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,13 +25,13 @@ const (
 var _ = Describe("ProgressiveRollout Controller", func() {
 
 	var (
-		ctx                                   context.Context
-		namespace, appSetApiGroup, appSetKind string
-		ns                                    *corev1.Namespace
-		ownerPR, singleStagePR                *deploymentskyscannernetv1alpha1.ProgressiveRollout
+		ctx                     context.Context
+		namespace, appSetAPIRef string
+		ns                      *corev1.Namespace
+		ownerPR, singleStagePR  *deploymentskyscannernetv1alpha1.ProgressiveRollout
 	)
-	appSetApiGroup = "argoproj.io/v1alpha1"
-	appSetKind = "ApplicationSet"
+
+	appSetAPIRef = internal.AppSetAPIGroup
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
@@ -59,8 +60,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
 				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
-						APIGroup: &appSetApiGroup,
-						Kind:     appSetKind,
+						APIGroup: &appSetAPIRef,
+						Kind:     internal.AppSetKind,
 						Name:     "owner-app-set",
 					},
 					Stages: nil,
@@ -79,8 +80,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					Name:      "app",
 					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: appSetApiGroup,
-						Kind:       appSetKind,
+						APIVersion: internal.AppSetAPIGroup,
+						Kind:       internal.AppSetKind,
 						Name:       "owner-app-set",
 						UID:        uuid.NewUUID(),
 					}},
@@ -104,8 +105,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					Name:      "non-owned-app",
 					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: appSetApiGroup,
-						Kind:       appSetKind,
+						APIVersion: internal.AppSetAPIGroup,
+						Kind:       internal.AppSetKind,
 						Name:       "not-owned",
 						UID:        uuid.NewUUID(),
 					}},
@@ -119,6 +120,61 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 	})
 
+	Describe("requestsForSecretChange function", func() {
+
+		BeforeEach(func() {
+			ownerPR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
+				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetAPIRef,
+						Kind:     internal.AppSetKind,
+						Name:     "owner-app-set",
+					},
+					Stages: nil,
+				}}
+			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
+		})
+
+		It("should forward an event for a matching argocd secret", func() {
+			By("creating an application")
+			app := &argov1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "app",
+					Namespace: namespace,
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: internal.AppSetAPIGroup,
+						Kind:       internal.AppSetKind,
+						Name:       "owner-app-set",
+						UID:        uuid.NewUUID(),
+					}},
+				},
+				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
+					Server:    "https://kubernetes.default.svc",
+					Namespace: namespace,
+					Name:      "local-cluster",
+				}},
+			}
+			Expect(k8sClient.Create(ctx, app)).To(Succeed())
+
+			By("creating a secret")
+
+		})
+
+		It("should not forward an event for a generic secret", func() {
+
+		})
+
+		It("should not forward an event for an argocd secret not matching any application", func() {
+
+		})
+
+	})
+
 	Describe("Reconciliation loop", func() {
 		It("should reconcile", func() {
 			By("creating a progressive rollout object")
@@ -126,7 +182,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
 				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
-						APIGroup: &appSetApiGroup,
+						APIGroup: &appSetAPIRef,
 						Kind:     "",
 						Name:     "",
 					},
