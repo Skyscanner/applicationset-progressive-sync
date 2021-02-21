@@ -41,13 +41,6 @@ jobs:
       - name: Build
         run: make manager
 
-      - name: Build on PR
-        uses: docker/build-push-action@v2
-        with:
-          push: false
-          tags: main
-        if: github.event_name == 'pull_request'
-
       - name: Login to GitHub Packages Docker Registry
         uses: docker/login-action@v1
         with:
