@@ -9,9 +9,5 @@ const (
 
 func IsArgoCDCluster(labels map[string]string) bool {
 	val, ok := labels[ArgoCDSecretTypeLabel]
-	if val == ArgoCDSecretTypeCluster && ok {
-		return true
-	} else {
-		return false
-	}
+	return val == ArgoCDSecretTypeCluster && ok
 }
