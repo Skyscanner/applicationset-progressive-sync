@@ -1,7 +1,7 @@
 package v1alpha1
 
 import (
-	"github.com/Skyscanner/argocd-progressive-rollout/internal"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,8 +18,8 @@ func TestHasOwnerReference(t *testing.T) {
 			Kind:       "fakeKind",
 			Name:       "fakeName",
 		}, {
-			APIVersion: internal.AppSetAPIGroup,
-			Kind:       internal.AppSetKind,
+			APIVersion: utils.AppSetAPIGroup,
+			Kind:       utils.AppSetKind,
 			Name:       "owner-app-set",
 		}},
 		expected: true,
@@ -32,13 +32,13 @@ func TestHasOwnerReference(t *testing.T) {
 		expected: false,
 	},
 	}
-	ref := internal.AppSetAPIGroup
+	ref := utils.AppSetAPIGroup
 	pr := ProgressiveRollout{
 		ObjectMeta: metav1.ObjectMeta{Name: "pr", Namespace: "namespace"},
 		Spec: ProgressiveRolloutSpec{
 			SourceRef: corev1.TypedLocalObjectReference{
 				APIGroup: &ref,
-				Kind:     internal.AppSetKind,
+				Kind:     utils.AppSetKind,
 				Name:     "owner-app-set",
 			},
 			Stages: nil,

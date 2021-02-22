@@ -1,4 +1,4 @@
-package internal
+package utils
 
 const (
 	ArgoCDSecretTypeLabel   = "argocd.argoproj.io/secret-type"

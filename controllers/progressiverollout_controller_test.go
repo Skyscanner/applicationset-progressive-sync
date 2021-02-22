@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
-	"github.com/Skyscanner/argocd-progressive-rollout/internal"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,7 +31,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		ownerPR, singleStagePR  *deploymentskyscannernetv1alpha1.ProgressiveRollout
 	)
 
-	appSetAPIRef = internal.AppSetAPIGroup
+	appSetAPIRef = utils.AppSetAPIGroup
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
@@ -61,7 +61,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
-						Kind:     internal.AppSetKind,
+						Kind:     utils.AppSetKind,
 						Name:     "owner-app-set",
 					},
 					Stages: nil,
@@ -80,8 +80,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					Name:      "app",
 					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: internal.AppSetAPIGroup,
-						Kind:       internal.AppSetKind,
+						APIVersion: utils.AppSetAPIGroup,
+						Kind:       utils.AppSetKind,
 						Name:       "owner-app-set",
 						UID:        uuid.NewUUID(),
 					}},
@@ -105,8 +105,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					Name:      "non-owned-app",
 					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: internal.AppSetAPIGroup,
-						Kind:       internal.AppSetKind,
+						APIVersion: utils.AppSetAPIGroup,
+						Kind:       utils.AppSetKind,
 						Name:       "not-owned",
 						UID:        uuid.NewUUID(),
 					}},
@@ -128,7 +128,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
-						Kind:     internal.AppSetKind,
+						Kind:     utils.AppSetKind,
 						Name:     "owner-app-set",
 					},
 					Stages: nil,
@@ -148,8 +148,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					Name:      "app",
 					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: internal.AppSetAPIGroup,
-						Kind:       internal.AppSetKind,
+						APIVersion: utils.AppSetAPIGroup,
+						Kind:       utils.AppSetKind,
 						Name:       "owner-app-set",
 						UID:        uuid.NewUUID(),
 					}},
@@ -164,7 +164,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a cluster secret")
 			cluster := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{internal.ArgoCDSecretTypeLabel: internal.ArgoCDSecretTypeCluster}},
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte(serverURL)}}
 			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 
@@ -192,8 +192,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					Name:      "app",
 					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: internal.AppSetAPIGroup,
-						Kind:       internal.AppSetKind,
+						APIVersion: utils.AppSetAPIGroup,
+						Kind:       utils.AppSetKind,
 						Name:       "owner-app-set",
 						UID:        uuid.NewUUID(),
 					}},
@@ -208,7 +208,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a cluster secret")
 			internalCluster := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{internal.ArgoCDSecretTypeLabel: internal.ArgoCDSecretTypeCluster}},
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte("https://local-kubernetes.default.svc")}}
 			Expect(k8sClient.Create(ctx, internalCluster)).To(Succeed())
 

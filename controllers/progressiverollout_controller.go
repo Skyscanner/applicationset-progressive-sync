@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
-	"github.com/Skyscanner/argocd-progressive-rollout/internal"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
@@ -136,7 +136,7 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 
 	r.Log.V(1).Info("received secret event", "name", s.Name, "Namespace", s.Namespace)
 
-	if !internal.IsArgoCDCluster(s.GetLabels()) {
+	if !utils.IsArgoCDCluster(s.GetLabels()) {
 		return nil
 	}
 
