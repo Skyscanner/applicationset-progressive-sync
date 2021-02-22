@@ -80,7 +80,7 @@ func (r *ProgressiveRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error 
 func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Object) []reconcile.Request {
 
 	/*
-		We trigger a reconciliation loop on an Application event if:
+		We trigger a Progressive Rollout reconciliation loop on an Application event if:
 		- the Application owner is referenced by a ProgressiveRollout object
 	*/
 
@@ -115,7 +115,7 @@ func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Obj
 func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
 
 	/*
-		We trigger a reconciliation loop on a Secret event if:
+		We trigger a Progressive Rollout reconciliation loop on a Secret event if:
 		- the Secret is an ArgoCD cluster, AND
 		- there is an Application targeting that secret/cluster, AND
 		- that Application owner is referenced by a ProgressiveRollout object
@@ -124,6 +124,7 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	var requests []reconcile.Request
 	var prList deploymentskyscannernetv1alpha1.ProgressiveRolloutList
 	var appList argov1alpha1.ApplicationList
+	recMap := make(map[types.NamespacedName]bool)
 	ctx := context.Background()
 
 	s, ok := o.(*corev1.Secret)
@@ -132,6 +133,8 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 		r.Log.Error(err, "failed to convert object to secret")
 		return nil
 	}
+
+	r.Log.V(1).Info("received secret event", "name", s.Name, "Namespace", s.Namespace)
 
 	if !internal.IsArgoCDCluster(s.GetLabels()) {
 		return nil
@@ -149,10 +152,22 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	for _, pr := range prList.Items {
 		for _, app := range appList.Items {
 			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.IsOwnedBy(app.GetOwnerReferences()) {
-				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
-					Namespace: pr.Namespace,
-					Name:      pr.Name,
-				}})
+				/*
+					Consider the following scenario:
+					- 2 Applications
+					- owned by the same ApplicationSet
+					- referenced by the same Progressive Rollout
+					- targeting the same cluster
+
+					In this scenario, we would trigger the reconciliation loop twice.
+					To avoid that, we use a map to
+				*/
+
+				namespacedName := types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}
+				if _, ok := recMap[namespacedName]; !ok {
+					recMap[namespacedName] = true
+					requests = append(requests, reconcile.Request{NamespacedName: namespacedName})
+				}
 			}
 		}
 	}
