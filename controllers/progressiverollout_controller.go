@@ -153,14 +153,14 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 		for _, app := range appList.Items {
 			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.IsOwnedBy(app.GetOwnerReferences()) {
 				/*
-					Consider the following scenario:
-					- 2 Applications
-					- owned by the same ApplicationSet
-					- referenced by the same Progressive Rollout
-					- targeting the same cluster
+				Consider the following scenario:
+				- 2 Applications
+				- owned by the same ApplicationSet
+				- referenced by the same Progressive Rollout
+				- targeting the same cluster
 
-					In this scenario, we would trigger the reconciliation loop twice.
-					To avoid that, we use a map to
+				In this scenario, we would trigger the reconciliation loop twice.
+				To avoid that, we use a map to store for which Progressive Rollout objects we already trigger the reconciliation loop.
 				*/
 
 				namespacedName := types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}

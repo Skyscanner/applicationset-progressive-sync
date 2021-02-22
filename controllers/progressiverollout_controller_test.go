@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 20
+	timeout  = time.Second * 10
 	interval = time.Millisecond * 10
 )
 
@@ -38,7 +38,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		namespace = "progressiverollout-test" + randStringNumber(5)
+		namespace = "progressiverollout-test-" + randStringNumber(5)
 
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
@@ -91,9 +91,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownedApp)).To(Succeed())
 
 			requests := reconciler.requestsForApplicationChange(ownedApp)
-			Eventually(func() bool {
-				return len(requests) == 1
-			}).Should(BeTrue())
+			Expect(len(requests)).Should(Equal(1))
 			Expect(requests[0].NamespacedName).To(Equal(types.NamespacedName{
 				Namespace: namespace,
 				Name:      "owner-pr",
@@ -118,9 +116,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, nonOwnedApp)).To(Succeed())
 
 			requests := reconciler.requestsForApplicationChange(nonOwnedApp)
-			Eventually(func() bool {
-				return len(requests) == 0
-			}).Should(BeTrue())
+			Expect(len(requests)).Should(Equal(0))
 		})
 	})
 
@@ -173,9 +169,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 
 			requests := reconciler.requestsForSecretChange(cluster)
-			Eventually(func() bool {
-				return len(requests) == 1
-			}).Should(BeTrue())
+			Expect(len(requests)).Should(Equal(1))
 		})
 
 		It("should not forward an event for a generic secret", func() {
@@ -186,9 +180,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, generic)).To(Succeed())
 
 			requests := reconciler.requestsForSecretChange(generic)
-			Eventually(func() bool {
-				return len(requests) == 0
-			}).Should(BeTrue())
+			Eventually(func() int {
+				return len(requests)
+			}).Should(Equal(0))
 		})
 
 		It("should not forward an event for an argocd secret not matching any application", func() {
@@ -215,13 +209,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating a cluster secret")
 			internalCluster := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{internal.ArgoCDSecretTypeLabel: internal.ArgoCDSecretTypeCluster}},
-				Data:       map[string][]byte{"server": []byte("https://kubernetes.default.svc")}}
+				Data:       map[string][]byte{"server": []byte("https://local-kubernetes.default.svc")}}
 			Expect(k8sClient.Create(ctx, internalCluster)).To(Succeed())
 
 			requests := reconciler.requestsForSecretChange(internalCluster)
-			Eventually(func() bool {
-				return len(requests) == 0
-			}).Should(BeTrue())
+			Expect(len(requests)).Should(Equal(0))
 		})
 	})
 
