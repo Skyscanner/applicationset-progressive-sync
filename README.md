@@ -20,30 +20,36 @@ The `argocd progressive rollout` controller allows operators and developers to d
 apiVersion: deployment.skyscanner.net/v1alpha1
 kind: ProgressiveRollout
 metadata:
-  name: myservice
-  namespace: argocd
-# the rollout steps
-stages:
-    # human friendly name
-  - name: two clusters as canary in EMEA
-    # how many targets to update in parallel
-    # can be an integer or %. Default to 1
-    maxParallel: 2
-    # how many targets to update from the selector result
-    # can be an integer or %. Default to 100%.
-    maxTargets: 2
-    # which clusters to update
-    targets:
-      clusters:
-        selector:
-          matchLabels:
+  name: myprogressiverollout
+  namespace: argoc
+spec:
+  # a reference to the target ApplicationSet
+  sourceRef:
+    apiVersion: argoproj.io/v1alpha1
+    kind: ApplicationSet
+    name: myappset
+    # the rollout steps
+  stages:
+      # human friendly name
+    - name: two clusters as canary in EMEA
+      # how many targets to update in parallel
+      # can be an integer or %. Default to 1
+      maxParallel: 2
+      # how many targets to update from the selector result
+      # can be an integer or %. Default to 100%.
+      maxTargets: 2
+      # which targets to update
+      targets:
+        clusters:
+          selector:
+            matchLabels:
             area: emea
-  - name: rollout to remaining clusters
-    maxParallel: 25%
-    maxTargets: 100%
-    targets:
-      clusters:
-        selector: {}
+    - name: rollout to remaining clusters
+      maxParallel: 25%
+      maxTargets: 100%
+      targets:
+        clusters:
+          selector: {}
 ```
 
 ## Status: `pre-alpha`
@@ -60,3 +66,10 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 1. Install `kind`: see <https://kind.sigs.k8s.io/docs/user/quick-start/#installation>
 1. Install `ArgoCD`: see <https://argoproj.github.io/argo-cd/getting_started/>
 1. Install `ApplicationSet` controller: see <https://github.com/argoproj-labs/applicationset>
+1. Install `ArgoCD Application` API pkg: see `hack/install-argocd-application.sh`
+
+### Update ArgoCD Application API package
+
+Because of [https://github.com/argoproj/argo-cd/issues/4055](https://github.com/argoproj/argo-cd/issues/4055) we can't just run `go get github.com/argoproj/argo-cd`.
+
+Use `hack/install-argocd-application.sh` to install the correct version of the Application API.

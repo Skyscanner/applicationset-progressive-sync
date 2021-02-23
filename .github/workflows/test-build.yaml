@@ -2,6 +2,8 @@ name: Test and Build
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -14,11 +16,6 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ^1.15
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v1
-        with:
-          languages: go
 
       - name: Install kubebuilder
         run: |
@@ -35,21 +32,14 @@ jobs:
       - name: Get dependencies
         run: go mod download
 
+      - name: Install CI
+        run: make install-ci
+
       - name: Test
         run: make test
 
       - name: Build
         run: make manager
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v1
-
-      - name: Build on PR
-        uses: docker/build-push-action@v2
-        with:
-          push: false
-          tags: main
-        if: github.event_name == 'pull_request'
 
       - name: Login to GitHub Packages Docker Registry
         uses: docker/login-action@v1

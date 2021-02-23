@@ -28,6 +28,7 @@ import (
 
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/controllers"
+	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -40,6 +41,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
 	_ = deploymentskyscannernetv1alpha1.AddToScheme(scheme)
+	_ = argov1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 

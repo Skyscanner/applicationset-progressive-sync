@@ -90,6 +90,16 @@ func (in *ProgressiveRollout) NewStatusCondition(t string, s metav1.ConditionSta
 	}
 }
 
+// IsOwnedBy returns true if the ProgressiveRollout object has a reference to one of the owners
+func (in *ProgressiveRollout) IsOwnedBy(owners []metav1.OwnerReference) bool {
+	for _, owner := range owners {
+		if owner.Kind == in.Spec.SourceRef.Kind && owner.APIVersion == *in.Spec.SourceRef.APIGroup && owner.Name == in.Spec.SourceRef.Name {
+			return true
+		}
+	}
+	return false
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // ProgressiveRollout is the Schema for the progressiverollouts API
