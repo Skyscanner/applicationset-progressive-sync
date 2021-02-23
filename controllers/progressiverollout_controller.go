@@ -66,12 +66,14 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)
 
-		targets, err := r.GetTargetClusters(stage.Targets.Clusters.Selector)
+		targets, err := r.getTargetClusters(stage.Targets.Clusters.Selector)
 		if err != nil {
 			log.Error(err, "unable to fetch targets")
 			return ctrl.Result{}, err
 		}
 		r.Log.V(1).Info("targets selected", "targets", targets.Items)
+
+
 		r.Log.Info("stage completed")
 	}
 
@@ -100,6 +102,7 @@ func (r *ProgressiveRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Complete(r)
 }
 
+// requestsForApplicationChange returns a reconcile request for a Progressive Rollout object when an Application change
 func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Object) []reconcile.Request {
 
 	/*
@@ -135,6 +138,7 @@ func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Obj
 	return requests
 }
 
+// requestsForSecretChange returns a reconcile request for a Progressive Rollout object when a Secret change
 func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
 
 	/*
@@ -198,8 +202,8 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	return requests
 }
 
-// GetTargetClusters returns a list of ArgoCD clusters matching the provided label selector
-func (r *ProgressiveRolloutReconciler) GetTargetClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
+// getTargetClusters returns a list of ArgoCD clusters matching the provided label selector
+func (r *ProgressiveRolloutReconciler) getTargetClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
 	secrets := corev1.SecretList{}
 	ctx := context.Background()
 
