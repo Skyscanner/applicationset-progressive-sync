@@ -124,7 +124,7 @@ func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Obj
 	}
 
 	for _, pr := range list.Items {
-		if pr.IsOwnedBy(app.GetOwnerReferences()) {
+		if pr.Owns(app.GetOwnerReferences()) {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
 				Namespace: pr.Namespace,
 				Name:      pr.Name,
@@ -174,7 +174,7 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 
 	for _, pr := range prList.Items {
 		for _, app := range appList.Items {
-			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.IsOwnedBy(app.GetOwnerReferences()) {
+			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.Owns(app.GetOwnerReferences()) {
 				/*
 					Consider the following scenario:
 					- 2 Applications

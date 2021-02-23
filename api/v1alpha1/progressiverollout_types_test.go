@@ -45,7 +45,7 @@ func TestHasOwnerReference(t *testing.T) {
 		}}
 
 	for _, testCase := range testCases {
-		got := pr.IsOwnedBy(testCase.ownerReferences)
+		got := pr.Owns(testCase.ownerReferences)
 		g := NewGomegaWithT(t)
 		g.Expect(got).To(Equal(testCase.expected))
 	}
