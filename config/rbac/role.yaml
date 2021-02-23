@@ -26,3 +26,20 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+    - argoproj.io
+  resources:
+    - applications
+    - applications/status
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - get
+    - list
+    - watch
