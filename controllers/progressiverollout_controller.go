@@ -57,17 +57,34 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// Get the ProgressiveRollout object
 	pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
 	if err := r.Get(ctx, req.NamespacedName, &pr); err != nil {
-		log.Error(err, "unable to fetch ProgressiveRollout", "object", pr.Name)
+		log.Error(err, "unable to fetch ProgressiveRollout")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	// Always log the ApplicationSet owner
+	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
+
+	for _, stage := range pr.Spec.Stages {
+		log = r.Log.WithValues("stage", stage.Name)
+
+		targets, err := r.GetTargetClusters(stage.Targets.Clusters.Selector)
+		if err != nil {
+			log.Error(err, "unable to fetch targets")
+			return ctrl.Result{}, err
+		}
+		r.Log.V(1).Info("targets selected", "targets", targets.Items)
+		r.Log.Info("stage completed")
+	}
+
+	log.Info("all stages completed")
 
 	// Rollout completed
 	completed := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
 	if err := r.Client.Status().Update(ctx, &pr); err != nil {
-		r.Log.V(1).Info("failed to update object status", "name", pr.Name, "namespace", pr.Namespace)
+		r.Log.Error(err, "failed to update object status")
 		return ctrl.Result{}, err
 	}
+	r.Log.Info("rollout completed")
 	return ctrl.Result{}, nil
 }
 
@@ -179,4 +196,27 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	}
 
 	return requests
+}
+
+// GetTargetClusters returns a list of ArgoCD clusters matching the provided label selector
+func (r *ProgressiveRolloutReconciler) GetTargetClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
+	secrets := corev1.SecretList{}
+	ctx := context.Background()
+
+	argoSelector := metav1.AddLabelToSelector(&selector, utils.ArgoCDSecretTypeLabel, utils.ArgoCDSecretTypeCluster)
+	labels, err := metav1.LabelSelectorAsSelector(argoSelector)
+	if err != nil {
+		r.Log.Error(err, "unable to convert selector into labels")
+		return corev1.SecretList{}, err
+	}
+
+	if err = r.List(ctx, &secrets, client.MatchingLabelsSelector{Selector: labels}); err != nil {
+		r.Log.Error(err, "failed to select targets using labels selector")
+		return corev1.SecretList{}, err
+	}
+
+	// https://github.com/Skyscanner/argocd-progressive-rollout/issues/9 will provide a better sorting
+	utils.SortSecretsByName(&secrets)
+
+	return secrets, nil
 }
