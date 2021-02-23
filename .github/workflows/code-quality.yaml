@@ -1,0 +1,30 @@
+name: CodeQL
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  codeql:
+    name: codeql
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ^1.15
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: go
+
+      - name: Get dependencies
+        run: go mod download
+
+      - name: Build
+        run: make manager
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
