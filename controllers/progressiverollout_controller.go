@@ -124,7 +124,7 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	var requests []reconcile.Request
 	var prList deploymentskyscannernetv1alpha1.ProgressiveRolloutList
 	var appList argov1alpha1.ApplicationList
-	recMap := make(map[types.NamespacedName]bool)
+	requestsMap := make(map[types.NamespacedName]bool)
 	ctx := context.Background()
 
 	s, ok := o.(*corev1.Secret)
@@ -164,8 +164,8 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 				*/
 
 				namespacedName := types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}
-				if _, ok := recMap[namespacedName]; !ok {
-					recMap[namespacedName] = true
+				if _, ok := requestsMap[namespacedName]; !ok {
+					requestsMap[namespacedName] = true
 					requests = append(requests, reconcile.Request{NamespacedName: namespacedName})
 				}
 			}

@@ -1,12 +1,6 @@
 package utils
 
-const (
-	ArgoCDSecretTypeLabel   = "argocd.argoproj.io/secret-type"
-	ArgoCDSecretTypeCluster = "cluster"
-	AppSetKind              = "ApplicationSet"
-	AppSetAPIGroup          = "argoproj.io/v1alpha1"
-)
-
+// IsArgoCDCluster returns true if one of the labels is the ArgoCD secret label with the secret type cluster as value
 func IsArgoCDCluster(labels map[string]string) bool {
 	val, ok := labels[ArgoCDSecretTypeLabel]
 	return val == ArgoCDSecretTypeCluster && ok
