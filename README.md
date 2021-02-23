@@ -62,10 +62,10 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## Development
 
+### Local development with Kubebuilder
+
 1. Install `pre-commit`: see <https://pre-commit.com/#install>
-1. Install `kind`: see <https://kind.sigs.k8s.io/docs/user/quick-start/#installation>
-1. Install `ArgoCD`: see <https://argoproj.github.io/argo-cd/getting_started/>
-1. Install `ApplicationSet` controller: see <https://github.com/argoproj-labs/applicationset>
+1. Install `kubebuilder`: see <https://book.kubebuilder.io/quick-start.html#installation>
 1. Install `ArgoCD Application` API pkg: see `hack/install-argocd-application.sh`
 
 ### Update ArgoCD Application API package
