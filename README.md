@@ -43,7 +43,7 @@ spec:
         clusters:
           selector:
             matchLabels:
-            area: emea
+              area: emea
     - name: rollout to remaining clusters
       maxParallel: 25%
       maxTargets: 100%
