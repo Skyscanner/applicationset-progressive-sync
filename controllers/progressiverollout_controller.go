@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
@@ -203,7 +204,7 @@ func (r *ProgressiveRolloutReconciler) GetTargets(selector metav1.LabelSelector)
 	secrets := corev1.SecretList{}
 	ctx := context.Background()
 
-	argoSelector := metav1.AddLabelToSelector(&selector, internal.ArgoCDSecretTypeLabel, internal.ArgoCDSecretTypeCluster)
+	argoSelector := metav1.AddLabelToSelector(&selector, utils.ArgoCDSecretTypeLabel, utils.ArgoCDSecretTypeCluster)
 	labels, err := metav1.LabelSelectorAsSelector(argoSelector)
 	if err != nil {
 		r.Log.Error(err, "unable to convert selector into labels")
@@ -215,7 +216,7 @@ func (r *ProgressiveRolloutReconciler) GetTargets(selector metav1.LabelSelector)
 		return corev1.SecretList{}, err
 	}
 
-	internal.SortSecretsByName(&secrets)
+	utils.SortSecretsByName(&secrets)
 
 	return secrets, nil
 }
