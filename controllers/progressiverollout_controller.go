@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
@@ -197,27 +196,4 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	}
 
 	return requests
-}
-
-// GetTargetClusters returns a list of ArgoCD clusters matching the provided label selector
-func (r *ProgressiveRolloutReconciler) GetTargetClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
-	secrets := corev1.SecretList{}
-	ctx := context.Background()
-
-	argoSelector := metav1.AddLabelToSelector(&selector, utils.ArgoCDSecretTypeLabel, utils.ArgoCDSecretTypeCluster)
-	labels, err := metav1.LabelSelectorAsSelector(argoSelector)
-	if err != nil {
-		r.Log.Error(err, "unable to convert selector into labels")
-		return corev1.SecretList{}, err
-	}
-
-	if err = r.List(ctx, &secrets, client.MatchingLabelsSelector{Selector: labels}); err != nil {
-		r.Log.Error(err, "failed to select targets using labels selector")
-		return corev1.SecretList{}, err
-	}
-
-	// https://github.com/Skyscanner/argocd-progressive-rollout/issues/9 will provide a better sorting
-	utils.SortSecretsByName(&secrets)
-
-	return secrets, nil
 }
