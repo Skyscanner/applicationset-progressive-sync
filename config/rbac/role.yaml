@@ -7,6 +7,30 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - deployment.skyscanner.net
   resources:
   - progressiverollouts
@@ -26,20 +50,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-    - argoproj.io
-  resources:
-    - applications
-    - applications/status
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups:
-    - ""
-  resources:
-    - secrets
-  verbs:
-    - get
-    - list
-    - watch
