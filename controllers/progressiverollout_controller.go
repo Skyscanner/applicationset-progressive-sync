@@ -67,7 +67,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)
 
-		targets, err := r.GetTargets(stage.Targets.Clusters.Selector)
+		targets, err := r.GetTargetClusters(stage.Targets.Clusters.Selector)
 		if err != nil {
 			log.Error(err, "unable to fetch targets")
 			return ctrl.Result{}, err
@@ -199,8 +199,8 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	return requests
 }
 
-// GetTargets returns a list of ArgoCD clusters matching the provided label selector
-func (r *ProgressiveRolloutReconciler) GetTargets(selector metav1.LabelSelector) (corev1.SecretList, error) {
+// GetTargetClusters returns a list of ArgoCD clusters matching the provided label selector
+func (r *ProgressiveRolloutReconciler) GetTargetClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
 	secrets := corev1.SecretList{}
 	ctx := context.Background()
 
@@ -216,6 +216,7 @@ func (r *ProgressiveRolloutReconciler) GetTargets(selector metav1.LabelSelector)
 		return corev1.SecretList{}, err
 	}
 
+	// https://github.com/Skyscanner/argocd-progressive-rollout/issues/9 will provide a better sorting
 	utils.SortSecretsByName(&secrets)
 
 	return secrets, nil
