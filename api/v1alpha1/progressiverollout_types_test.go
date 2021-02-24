@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestHasOwnerReference(t *testing.T) {
+func TestOwns(t *testing.T) {
 	testCases := []struct {
 		ownerReferences []metav1.OwnerReference
 		expected        bool
