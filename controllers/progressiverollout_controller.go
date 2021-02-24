@@ -237,6 +237,7 @@ func (r *ProgressiveRolloutReconciler) getClusters(selector metav1.LabelSelector
 	return secrets, nil
 }
 
+// getApps returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveRollout
 func (r *ProgressiveRolloutReconciler) getApps(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
 	apps := []argov1alpha1.Application{{}}
 	appList := argov1alpha1.ApplicationList{}
