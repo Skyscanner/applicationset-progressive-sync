@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
@@ -66,14 +67,25 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)
 
-		targets, err := r.getTargetClusters(stage.Targets.Clusters.Selector)
+		clusters, err := r.getClusters(stage.Targets.Clusters.Selector)
 		if err != nil {
-			log.Error(err, "unable to fetch targets")
+			log.Error(err, "unable to fetch clusters")
 			return ctrl.Result{}, err
 		}
-		r.Log.V(1).Info("targets selected", "targets", targets.Items)
+		r.Log.V(1).Info("clusters selected", "clusters", clusters.Items)
 
+		apps, err := r.getApps(clusters, pr)
+		if err != nil {
+			log.Error(err, "unable to fetch apps")
+			return ctrl.Result{}, err
+		}
+		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v",apps))
 
+		syncApps := scheduler.Scheduler(clusters, apps, stage)
+
+		for _, s := range syncApps {
+			r.Log.Info("syncing app", "app", s)
+		}
 		r.Log.Info("stage completed")
 	}
 
@@ -202,8 +214,8 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	return requests
 }
 
-// getTargetClusters returns a list of ArgoCD clusters matching the provided label selector
-func (r *ProgressiveRolloutReconciler) getTargetClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
+// getClusters returns a list of ArgoCD clusters matching the provided label selector
+func (r *ProgressiveRolloutReconciler) getClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
 	secrets := corev1.SecretList{}
 	ctx := context.Background()
 
@@ -223,4 +235,27 @@ func (r *ProgressiveRolloutReconciler) getTargetClusters(selector metav1.LabelSe
 	utils.SortSecretsByName(&secrets)
 
 	return secrets, nil
+}
+
+func (r *ProgressiveRolloutReconciler) getApps(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
+	apps := []argov1alpha1.Application{{}}
+	appList := argov1alpha1.ApplicationList{}
+	ctx := context.Background()
+
+	if err := r.List(ctx, &appList); err != nil {
+		r.Log.Error(err, "failed to list Application")
+		return apps, err
+	}
+
+	for _, c := range clusters.Items{
+		for _, app := range appList.Items {
+			if pr.Owns(app.GetOwnerReferences()) && string(c.Data["server"]) == app.Spec.Destination.Server {
+				apps = append(apps, app)
+			}
+		}
+	}
+
+	utils.SortAppsByName(&apps)
+
+	return apps, nil
 }
