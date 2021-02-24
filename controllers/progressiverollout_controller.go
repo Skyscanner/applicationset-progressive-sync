@@ -79,7 +79,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			log.Error(err, "unable to fetch apps")
 			return ctrl.Result{}, err
 		}
-		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v",apps))
+		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v", apps))
 
 		syncApps := scheduler.Scheduler(clusters, apps, stage)
 
@@ -247,7 +247,7 @@ func (r *ProgressiveRolloutReconciler) getApps(clusters corev1.SecretList, pr de
 		return apps, err
 	}
 
-	for _, c := range clusters.Items{
+	for _, c := range clusters.Items {
 		for _, app := range appList.Items {
 			if pr.Owns(app.GetOwnerReferences()) && string(c.Data["server"]) == app.Spec.Destination.Server {
 				apps = append(apps, app)
