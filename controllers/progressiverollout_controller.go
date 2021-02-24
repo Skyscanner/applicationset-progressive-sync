@@ -67,26 +67,41 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)
 
-		clusters, err := r.getClusters(stage.Targets.Clusters.Selector)
+		clusters, err := r.getClustersFromSelector(stage.Targets.Clusters.Selector)
 		if err != nil {
 			log.Error(err, "unable to fetch clusters")
 			return ctrl.Result{}, err
 		}
 		r.Log.V(1).Info("clusters selected", "clusters", clusters.Items)
 
-		apps, err := r.getApps(clusters, pr)
+		apps, err := r.getAppsFromClusters(clusters, pr)
 		if err != nil {
 			log.Error(err, "unable to fetch apps")
 			return ctrl.Result{}, err
 		}
 		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v", apps))
 
-		syncApps := scheduler.Scheduler(clusters, apps, stage)
+		scheduledApps := scheduler.Scheduler(apps, stage)
 
-		for _, s := range syncApps {
+		for _, s := range scheduledApps {
+			// TODO: add sync method here
 			r.Log.Info("syncing app", "app", s)
 		}
-		r.Log.Info("stage completed")
+
+		if scheduler.IsStageFailed(apps, stage) {
+			// TODO: updated status
+			r.Log.Info("stage failed")
+			return ctrl.Result{}, nil
+		}
+
+		if scheduler.IsStageComplete(apps, stage) {
+			// TODO: update status
+			r.Log.Info("stage completed")
+		} else {
+			// TODO: update status
+			r.Log.Info("stage in progress")
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	log.Info("all stages completed")
@@ -214,8 +229,8 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	return requests
 }
 
-// getClusters returns a list of ArgoCD clusters matching the provided label selector
-func (r *ProgressiveRolloutReconciler) getClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
+// getClustersFromSelector returns a list of ArgoCD clusters matching the provided label selector
+func (r *ProgressiveRolloutReconciler) getClustersFromSelector(selector metav1.LabelSelector) (corev1.SecretList, error) {
 	secrets := corev1.SecretList{}
 	ctx := context.Background()
 
@@ -237,8 +252,8 @@ func (r *ProgressiveRolloutReconciler) getClusters(selector metav1.LabelSelector
 	return secrets, nil
 }
 
-// getApps returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveRollout
-func (r *ProgressiveRolloutReconciler) getApps(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
+// getAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveRollout
+func (r *ProgressiveRolloutReconciler) getAppsFromClusters(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
 	apps := []argov1alpha1.Application{{}}
 	appList := argov1alpha1.ApplicationList{}
 	ctx := context.Background()
