@@ -8,12 +8,24 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// Scheduler returns a list of apps to sync
+// Scheduler returns a list of apps to sync for a given stage
 func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) []string {
+
+	/*
+	The Scheduler takes
+	- a ProgressiveRolloutStage object
+	- the Applications selected with the clusters selector
+
+	The Scheduler splits the Applications in the following groups:
+	- OutOfSync Applications: those are the Applications to update during the stage.
+	- syncedInCurrentStage Applications: those are Application that synced during the current stage. Those Applications count against the number of clusters to update.
+	- progressingApps: those are Applications that are still in progress updating. Those Applications count against the number of clusters to update in parallel.
+	*/
 
 	var scheduledApps []string
 
 	oufOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+	syncedInCurrentStage := utils.GetSyncedAppsByStage(apps, stage.Name)
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
 
 	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(oufOfSyncApps), false)
@@ -25,7 +37,7 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 		return scheduledApps
 	}
 
-	if len(oufOfSyncApps) > 0 {
+	if (maxTargets - len(syncedInCurrentStage)) > 0 {
 		for i := 0; i < maxParallel-len(progressingApps); i++ {
 			scheduledApps = append(scheduledApps, oufOfSyncApps[i].Name)
 		}

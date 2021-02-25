@@ -33,6 +33,8 @@ func GetAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alpha1.
 		}
 	}
 
+	SortAppsByName(&result)
+
 	return result
 }
 
@@ -45,6 +47,24 @@ func GetAppsByHealthStatusCode(apps []argov1alpha1.Application, code health.Heal
 			result = append(result, app)
 		}
 	}
+
+	SortAppsByName(&result)
+
+	return result
+}
+
+// GetSyncedAppsByStage returns the Applications that synced during the given stage
+func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1alpha1.Application {
+	var result []argov1alpha1.Application
+
+	for _, app := range apps {
+		val, ok := app.Annotations[ProgressiveRolloutStageKey]
+		if ok && val == name && app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced {
+			result = append(result, app)
+		}
+	}
+
+	SortAppsByName(&result)
 
 	return result
 }
