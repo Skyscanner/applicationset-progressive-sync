@@ -443,7 +443,7 @@ func TestScheduler(t *testing.T) {
 
 	for _, testCase := range testCases {
 		got := Scheduler(testCase.apps, testCase.stage)
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(got).To(Equal(testCase.expected))
 	}
 }

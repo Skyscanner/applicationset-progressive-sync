@@ -31,7 +31,7 @@ func TestIsArgoCDCluster(t *testing.T) {
 
 	for _, testCase := range testCases {
 		got := IsArgoCDCluster(testCase.labels)
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(got).To(Equal(testCase.expected))
 	}
 }
@@ -56,7 +56,7 @@ func TestSortSecretsByName(t *testing.T) {
 		}, {
 			ObjectMeta: metav1.ObjectMeta{Name: "clusterC", Namespace: namespace},
 		}}}}
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	SortSecretsByName(testCase.secretList)
 	g.Expect(testCase.secretList).Should(Equal(testCase.expected))
 }
@@ -77,7 +77,7 @@ func TestSortAppsByName(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "appC", Namespace: namespace}}},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	SortAppsByName(testCase.apps)
 	g.Expect(testCase.apps).Should(Equal(testCase.expected))
 }
@@ -204,7 +204,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 		}}
 
 	for _, testCase := range testCases {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		got := GetSyncedAppsByStage(testCase.apps, testCase.stage)
 		g.Expect(got).Should(Equal(testCase.expected))
 	}

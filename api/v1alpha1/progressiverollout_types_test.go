@@ -46,7 +46,7 @@ func TestOwns(t *testing.T) {
 
 	for _, testCase := range testCases {
 		got := pr.Owns(testCase.ownerReferences)
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(got).To(Equal(testCase.expected))
 	}
 }
