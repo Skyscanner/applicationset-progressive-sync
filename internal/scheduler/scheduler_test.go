@@ -316,6 +316,38 @@ func TestScheduler(t *testing.T) {
 			},
 			expected: nil,
 		},
+		// 1 Applications:
+		//  - OutOfSync 1
+		//  - syncedInCurrentStage 0
+		//  - Progressing 0
+		// Stage:
+		//  - maxTargets: 1
+		//  - maxParallel: 1
+		// The scheduler should return 1 applications
+		{
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+			},
+			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
+				Name:        "",
+				MaxParallel: intstr.IntOrString{IntVal: 1},
+				MaxTargets:  intstr.IntOrString{IntVal: 1},
+				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
+			},
+			expected: []string{
+				"app-one",
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
