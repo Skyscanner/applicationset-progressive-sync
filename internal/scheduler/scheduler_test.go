@@ -355,7 +355,7 @@ func TestScheduler(t *testing.T) {
 		// Stage:
 		//  - maxTargets: 3
 		//  - maxParallel: 3
-		// The scheduler should return3 applications
+		// The scheduler should return 3 applications
 		{
 			apps: []argov1alpha1.Application{
 				{
@@ -423,6 +423,21 @@ func TestScheduler(t *testing.T) {
 			expected: []string{
 				"app-five", "app-four", "app-one",
 			},
+		},
+		// 0 Applications
+		// Stage:
+		//  - maxTargets: 3
+		//  - maxParallel: 3
+		// The scheduler should return 0 applications
+		{
+			apps: nil,
+			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
+				Name:        "test-5",
+				MaxParallel: intstr.IntOrString{IntVal: 3},
+				MaxTargets:  intstr.IntOrString{IntVal: 3},
+				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
+			},
+			expected: nil,
 		},
 	}
 

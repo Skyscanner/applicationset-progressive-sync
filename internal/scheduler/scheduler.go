@@ -25,6 +25,12 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	var scheduledApps []string
 
 	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+
+	// If there are no Applications out of sync, return
+	if len(outOfSyncApps) <= 0 {
+		return scheduledApps
+	}
+
 	syncedInCurrentStage := utils.GetSyncedAppsByStage(apps, stage.Name)
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
 
@@ -37,10 +43,13 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 		return scheduledApps
 	}
 
-	if (maxTargets - len(syncedInCurrentStage)) > 0 {
-		for i := 0; i < maxParallel-len(progressingApps); i++ {
-			scheduledApps = append(scheduledApps, outOfSyncApps[i].Name)
-		}
+	// If we already synced the desired number of Applications, return
+	if maxTargets == len(syncedInCurrentStage) {
+		return scheduledApps
+	}
+
+	for i := 0; i < maxParallel-len(progressingApps); i++ {
+		scheduledApps = append(scheduledApps, outOfSyncApps[i].Name)
 	}
 	return scheduledApps
 }
