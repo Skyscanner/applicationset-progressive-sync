@@ -20,13 +20,16 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 		- OutOfSync Applications: those are the Applications to update during the stage.
 		- syncedInCurrentStage Applications: those are Application that synced during the current stage. Those Applications count against the number of clusters to update.
 		- progressingApps: those are Applications that are still in progress updating. Those Applications count against the number of clusters to update in parallel.
+
+		Why does the Scheduler need an annotation? Consider the scenario where we have 5 Applications - 4 OutOfSync and 1 Synced - and a stage with maxTargets = 3.
+		If we don't keep track on which stage the Application synced, we can't compute how many applications we have to update in the current stage. Without the annotation, it would be impossible for the scheduler to know if the Application synced at this stage - and so we have only 2 Applications left to sync.
 	*/
 
 	var scheduledApps []string
 
 	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 
-	// If there are no Applications out of sync, return
+	// If there are no OutOfSync Applications, return
 	if len(outOfSyncApps) <= 0 {
 		return scheduledApps
 	}

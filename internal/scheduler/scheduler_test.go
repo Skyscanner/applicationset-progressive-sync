@@ -156,8 +156,8 @@ func TestScheduler(t *testing.T) {
 		//  - syncedInCurrentStage 0
 		//  - Progressing 0
 		// Stage:
-		//  - maxTargets: 3
-		//  - maxParallel: 2
+		//  - maxTargets: 50%
+		//  - maxParallel: 100%
 		// The scheduler should return 2 applications
 		{
 			apps: []argov1alpha1.Application{

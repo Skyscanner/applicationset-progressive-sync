@@ -221,7 +221,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		It("should reconcile", func() {
 			By("creating a cluster")
 			cluster := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}}, Data: map[string][]byte{"server": []byte("https://single-stage-pr.kubernetes.io")},
+				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
+				Data: map[string][]byte{
+					"server": []byte("https://single-stage-pr.kubernetes.io"),
+				},
 			}
 			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 
