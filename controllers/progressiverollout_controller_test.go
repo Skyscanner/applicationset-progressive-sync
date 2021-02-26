@@ -219,14 +219,41 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	Describe("Reconciliation loop", func() {
 		It("should reconcile", func() {
-			By("creating a progressive rollout object")
+			By("creating a cluster")
+			cluster := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}}, Data: map[string][]byte{"server": []byte("https://single-stage-pr.kubernetes.io")},
+			}
+			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+
+			By("creating an application targeting the cluster")
+			singleStageApp := &argov1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "single-stage-app",
+					Namespace: namespace,
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: utils.AppSetAPIGroup,
+						Kind:       utils.AppSetKind,
+						Name:       "single-stage-appset",
+						UID:        uuid.NewUUID(),
+					}},
+				},
+				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
+					Server:    "https://single-stage-pr.kubernetes.io",
+					Namespace: namespace,
+					Name:      "remote-cluster",
+				}},
+				Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Status: argov1alpha1.SyncStatusCodeOutOfSync}},
+			}
+			Expect(k8sClient.Create(ctx, singleStageApp)).To(Succeed())
+
+			By("creating a progressive rollout")
 			singleStagePR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
 				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
 				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
-						Kind:     "",
-						Name:     "",
+						Kind:     utils.AppSetKind,
+						Name:     "single-stage-appset",
 					},
 					Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
 						Name:        "stage 1",

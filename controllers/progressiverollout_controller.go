@@ -61,26 +61,33 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		log.Error(err, "unable to fetch ProgressiveRollout")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	// Always log the ApplicationSet owner
+
 	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
 
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)
 
+		// Get the clusters to update
 		clusters, err := r.getClustersFromSelector(stage.Targets.Clusters.Selector)
 		if err != nil {
 			log.Error(err, "unable to fetch clusters")
 			return ctrl.Result{}, err
 		}
-		r.Log.V(1).Info("clusters selected", "clusters", clusters.Items)
+		r.Log.V(1).Info("clusters selected", "clusters", fmt.Sprintf("%v", clusters.Items))
 
-		apps, err := r.getAppsFromClusters(clusters, pr)
+		// Get the Applications owned by the ProgressiveRollout targeting the clusters
+		apps, err := r.getOwnedAppsFromClusters(clusters, pr)
 		if err != nil {
 			log.Error(err, "unable to fetch apps")
 			return ctrl.Result{}, err
 		}
 		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v", apps))
 
+		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
+		// This action allows the Scheduler to keep track at which stage an Application has been synced.
+		r.removeAnnotationFromApps(&apps, utils.ProgressiveRolloutSyncedAtStageKey)
+
+		// Get the Applications to update
 		scheduledApps := scheduler.Scheduler(apps, stage)
 
 		for _, s := range scheduledApps {
@@ -100,13 +107,14 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		} else {
 			// TODO: update status
 			r.Log.Info("stage in progress")
+			// Stage in progress, we reconcile again until the stage is completed or failed
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
 
 	log.Info("all stages completed")
 
-	// Rollout completed
+	// Progressive rollout completed
 	completed := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
 	if err := r.Client.Status().Update(ctx, &pr); err != nil {
@@ -252,8 +260,8 @@ func (r *ProgressiveRolloutReconciler) getClustersFromSelector(selector metav1.L
 	return secrets, nil
 }
 
-// getAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveRollout
-func (r *ProgressiveRolloutReconciler) getAppsFromClusters(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
+// getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveRollout
+func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
 	apps := []argov1alpha1.Application{{}}
 	appList := argov1alpha1.ApplicationList{}
 	ctx := context.Background()
@@ -274,4 +282,11 @@ func (r *ProgressiveRolloutReconciler) getAppsFromClusters(clusters corev1.Secre
 	utils.SortAppsByName(&apps)
 
 	return apps, nil
+}
+
+// removeAnnotationFromApps remove the annotation from the given Applications
+func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps *[]argov1alpha1.Application, annotation string) {
+	for _, app := range *apps {
+		delete(app.Annotations, annotation)
+	}
 }
