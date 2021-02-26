@@ -2,6 +2,7 @@ package utils
 
 import (
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
+	"github.com/argoproj/gitops-engine/pkg/health"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,4 +80,132 @@ func TestSortAppsByName(t *testing.T) {
 	g := NewGomegaWithT(t)
 	SortAppsByName(testCase.apps)
 	g.Expect(testCase.apps).Should(Equal(testCase.expected))
+}
+
+func TestGetSyncedAppsByStage(t *testing.T) {
+	namespace := "default"
+	stage := "test-stage"
+	testCases := []struct {
+		apps     []argov1alpha1.Application
+		stage    string
+		expected []argov1alpha1.Application
+	}{{
+		// Correct annotation, stage, sync status and health status
+		apps: []argov1alpha1.Application{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "appA",
+				Namespace: namespace,
+				Annotations: map[string]string{
+					ProgressiveRolloutSyncedAtStageKey: stage,
+				}},
+			Status: argov1alpha1.ApplicationStatus{
+				Sync: argov1alpha1.SyncStatus{
+					Status: argov1alpha1.SyncStatusCodeSynced},
+				Health: argov1alpha1.HealthStatus{
+					Status: health.HealthStatusHealthy,
+				}},
+		},
+		},
+		stage: stage,
+		expected: []argov1alpha1.Application{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "appA",
+					Namespace: namespace,
+					Annotations: map[string]string{
+						ProgressiveRolloutSyncedAtStageKey: stage,
+					}},
+				Status: argov1alpha1.ApplicationStatus{
+					Sync: argov1alpha1.SyncStatus{
+						Status: argov1alpha1.SyncStatusCodeSynced},
+					Health: argov1alpha1.HealthStatus{
+						Status: health.HealthStatusHealthy,
+					}},
+			},
+		},
+	},
+		{
+			// Correct annotation, sync status and health status but synced in a different stage
+			apps: []argov1alpha1.Application{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "appA",
+					Namespace: namespace,
+					Annotations: map[string]string{
+						ProgressiveRolloutSyncedAtStageKey: "wrong-stage",
+					}},
+				Status: argov1alpha1.ApplicationStatus{
+					Sync: argov1alpha1.SyncStatus{
+						Status: argov1alpha1.SyncStatusCodeSynced},
+					Health: argov1alpha1.HealthStatus{
+						Status: health.HealthStatusHealthy,
+					}},
+			},
+			},
+			stage:    stage,
+			expected: nil,
+		},
+		{
+			// Correct annotation, value and sync status but wrong health code
+			apps: []argov1alpha1.Application{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "appA",
+					Namespace: namespace,
+					Annotations: map[string]string{
+						ProgressiveRolloutSyncedAtStageKey: stage,
+					}},
+				Status: argov1alpha1.ApplicationStatus{
+					Sync: argov1alpha1.SyncStatus{
+						Status: argov1alpha1.SyncStatusCodeSynced},
+					Health: argov1alpha1.HealthStatus{
+						Status: health.HealthStatusProgressing,
+					}},
+			},
+			},
+			stage:    stage,
+			expected: nil,
+		},
+		{
+			// Correct annotation, value and health status but wrong sync code
+			apps: []argov1alpha1.Application{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "appA",
+					Namespace: namespace,
+					Annotations: map[string]string{
+						ProgressiveRolloutSyncedAtStageKey: stage,
+					}},
+				Status: argov1alpha1.ApplicationStatus{
+					Sync: argov1alpha1.SyncStatus{
+						Status: argov1alpha1.SyncStatusCodeOutOfSync},
+					Health: argov1alpha1.HealthStatus{
+						Status: health.HealthStatusHealthy,
+					}},
+			},
+			},
+			stage:    stage,
+			expected: nil,
+		},
+		{
+			// Missing annotation
+			apps: []argov1alpha1.Application{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "appA",
+					Namespace: namespace,
+				},
+				Status: argov1alpha1.ApplicationStatus{
+					Sync: argov1alpha1.SyncStatus{
+						Status: argov1alpha1.SyncStatusCodeSynced},
+					Health: argov1alpha1.HealthStatus{
+						Status: health.HealthStatusHealthy,
+					}},
+			},
+			},
+			stage:    stage,
+			expected: nil,
+		}}
+
+	for _, testCase := range testCases {
+		g := NewGomegaWithT(t)
+		got := GetSyncedAppsByStage(testCase.apps, testCase.stage)
+		g.Expect(got).Should(Equal(testCase.expected))
+	}
 }

@@ -348,6 +348,82 @@ func TestScheduler(t *testing.T) {
 				"app-one",
 			},
 		},
+		// 5 Applications:
+		//  - OutOfSync 5
+		//  - syncedInCurrentStage 0
+		//  - Progressing 0
+		// Stage:
+		//  - maxTargets: 3
+		//  - maxParallel: 3
+		// The scheduler should return3 applications
+		{
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-two",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+			},
+			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
+				Name:        "test-5",
+				MaxParallel: intstr.IntOrString{IntVal: 3},
+				MaxTargets:  intstr.IntOrString{IntVal: 3},
+				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
+			},
+			expected: []string{
+				"app-five", "app-four", "app-one",
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
