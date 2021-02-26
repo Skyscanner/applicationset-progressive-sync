@@ -21,7 +21,7 @@ apiVersion: deployment.skyscanner.net/v1alpha1
 kind: ProgressiveRollout
 metadata:
   name: myprogressiverollout
-  namespace: argoc
+  namespace: argocd
 spec:
   # a reference to the target ApplicationSet
   sourceRef:
@@ -33,10 +33,10 @@ spec:
       # human friendly name
     - name: two clusters as canary in EMEA
       # how many targets to update in parallel
-      # can be an integer or %. Default to 1
+      # can be an integer or %.
       maxParallel: 2
       # how many targets to update from the selector result
-      # can be an integer or %. Default to 100%.
+      # can be an integer or %.
       maxTargets: 2
       # which targets to update
       targets:
