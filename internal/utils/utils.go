@@ -18,7 +18,7 @@ func SortSecretsByName(secrets *corev1.SecretList) {
 	sort.SliceStable(secrets.Items, func(i, j int) bool { return secrets.Items[i].Name < secrets.Items[j].Name })
 }
 
-// SortSecretsByName sort the Application slice in place by the app name
+// SortAppsByName sort the Application slice in place by the app name
 func SortAppsByName(apps *[]argov1alpha1.Application) {
 	sort.SliceStable(*apps, func(i, j int) bool { return (*apps)[i].Name < (*apps)[j].Name })
 }
@@ -38,7 +38,7 @@ func GetAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alpha1.
 	return result
 }
 
-// GetAppsByHealthStatusCode returns the Applications matching the specified sync status code
+// GetAppsByHealthStatusCode returns the Applications matching the specified health status code
 func GetAppsByHealthStatusCode(apps []argov1alpha1.Application, code health.HealthStatusCode) []argov1alpha1.Application {
 	var result []argov1alpha1.Application
 
