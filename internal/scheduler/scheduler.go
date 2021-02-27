@@ -28,9 +28,7 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	*/
 
 	var scheduledApps []string
-
 	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-
 	// If there are no OutOfSync Applications, return
 	if len(outOfSyncApps) == 0 {
 		return scheduledApps
@@ -46,6 +44,14 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	maxParallel, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxParallel, maxTargets, false)
 	if err != nil {
 		return scheduledApps
+	}
+
+	// We want to target minimum one cluster
+	if maxTargets == 0 {
+		maxTargets = 1
+	}
+	if maxParallel == 0 {
+		maxParallel = 1
 	}
 
 	// If we already synced the desired number of Applications, return
