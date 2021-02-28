@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+
+	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
@@ -35,8 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
@@ -52,6 +52,7 @@ type ProgressiveRolloutReconciler struct {
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications,verbs=get;list;watch
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications/status,verbs=get;list;watch
 
+// Reconcile performs the reconciling for a single named ProgressiveRollout object
 func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("progressiverollout", req.NamespacedName)
 
@@ -86,7 +87,9 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 		// This action allows the Scheduler to keep track at which stage an Application has been synced.
 		outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-		r.removeAnnotationFromApps(&outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey)
+		if err = r.removeAnnotationFromApps(&outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
+			return ctrl.Result{}, err
+		}
 
 		// Get the Applications to update
 		scheduledApps := scheduler.Scheduler(apps, stage)
@@ -126,6 +129,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager adds the reconciler to the manager, so that it gets started when the manager is started.
 func (r *ProgressiveRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&deploymentskyscannernetv1alpha1.ProgressiveRollout{}).
@@ -285,9 +289,18 @@ func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.
 	return apps, nil
 }
 
-// removeAnnotationFromApps remove the annotation from the given Applications
-func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps *[]argov1alpha1.Application, annotation string) {
+// removeAnnotationFromApps remove an annotation from the given Applications
+func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps *[]argov1alpha1.Application, annotation string) error {
+	ctx := context.Background()
+
 	for _, app := range *apps {
-		delete(app.Annotations, annotation)
+		if _, ok := app.Annotations[annotation]; ok {
+			delete(app.Annotations, annotation)
+			if err := r.Client.Update(ctx, &app); err != nil {
+				r.Log.Error(err, "failed to update Application", "app", app.Name)
+				return err
+			}
+		}
 	}
+	return nil
 }
