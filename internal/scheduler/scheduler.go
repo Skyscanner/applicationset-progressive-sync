@@ -9,7 +9,7 @@ import (
 )
 
 // Scheduler returns a list of apps to sync for a given stage
-func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) []string {
+func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) []argov1alpha1.Application {
 
 	/*
 		The Scheduler takes:
@@ -27,7 +27,7 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 		Without the annotation, it would be impossible for the scheduler to know if the Application synced at this stage - and so we have only 2 Applications left to sync.
 	*/
 
-	var scheduledApps []string
+	var scheduledApps []argov1alpha1.Application
 	outOfSyncApps := utils.FilterAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 	// If there are no OutOfSync Applications, return
 	if len(outOfSyncApps) == 0 {
@@ -60,7 +60,7 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	}
 
 	for i := 0; i < maxParallel-len(progressingApps); i++ {
-		scheduledApps = append(scheduledApps, outOfSyncApps[i].Name)
+		scheduledApps = append(scheduledApps, outOfSyncApps[i])
 	}
 	return scheduledApps
 }

@@ -18,7 +18,7 @@ func TestScheduler(t *testing.T) {
 		name     string
 		apps     []argov1alpha1.Application
 		stage    deploymentskyscannernetv1alpha1.ProgressiveRolloutStage
-		expected []string
+		expected []argov1alpha1.Application
 	}{
 		{
 			name: "Applications: outOfSync 3, syncedInCurrentStage 0, progressing 0, | Stage: maxTargets 2, maxParallel 2 | Expected: scheduled 2",
@@ -63,8 +63,29 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
-			expected: []string{
-				"app-one", "app-three",
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
 			},
 		},
 		{
@@ -135,8 +156,18 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
-			expected: []string{
-				"app-one",
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
 			},
 		},
 		{
@@ -204,8 +235,29 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
-			expected: []string{
-				"app-five", "app-four",
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
 			},
 		},
 		{
@@ -273,8 +325,29 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("50%"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
-			expected: []string{
-				"app-five", "app-four",
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
 			},
 		},
 		{
@@ -380,8 +453,18 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("1"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
-			expected: []string{
-				"app-one",
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
 			},
 		},
 		{
@@ -449,8 +532,40 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
-			expected: []string{
-				"app-five", "app-four", "app-one",
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
 			},
 		},
 		{
@@ -485,8 +600,18 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("10%"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
-			expected: []string{
-				"app-one",
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
 			},
 		},
 
@@ -534,8 +659,29 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("2"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
-			expected: []string{
-				"app-one", "app-two",
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-two",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
 			},
 		},
 
