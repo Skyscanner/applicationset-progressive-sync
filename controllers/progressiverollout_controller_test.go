@@ -219,7 +219,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	Describe("Reconciliation loop", func() {
 		It("should reconcile", func() {
-			By("creating a cluster")
+			By("creating an ArgoCD cluster")
 			cluster := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
 				Data: map[string][]byte{
