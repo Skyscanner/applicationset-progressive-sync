@@ -33,8 +33,6 @@ func FilterAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alph
 		}
 	}
 
-	SortAppsByName(&result)
-
 	return result
 }
 
@@ -47,8 +45,6 @@ func GetAppsByHealthStatusCode(apps []argov1alpha1.Application, code health.Heal
 			result = append(result, app)
 		}
 	}
-
-	SortAppsByName(&result)
 
 	return result
 }
@@ -63,8 +59,6 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 			result = append(result, app)
 		}
 	}
-
-	SortAppsByName(&result)
 
 	return result
 }

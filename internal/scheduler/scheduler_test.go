@@ -700,6 +700,7 @@ func TestScheduler(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			utils.SortAppsByName(&testCase.apps)
 			got := Scheduler(testCase.apps, testCase.stage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
