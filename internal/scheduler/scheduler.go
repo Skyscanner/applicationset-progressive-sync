@@ -46,7 +46,9 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 		return scheduledApps
 	}
 
-	// We want to target minimum one cluster
+	// Validation should never allow the user to explicitly use zero values for maxTargets or maxParallel.
+	// Due the rounding down when scaled, they might resolve to 0.
+	// If one of them resolve to 0, we set it to 1.
 	if maxTargets == 0 {
 		maxTargets = 1
 	}
