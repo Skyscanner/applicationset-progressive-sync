@@ -86,29 +86,14 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 	namespace := "default"
 	stage := "test-stage"
 	testCases := []struct {
+		name     string
 		apps     []argov1alpha1.Application
 		stage    string
 		expected []argov1alpha1.Application
-	}{{
-		// Correct annotation, stage, sync status and health status
-		apps: []argov1alpha1.Application{{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "appA",
-				Namespace: namespace,
-				Annotations: map[string]string{
-					ProgressiveRolloutSyncedAtStageKey: stage,
-				}},
-			Status: argov1alpha1.ApplicationStatus{
-				Sync: argov1alpha1.SyncStatus{
-					Status: argov1alpha1.SyncStatusCodeSynced},
-				Health: argov1alpha1.HealthStatus{
-					Status: health.HealthStatusHealthy,
-				}},
-		},
-		},
-		stage: stage,
-		expected: []argov1alpha1.Application{
-			{
+	}{
+		{
+			name: "Correct annotation, stage, sync status, health status",
+			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
 					Namespace: namespace,
@@ -120,12 +105,28 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 						Status: argov1alpha1.SyncStatusCodeSynced},
 					Health: argov1alpha1.HealthStatus{
 						Status: health.HealthStatusHealthy,
+					},
+				},
+			}},
+			stage: stage,
+			expected: []argov1alpha1.Application{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "appA",
+					Namespace: namespace,
+					Annotations: map[string]string{
+						ProgressiveRolloutSyncedAtStageKey: stage,
 					}},
-			},
+				Status: argov1alpha1.ApplicationStatus{
+					Sync: argov1alpha1.SyncStatus{
+						Status: argov1alpha1.SyncStatusCodeSynced},
+					Health: argov1alpha1.HealthStatus{
+						Status: health.HealthStatusHealthy,
+					},
+				},
+			}},
 		},
-	},
 		{
-			// Correct annotation, sync status and health status but synced in a different stage
+			name: "Correct annotation, sync status, health status. Incorrect annotation value",
 			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -138,14 +139,14 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 						Status: argov1alpha1.SyncStatusCodeSynced},
 					Health: argov1alpha1.HealthStatus{
 						Status: health.HealthStatusHealthy,
-					}},
-			},
+					},
+				}},
 			},
 			stage:    stage,
 			expected: nil,
 		},
 		{
-			// Correct annotation, value and sync status but wrong health code
+			name: "Correct annotation, value, sync status. Incorrect health status",
 			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -158,14 +159,14 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 						Status: argov1alpha1.SyncStatusCodeSynced},
 					Health: argov1alpha1.HealthStatus{
 						Status: health.HealthStatusProgressing,
-					}},
-			},
+					},
+				}},
 			},
 			stage:    stage,
 			expected: nil,
 		},
 		{
-			// Correct annotation, value and health status but wrong sync code
+			name: "Correct annotation, value and health status. Incorrect sync status",
 			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -185,7 +186,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 			expected: nil,
 		},
 		{
-			// Missing annotation
+			name: "Missing annotation",
 			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -201,11 +202,62 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 			},
 			stage:    stage,
 			expected: nil,
-		}}
+		},
+		{
+			name: "2 Applications: 1 with correct annotation, stage, sync status, health status. 1 with incorrect data",
+			apps: []argov1alpha1.Application{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "appA",
+					Namespace: namespace,
+					Annotations: map[string]string{
+						ProgressiveRolloutSyncedAtStageKey: stage,
+					}},
+				Status: argov1alpha1.ApplicationStatus{
+					Sync: argov1alpha1.SyncStatus{
+						Status: argov1alpha1.SyncStatusCodeSynced},
+					Health: argov1alpha1.HealthStatus{
+						Status: health.HealthStatusHealthy,
+					},
+				},
+			},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "appB",
+						Namespace: namespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusProgressing,
+						},
+					},
+				}},
+			stage: stage,
+			expected: []argov1alpha1.Application{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "appA",
+					Namespace: namespace,
+					Annotations: map[string]string{
+						ProgressiveRolloutSyncedAtStageKey: stage,
+					}},
+				Status: argov1alpha1.ApplicationStatus{
+					Sync: argov1alpha1.SyncStatus{
+						Status: argov1alpha1.SyncStatusCodeSynced},
+					Health: argov1alpha1.HealthStatus{
+						Status: health.HealthStatusHealthy,
+					},
+				},
+			}},
+		},
+	}
 
 	for _, testCase := range testCases {
-		g := NewWithT(t)
-		got := GetSyncedAppsByStage(testCase.apps, testCase.stage)
-		g.Expect(got).Should(Equal(testCase.expected))
+		t.Run(testCase.name, func(t *testing.T) {
+			g := NewWithT(t)
+			got := GetSyncedAppsByStage(testCase.apps, testCase.stage)
+			g.Expect(got).Should(Equal(testCase.expected))
+		})
 	}
 }
