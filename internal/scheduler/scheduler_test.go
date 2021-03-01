@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
@@ -554,9 +553,10 @@ func TestScheduler(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		fmt.Println("Test: ", testCase.name)
-		got := Scheduler(testCase.apps, testCase.stage)
-		g := NewWithT(t)
-		g.Expect(got).To(Equal(testCase.expected))
+		t.Run(testCase.name, func(t *testing.T) {
+			got := Scheduler(testCase.apps, testCase.stage)
+			g := NewWithT(t)
+			g.Expect(got).To(Equal(testCase.expected))
+		})
 	}
 }
