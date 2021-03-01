@@ -86,7 +86,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 		// This action allows the Scheduler to keep track at which stage an Application has been synced.
-		outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+		outOfSyncApps := utils.FilterAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 		if err = r.removeAnnotationFromApps(&outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
 			return ctrl.Result{}, err
 		}

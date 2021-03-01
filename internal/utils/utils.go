@@ -23,8 +23,8 @@ func SortAppsByName(apps *[]argov1alpha1.Application) {
 	sort.SliceStable(*apps, func(i, j int) bool { return (*apps)[i].Name < (*apps)[j].Name })
 }
 
-// GetAppsBySyncStatusCode returns the Applications matching the specified sync status code
-func GetAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alpha1.SyncStatusCode) []argov1alpha1.Application {
+// FilterAppsBySyncStatusCode returns the Applications matching the specified sync status code
+func FilterAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alpha1.SyncStatusCode) []argov1alpha1.Application {
 	var result []argov1alpha1.Application
 
 	for _, app := range apps {

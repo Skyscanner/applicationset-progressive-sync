@@ -28,7 +28,7 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	*/
 
 	var scheduledApps []string
-	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+	outOfSyncApps := utils.FilterAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 	// If there are no OutOfSync Applications, return
 	if len(outOfSyncApps) == 0 {
 		return scheduledApps
