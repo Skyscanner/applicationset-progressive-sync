@@ -491,7 +491,7 @@ func TestScheduler(t *testing.T) {
 		},
 
 		{
-			name: "Applications: outOfSync 2, syncedInCurrentStage 0, progressing 0, syncedInPreviousStage 1 | Stage: maxTargets 1, maxParallel 1 | Expected: scheduled 1",
+			name: "Applications: outOfSync 2, syncedInCurrentStage 0, progressing 0, syncedInPreviousStage 1 | Stage: maxTargets 2, maxParallel 2 | Expected: scheduled 2",
 			apps: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -523,19 +523,19 @@ func TestScheduler(t *testing.T) {
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
-							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+							Status: argov1alpha1.SyncStatusCodeSynced,
 						},
 					},
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
 				Name:        stageName,
-				MaxParallel: intstr.Parse("1"),
-				MaxTargets:  intstr.Parse("1"),
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("2"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
 			},
 			expected: []string{
-				"app-one",
+				"app-one", "app-two",
 			},
 		},
 
