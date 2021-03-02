@@ -19,6 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+
+	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
@@ -34,8 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
@@ -51,6 +52,7 @@ type ProgressiveRolloutReconciler struct {
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications,verbs=get;list;watch
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications/status,verbs=get;list;watch
 
+// Reconcile performs the reconciling for a single named ProgressiveRollout object
 func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("progressiverollout", req.NamespacedName)
 
@@ -60,24 +62,63 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		log.Error(err, "unable to fetch ProgressiveRollout")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	// Always log the ApplicationSet owner
+
 	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
 
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)
 
-		targets, err := r.GetTargetClusters(stage.Targets.Clusters.Selector)
+		// Get the clusters to update
+		clusters, err := r.getClustersFromSelector(stage.Targets.Clusters.Selector)
 		if err != nil {
-			log.Error(err, "unable to fetch targets")
+			log.Error(err, "unable to fetch clusters")
 			return ctrl.Result{}, err
 		}
-		r.Log.V(1).Info("targets selected", "targets", targets.Items)
-		r.Log.Info("stage completed")
+		r.Log.V(1).Info("clusters selected", "clusters", fmt.Sprintf("%v", clusters.Items))
+
+		// Get the Applications owned by the ProgressiveRollout targeting the clusters
+		apps, err := r.getOwnedAppsFromClusters(clusters, pr)
+		if err != nil {
+			log.Error(err, "unable to fetch apps")
+			return ctrl.Result{}, err
+		}
+		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v", apps))
+
+		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
+		// This action allows the Scheduler to keep track at which stage an Application has been synced.
+		outOfSyncApps := utils.FilterAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+		if err = r.removeAnnotationFromApps(&outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Get the Applications to update
+		scheduledApps := scheduler.Scheduler(apps, stage)
+
+		for _, s := range scheduledApps {
+			// TODO: add sync method here
+			r.Log.Info("syncing app", "app", s)
+		}
+
+		if scheduler.IsStageFailed(apps, stage) {
+			// TODO: updated status
+			r.Log.Info("stage failed")
+			return ctrl.Result{}, nil
+		}
+
+		if scheduler.IsStageComplete(apps, stage) {
+			// TODO: update status
+			r.Log.Info("stage completed")
+		} else {
+			// TODO: update status
+			r.Log.Info("stage in progress")
+			// Stage in progress, we reconcile again until the stage is completed or failed
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	log.Info("all stages completed")
 
-	// Rollout completed
+	// Progressive rollout completed
 	completed := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
 	if err := r.Client.Status().Update(ctx, &pr); err != nil {
@@ -88,6 +129,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager adds the reconciler to the manager, so that it gets started when the manager is started.
 func (r *ProgressiveRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&deploymentskyscannernetv1alpha1.ProgressiveRollout{}).
@@ -100,6 +142,7 @@ func (r *ProgressiveRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Complete(r)
 }
 
+// requestsForApplicationChange returns a reconcile request for a Progressive Rollout object when an Application change
 func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Object) []reconcile.Request {
 
 	/*
@@ -124,7 +167,7 @@ func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Obj
 	}
 
 	for _, pr := range list.Items {
-		if pr.IsOwnedBy(app.GetOwnerReferences()) {
+		if pr.Owns(app.GetOwnerReferences()) {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
 				Namespace: pr.Namespace,
 				Name:      pr.Name,
@@ -135,6 +178,7 @@ func (r *ProgressiveRolloutReconciler) requestsForApplicationChange(o client.Obj
 	return requests
 }
 
+// requestsForSecretChange returns a reconcile request for a Progressive Rollout object when a Secret change
 func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
 
 	/*
@@ -174,7 +218,7 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 
 	for _, pr := range prList.Items {
 		for _, app := range appList.Items {
-			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.IsOwnedBy(app.GetOwnerReferences()) {
+			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.Owns(app.GetOwnerReferences()) {
 				/*
 					Consider the following scenario:
 					- 2 Applications
@@ -198,8 +242,8 @@ func (r *ProgressiveRolloutReconciler) requestsForSecretChange(o client.Object) 
 	return requests
 }
 
-// GetTargetClusters returns a list of ArgoCD clusters matching the provided label selector
-func (r *ProgressiveRolloutReconciler) GetTargetClusters(selector metav1.LabelSelector) (corev1.SecretList, error) {
+// getClustersFromSelector returns a list of ArgoCD clusters matching the provided label selector
+func (r *ProgressiveRolloutReconciler) getClustersFromSelector(selector metav1.LabelSelector) (corev1.SecretList, error) {
 	secrets := corev1.SecretList{}
 	ctx := context.Background()
 
@@ -219,4 +263,44 @@ func (r *ProgressiveRolloutReconciler) GetTargetClusters(selector metav1.LabelSe
 	utils.SortSecretsByName(&secrets)
 
 	return secrets, nil
+}
+
+// getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveRollout
+func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
+	apps := []argov1alpha1.Application{{}}
+	appList := argov1alpha1.ApplicationList{}
+	ctx := context.Background()
+
+	if err := r.List(ctx, &appList); err != nil {
+		r.Log.Error(err, "failed to list Application")
+		return apps, err
+	}
+
+	for _, c := range clusters.Items {
+		for _, app := range appList.Items {
+			if pr.Owns(app.GetOwnerReferences()) && string(c.Data["server"]) == app.Spec.Destination.Server {
+				apps = append(apps, app)
+			}
+		}
+	}
+
+	utils.SortAppsByName(&apps)
+
+	return apps, nil
+}
+
+// removeAnnotationFromApps remove an annotation from the given Applications
+func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps *[]argov1alpha1.Application, annotation string) error {
+	ctx := context.Background()
+
+	for _, app := range *apps {
+		if _, ok := app.Annotations[annotation]; ok {
+			delete(app.Annotations, annotation)
+			if err := r.Client.Update(ctx, &app); err != nil {
+				r.Log.Error(err, "failed to update Application", "app", app.Name)
+				return err
+			}
+		}
+	}
+	return nil
 }

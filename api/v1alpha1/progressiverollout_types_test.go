@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestHasOwnerReference(t *testing.T) {
+func TestOwns(t *testing.T) {
 	testCases := []struct {
 		ownerReferences []metav1.OwnerReference
 		expected        bool
@@ -45,8 +45,8 @@ func TestHasOwnerReference(t *testing.T) {
 		}}
 
 	for _, testCase := range testCases {
-		got := pr.IsOwnedBy(testCase.ownerReferences)
-		g := NewGomegaWithT(t)
+		got := pr.Owns(testCase.ownerReferences)
+		g := NewWithT(t)
 		g.Expect(got).To(Equal(testCase.expected))
 	}
 }

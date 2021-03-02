@@ -21,7 +21,7 @@ apiVersion: deployment.skyscanner.net/v1alpha1
 kind: ProgressiveRollout
 metadata:
   name: myprogressiverollout
-  namespace: argoc
+  namespace: argocd
 spec:
   # a reference to the target ApplicationSet
   sourceRef:
@@ -33,17 +33,17 @@ spec:
       # human friendly name
     - name: two clusters as canary in EMEA
       # how many targets to update in parallel
-      # can be an integer or %. Default to 1
+      # can be an integer or %.
       maxParallel: 2
       # how many targets to update from the selector result
-      # can be an integer or %. Default to 100%.
+      # can be an integer or %.
       maxTargets: 2
       # which targets to update
       targets:
         clusters:
           selector:
             matchLabels:
-            area: emea
+              area: emea
     - name: rollout to remaining clusters
       maxParallel: 25%
       maxTargets: 100%
@@ -62,10 +62,10 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## Development
 
+### Local development with Kubebuilder
+
 1. Install `pre-commit`: see <https://pre-commit.com/#install>
-1. Install `kind`: see <https://kind.sigs.k8s.io/docs/user/quick-start/#installation>
-1. Install `ArgoCD`: see <https://argoproj.github.io/argo-cd/getting_started/>
-1. Install `ApplicationSet` controller: see <https://github.com/argoproj-labs/applicationset>
+1. Install `kubebuilder`: see <https://book.kubebuilder.io/quick-start.html#installation>
 1. Install `ArgoCD Application` API pkg: see `hack/install-argocd-application.sh`
 
 ### Update ArgoCD Application API package
