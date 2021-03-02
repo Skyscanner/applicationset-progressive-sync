@@ -5,6 +5,8 @@ on: pull_request
 jobs:
   lint-test-chart:
     runs-on: ubuntu-latest
+    env:
+      ARGOCD_VERSION: 1.8.6
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -42,5 +44,10 @@ jobs:
         uses: helm/kind-action@v1.1.0
         if: steps.list-changed.outputs.changed == 'true'
 
+      - name: Install ArgoCD Application CRD
+        run: kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/$ARGOCD_VERSION/manifests/crds/application-crd.yaml
+        if: steps.list-changed.outputs.changed == 'true'
+
       - name: Run chart-testing (install)
         run: ct install
+        if: steps.list-changed.outputs.changed == 'true'
