@@ -50,3 +50,15 @@ jobs:
 
       - name: Run chart-testing (install)
         run: ct install --config ct.yaml
+        if: steps.list-changed.outputs.changed == 'true'
+
+  helm-docs-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        if: steps.list-changed.outputs.changed == 'true'
+
+      - name: Run helm-docs
+        uses: docker://jnorwood/helm-docs:v1.5.0
+        if: steps.list-changed.outputs.changed == 'true'
