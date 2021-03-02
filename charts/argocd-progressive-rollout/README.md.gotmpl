@@ -11,11 +11,15 @@
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add foo-bar http://charts.foo-bar.com
-helm install my-release foo-bar/{{ template "chart.name" . }}
+helm repo add {{ template "chart.name" . }} {{ template "chart.homepage" . }}/charts
+helm install my-release {{ template "chart.name" . }}/{{ template "chart.name" . }}
 ```
 
-{{ template "chart.requirementsSection" . }}
+### Helm v2 Compatibility
+
+Users of Helm v2 should set the `installCRDs` value to `true` to install the CRDs.
+
+## Values
 
 {{ template "chart.valuesSection" . }}
 

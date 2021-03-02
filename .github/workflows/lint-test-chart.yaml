@@ -1,4 +1,4 @@
-name: Lint and Test Charts
+name: Lint and Test Chart
 
 on: pull_request
 
@@ -52,13 +52,11 @@ jobs:
         run: ct install --config ct.yaml
         if: steps.list-changed.outputs.changed == 'true'
 
-  helm-docs-validate:
+  helm-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        if: steps.list-changed.outputs.changed == 'true'
 
       - name: Run helm-docs
         uses: docker://jnorwood/helm-docs:v1.5.0
-        if: steps.list-changed.outputs.changed == 'true'
