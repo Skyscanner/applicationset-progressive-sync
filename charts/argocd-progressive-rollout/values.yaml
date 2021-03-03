@@ -7,7 +7,7 @@ replicaCount: 1
 installCRDs: false
 
 image:
-  repository: docker.pkg.github.com/skyscanner/argocd-progressive-rollout/argocd-progressive-rollout
+  repository: maruina/argocd-progressive-rollout
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
