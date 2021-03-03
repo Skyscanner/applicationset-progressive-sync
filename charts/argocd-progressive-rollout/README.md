@@ -17,7 +17,7 @@ helm install my-release argocd-progressive-rollout/argocd-progressive-rollout
 
 ### Helm v2 Compatibility
 
-Users of Helm v2 should set the `installCRDs` value to `true` to install the CRDs.
+Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 
 ## Values
 
