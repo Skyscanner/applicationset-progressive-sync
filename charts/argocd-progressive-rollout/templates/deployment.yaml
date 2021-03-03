@@ -30,7 +30,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
-            - manager
+            - /manager
             - --metrics-addr={{ .Values.args.metricsAddr }}
             {{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
             - --enable-leader-election=true
@@ -38,17 +38,9 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http
-              containerPort: 80
+            - name: http-metrics
+              containerPort: {{ (split ":" .Values.args.metricsAddr)._1 }}
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
