@@ -28,12 +28,11 @@ jobs:
     - name: Login to GitHub Packages Docker Registry
       uses: docker/login-action@v1
       with:
-        registry: docker.pkg.github.com
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Build and publish a tagged docker image
       uses: docker/build-push-action@v2
       with:
         push: true
-        tags: docker.pkg.github.com/skyscanner/argocd-progressive-rollout/argocd-progressive-rollout:${{ steps.tagName.outputs.tag }}
+        tags: maruina/argocd-progressive-rollout:${{ steps.tagName.outputs.tag }}
