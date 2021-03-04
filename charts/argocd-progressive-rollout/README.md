@@ -11,8 +11,8 @@ A Helm chart to install the ArgoCD Progressive Rollout controller.
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add argocd-progressive-rollout https://github.com/Skyscanner/argocd-progressive-rollout/charts/argocd-progressive-rollout
-helm install my-release argocd-progressive-rollout/argocd-progressive-rollout
+helm repo add argocd-progressive-rollout https://skyscanner.github.io/argocd-progressive-rollout/
+helm upgrade -i my-release argocd-progressive-rollout/argocd-progressive-rollout --namespace argocd
 ```
 
 ### Helm v2 Compatibility
