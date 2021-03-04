@@ -1,0 +1,88 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "argocd-progressive-rollout.fullname" . }}
+  labels:
+    {{- include "argocd-progressive-rollout.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deployment.skyscanner.net
+  resources:
+  - progressiverollouts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - deployment.skyscanner.net
+  resources:
+  - progressiverollouts/status
+  verbs:
+  - get
+  - patch
+  - update
+{{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - configmaps/status
+  verbs:
+  - get
+  - update
+  - patch
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "argocd-progressive-rollout.fullname" . }}
+  labels:
+    {{- include "argocd-progressive-rollout.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "argocd-progressive-rollout.fullname" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "argocd-progressive-rollout.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}

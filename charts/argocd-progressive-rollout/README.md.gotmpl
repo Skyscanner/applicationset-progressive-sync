@@ -1,0 +1,26 @@
+# {{ template "chart.name" . }}
+
+{{ template "chart.versionBadge" . }}{{ template "chart.typeBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+{{ template "chart.description" . }}
+
+**Homepage:** <{{ template "chart.homepage" . }}>
+
+## Installing the Chart
+
+To install the chart with the release name `my-release`:
+
+```console
+helm repo add {{ template "chart.name" . }} {{ template "chart.homepage" . }}/charts/{{ template "chart.name" . }}
+helm install my-release {{ template "chart.name" . }}/{{ template "chart.name" . }}
+```
+
+### Helm v2 Compatibility
+
+Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
+
+## Values
+
+{{ template "chart.valuesSection" . }}
+
+{{ template "helm-docs.versionFooter" . }}
