@@ -1,18 +1,21 @@
 package v1alpha1
 
 import (
+	"testing"
+
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestOwns(t *testing.T) {
 	testCases := []struct {
+		name            string
 		ownerReferences []metav1.OwnerReference
 		expected        bool
 	}{{
+		name: "owns",
 		ownerReferences: []metav1.OwnerReference{{
 			APIVersion: "fakeAPIVersion",
 			Kind:       "fakeKind",
@@ -24,14 +27,15 @@ func TestOwns(t *testing.T) {
 		}},
 		expected: true,
 	}, {
+		name: "does not own",
 		ownerReferences: []metav1.OwnerReference{{
 			APIVersion: "fakeAPIVersion",
 			Kind:       "fakeKind",
 			Name:       "fakeName",
 		}},
 		expected: false,
-	},
-	}
+	}}
+
 	ref := utils.AppSetAPIGroup
 	pr := ProgressiveRollout{
 		ObjectMeta: metav1.ObjectMeta{Name: "pr", Namespace: "namespace"},
@@ -45,8 +49,10 @@ func TestOwns(t *testing.T) {
 		}}
 
 	for _, testCase := range testCases {
-		got := pr.Owns(testCase.ownerReferences)
-		g := NewWithT(t)
-		g.Expect(got).To(Equal(testCase.expected))
+		t.Run(testCase.name, func(t *testing.T) {
+			got := pr.Owns(testCase.ownerReferences)
+			g := NewWithT(t)
+			g.Expect(got).To(Equal(testCase.expected))
+		})
 	}
 }
