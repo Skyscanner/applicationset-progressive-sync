@@ -1,4 +1,3 @@
-
 #!/bin/bash
 set -e
 
@@ -11,9 +10,9 @@ function retry_argocd_exec() {
     sleep_time=${3:-5}
     counter=0
 
-    until kubectl exec -n argocd -it $argoserver -- bash -c "$command"
+    until kubectl exec -n argocd -it "$argoserver" -- bash -c "$command"
     do
-    sleep $sleep_time
+    sleep "$sleep_time"
     [[ counter -eq $max_retry ]] && echoerr "Failed!" && exit 1
     echoerr "Trying again. Try #$counter"
     ((counter++))
@@ -26,7 +25,7 @@ function register_argocd_cluster() {
     recreate=${2:-false}
 
     if [ "$recreate" = true ] ; then
-        kind delete cluster --name $clustername
+        kind delete cluster --name "$clustername"
     fi
 
     # TODO: move these into a function
@@ -34,11 +33,11 @@ function register_argocd_cluster() {
     argocdlogin="argocd login --insecure --username admin --password admin argocd-server.argocd.svc.cluster.local:443"
     prevcontext=$(kubectl config current-context)
 
-    kind create cluster --name $clustername
+    kind create cluster --name "$clustername"
 
-    kind get kubeconfig --name $clustername --internal > /tmp/$clustername.yml
+    kind get kubeconfig --name "$clustername" --internal > /tmp/"$clustername".yml
     kubectl config use-context kind-argocd-control-plane
-    kubectl cp /tmp/$clustername.yml argocd/$argoserver:/tmp/$clustername.yml
+    kubectl cp /tmp/"$clustername".yml argocd/"$argoserver":/tmp/"$clustername".yml
     retry_argocd_exec "$argocdlogin && argocd cluster add kind-$clustername --kubeconfig /tmp/$clustername.yml --upsert" || echo "Success after retrying"
-    kubectl config use-context $prevcontext
+    kubectl config use-context "$prevcontext"
 }

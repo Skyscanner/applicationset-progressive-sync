@@ -1,4 +1,4 @@
-#/bin/sh
+#!/bin/sh
 set -e
 
 ../go-mod-hack.sh v1.20.1

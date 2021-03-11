@@ -3,8 +3,9 @@ set -e
 
 root=$(dirname "${BASH_SOURCE[0]}")
 
-bash -e $root/install-dev-deps.sh
-source $root/dev-functions.sh
+bash -e "$root"/install-dev-deps.sh
+# shellcheck source=hack/dev-functions.sh
+source "$root"/dev-functions.sh
 
 # Create the control cluster
 kind delete cluster --name argocd-control-plane
@@ -24,15 +25,15 @@ retry_argocd_exec "$argocdlogin_initial && argocd account update-password --acco
 argocdlogin="argocd login --insecure --username admin --password admin argocd-server.argocd.svc.cluster.local:443"
 
 # # Create a new user
-kubectl apply -f $root/dev/users.yml 
-kubectl apply -f $root/dev/secrets.yml
+kubectl apply -f "$root"/dev/users.yml
+kubectl apply -f "$root"/dev/secrets.yml
 # and set its password
 retry_argocd_exec "$argocdlogin && argocd account update-password --account prc --current-password admin --new-password prc" || echo "Success"
 
 # Setup permissions for the new user
-kubectl apply -f $root/dev/perms.yml
+kubectl apply -f "$root"/dev/perms.yml
 # Register in-cluster in argo secrets
-kubectl apply -f $root/dev/control-plane.yml
+kubectl apply -f "$root"/dev/control-plane.yml
 
 # Create additional clusters to server as deployment targets
 register_argocd_cluster "prc-cluster-1" true
@@ -51,5 +52,3 @@ kubectl create secret generic -n argocd prc-controller-secret --from-literal="to
 
 # TODO: Deploy prog rollout controller to control cluster
 # TODO: Deploy a sample ProgRollout CRD to control cluster
-
-
