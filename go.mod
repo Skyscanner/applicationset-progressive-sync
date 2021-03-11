@@ -3,14 +3,15 @@ module github.com/Skyscanner/argocd-progressive-rollout
 go 1.15
 
 require (
-	github.com/argoproj/argo-cd v0.8.1-0.20210218202601-6de3cf44a4cb
+	github.com/argoproj/argo-cd v0.8.1-0.20210218100039-a4ee25b59d8d
 	github.com/argoproj/gitops-engine v0.2.1-0.20210129183711-c5b7114c501f
 	github.com/go-logr/logr v0.3.0
-	github.com/onsi/ginkgo v1.14.2
-	github.com/onsi/gomega v1.10.3
+	github.com/onsi/ginkgo v1.15.1
+	github.com/onsi/gomega v1.11.0
 	k8s.io/api v0.20.1
 	k8s.io/apimachinery v0.20.1
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
+	k8s.io/kubernetes v1.20.1 // indirect
 	sigs.k8s.io/controller-runtime v0.8.0
 )
 
@@ -30,7 +31,7 @@ replace k8s.io/cloud-provider => k8s.io/cloud-provider v0.20.1
 
 replace k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.20.1
 
-replace k8s.io/code-generator => k8s.io/code-generator v0.20.4-rc.0
+replace k8s.io/code-generator => k8s.io/code-generator v0.20.5-rc.0
 
 replace k8s.io/component-base => k8s.io/component-base v0.20.1
 
@@ -38,7 +39,7 @@ replace k8s.io/component-helpers => k8s.io/component-helpers v0.20.1
 
 replace k8s.io/controller-manager => k8s.io/controller-manager v0.20.1
 
-replace k8s.io/cri-api => k8s.io/cri-api v0.20.4-rc.0
+replace k8s.io/cri-api => k8s.io/cri-api v0.20.5-rc.0
 
 replace k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.20.1
 
@@ -58,6 +59,10 @@ replace k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.20.1
 
 replace k8s.io/metrics => k8s.io/metrics v0.20.1
 
-replace k8s.io/mount-utils => k8s.io/mount-utils v0.20.4-rc.0
+replace k8s.io/mount-utils => k8s.io/mount-utils v0.20.5-rc.0
 
 replace k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.20.1
+
+replace k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.20.1
+
+replace k8s.io/sample-controller => k8s.io/sample-controller v0.20.1

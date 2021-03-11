@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal/sync"
 
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
@@ -95,8 +96,12 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		scheduledApps := scheduler.Scheduler(apps, stage)
 
 		for _, s := range scheduledApps {
-			// TODO: add sync method here
 			r.Log.Info("syncing app", "app", s)
+			_, err := sync.Sync(s, ctx)
+			if err != nil {
+				log.Error(err, "unable to sync apps")
+				return ctrl.Result{}, err
+			}
 		}
 
 		if scheduler.IsStageFailed(apps, stage) {
