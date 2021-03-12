@@ -19,11 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/Skyscanner/argocd-progressive-rollout/internal/sync"
-
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
+	argocdclient "github.com/argoproj/argo-cd/pkg/apiclient"
+	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -45,6 +45,8 @@ type ProgressiveRolloutReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+	ArgoCDClient argocdclient.Client
+	ArgoCDAppClient applicationpkg.ApplicationServiceClient
 }
 
 // +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete
@@ -97,7 +99,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
-			_, err := sync.Sync(s, ctx)
+			err := r.syncApp(s.Name)
 			if err != nil {
 				log.Error(err, "unable to sync apps")
 				return ctrl.Result{}, err
@@ -307,5 +309,21 @@ func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps *[]argov1al
 			}
 		}
 	}
+	return nil
+}
+
+// syncApp sends a sync request for the target app
+func (r *ProgressiveRolloutReconciler) syncApp(appName string) error {
+	ctx := context.Background()
+
+	syncReq := applicationpkg.ApplicationSyncRequest{
+		Name: &appName,
+	}
+
+	_, err := r.ArgoCDAppClient.Sync(ctx, &syncReq)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

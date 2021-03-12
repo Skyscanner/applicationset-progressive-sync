@@ -3,9 +3,7 @@ package utils
 import (
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
-	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
-	"os"
 	"sort"
 )
 
@@ -63,32 +61,4 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 	}
 
 	return result
-}
-
-func GetArgoServerAddr() (string, error) {
-	file, err := os.Open(ArgoCDServerAddrFile)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
-}
-
-func GetArgoAuthToken() (string, error) {
-	file, err := os.Open(ArgoCDAuthTokenFile)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
 }
