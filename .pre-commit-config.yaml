@@ -18,6 +18,8 @@ repos:
   rev: v0.7.1.1
   hooks:
   - id: shellcheck
+    args:
+      - -x
 - repo: local
   hooks:
   - id: shell-format

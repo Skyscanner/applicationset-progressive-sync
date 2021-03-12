@@ -64,20 +64,20 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ### Local development with Kubebuilder
 
-Just run 
+Just run
 
 ```
 bash hack/install-dev-deps.sh
-bash hack/setup-dev.sh  
+bash hack/setup-dev.sh [argocd-version] [appset-version]
 ```
 
-this will install all the dependencies (`pre-commit`, `kubebuilder`, `argocd`, `kind`) and it will install the correct version of ArgoCD Application API package for you.
+this will install all the dependencies (`pre-commit`, `kubebuilder`, `argocd`, `kind`) and it will install the correct version of ArgoCD Application API package for you. If you omit `argocd-version` and/or `appset-version` it will default to the latest stable/tested versions of ArgoCD and Appset controller.
 
 After running the script, you will have 3 kind clusters created locally:
  - `kind-argocd-control-plane` - cluster hosting the argocd installation and the progressive rollout operator. This cluster is also registered with Argo so that we can simulate using the same process for deploying to control cluster as well
- - `kind-prc-cluster-1` and `kind-prc-cluster-2` - are the target clusters for deploying the apps to. 
+ - `kind-prc-cluster-1` and `kind-prc-cluster-2` - are the target clusters for deploying the apps to.
 
- This gives us a total of 3 clusters allowing us to play with multiple stages of deploying. If you want to create additional clusters, you can do so by running 
+ This gives us a total of 3 clusters allowing us to play with multiple stages of deploying. If you want to create additional clusters, you can do so by running
  ```
  bash hack/add-cluster <cluster-name> <recreate>
  ```
