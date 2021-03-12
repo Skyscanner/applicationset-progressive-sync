@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
-function echoerr() { echo "$@" 1>&2; }
+function err() {
+	echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*" >&2
+}
 
 function retry_argocd_exec() {
 	argoserver=$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o name | cut -d'/' -f 2)
@@ -12,8 +14,8 @@ function retry_argocd_exec() {
 
 	until kubectl exec -n argocd -it "$argoserver" -- bash -c "$command"; do
 		sleep "$sleep_time"
-		[[ counter -eq $max_retry ]] && echoerr "Failed!" && exit 1
-		echoerr "Trying again. Try #$counter"
+		[[ counter -eq $max_retry ]] && err "Failed!" && exit 1
+		err "Trying again. Try #$counter"
 		((counter++))
 	done
 }

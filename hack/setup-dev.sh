@@ -3,7 +3,7 @@ set -e
 
 root=$(dirname "${BASH_SOURCE[0]}")
 
-bash -e "$root"/install-dev-deps.sh
+bash -e "$root"/install-dev-deps.sh true
 # shellcheck source=hack/dev-functions.sh
 source "$root"/dev-functions.sh
 

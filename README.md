@@ -67,6 +67,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 Just run 
 
 ```
+bash hack/install-dev-deps.sh
 bash hack/setup-dev.sh  
 ```
 

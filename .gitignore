@@ -159,3 +159,6 @@ Temporary Items
 
 .idea
 bin
+
+# Ignore all hack marker files
+hack/.hack.*
