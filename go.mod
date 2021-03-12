@@ -6,6 +6,7 @@ require (
 	github.com/argoproj/argo-cd v0.8.1-0.20210218202601-6de3cf44a4cb
 	github.com/argoproj/gitops-engine v0.2.1-0.20210129183711-c5b7114c501f
 	github.com/go-logr/logr v0.3.0
+	github.com/kr/pretty v0.2.1 // indirect
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	k8s.io/api v0.20.1
