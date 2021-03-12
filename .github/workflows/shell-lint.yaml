@@ -1,0 +1,25 @@
+name: Shell Lint
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  shellcheck:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: shellcheck
+        run: |
+          pip install shellcheck-py
+          GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt
+          shellcheck -x **/*.sh
+          ls $(go env GOPATH)/bin
+          $(go env GOPATH)/bin/shfmt -l -d . 
+
+
