@@ -40,7 +40,7 @@ kubectl apply -f "$root"/dev/secrets.yml
 retry_argocd_exec "$argocdlogin && argocd account update-password --account prc --current-password admin --new-password prc" || echo "Success"
 
 # Setup permissions for the new user
-kubectl apply -f "$root"/dev/perms.yml
+kubectl apply -f "$root"/dev/rbac.yml
 # Register in-cluster in argo secrets
 kubectl apply -f "$root"/dev/control-plane.yml
 
@@ -48,20 +48,15 @@ kubectl apply -f "$root"/dev/control-plane.yml
 register_argocd_cluster "prc-cluster-1" true
 register_argocd_cluster "prc-cluster-2" true
 
-# Generate token for the new user
-token=$(retry_argocd_exec "$argocdlogin >/dev/null && argocd account generate-token --account prc")
-serverip=$(kubectl get service -n argocd argocd-server -o=jsonpath='{.spec.clusterIP}')
+local_address=$(local_argocd_login)
 
 # retry_argocd_exec can race with outputting to stdout with the rest of this script
 # so sleep for a bit to make sure that the token and server ip output doesn't get mangled
 sleep 5
 
 echo "All done"
-echo "Token:$token"
-echo "Argo server ip:$serverip"
-echo "Take note of token and server ip above. They will be required for setting up the PRC controller so that it can trigger syncs"
-
-kubectl create secret generic -n argocd prc-controller-secret --from-literal="token=$token" --from-literal="serverip=$serverip"
+echo "ArgoCD server is available at: $local_address"
+echo "You can find the password and the token stored in .env.local file for your convinience."
 
 # TODO: Deploy prog rollout controller to control cluster
 # TODO: Deploy a sample ProgRollout CRD to control cluster

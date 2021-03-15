@@ -3,7 +3,7 @@
 set -euo pipefail
 
 VERSION=${1#"v"}
-if [ -z "$VERSION" ]; then
+if [[ -z "$VERSION" ]]; then
 	echo "Must specify version!"
 	exit 1
 fi
