@@ -76,13 +76,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	argoCDClientOpts := argocdclient.ClientOptions{
+	acdClientOpts := argocdclient.ClientOptions{
 		ServerAddr: c.ArgoCDServerAddr,
 		Insecure:   true,
 		AuthToken:  c.ArgoCDAuthToken,
 	}
 
-	acdClient := argocdclient.NewClientOrDie(&argoCDClientOpts)
+	acdClient := argocdclient.NewClientOrDie(&acdClientOpts)
 	_, acdAppClient := acdClient.NewApplicationClientOrDie()
 
 	if err = (&controllers.ProgressiveRolloutReconciler{

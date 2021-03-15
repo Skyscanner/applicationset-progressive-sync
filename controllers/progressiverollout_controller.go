@@ -43,9 +43,9 @@ import (
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
 type ProgressiveRolloutReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	ArgoCDClient argocdclient.Client
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	ArgoCDClient    argocdclient.Client
 	ArgoCDAppClient applicationpkg.ApplicationServiceClient
 }
 
