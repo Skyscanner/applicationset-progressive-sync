@@ -6,7 +6,7 @@ function err() {
 }
 
 function retry_argocd_exec() {
-	argoserver=$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o name | cut -d'/' -f 2)
+	argoserver=$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items..metadata.name}')
 	command=$1
 	max_retry=${2:-5}
 	sleep_time=${3:-5}
@@ -30,7 +30,7 @@ function register_argocd_cluster() {
 	fi
 
 	# TODO: move these into a function
-	argoserver=$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o name | cut -d'/' -f 2)
+	argoserver=$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items..metadata.name}')
 	argocdlogin="argocd login --insecure --username admin --password admin argocd-server.argocd.svc.cluster.local:443"
 	prevcontext=$(kubectl config current-context)
 
