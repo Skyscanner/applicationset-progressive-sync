@@ -58,5 +58,7 @@ echo "All done"
 echo "ArgoCD server is available at: $local_address"
 echo "You can find the password and the token stored in .env.local file for your convinience."
 
+open "$local_address"
+
 # TODO: Deploy prog rollout controller to control cluster
 # TODO: Deploy a sample ProgRollout CRD to control cluster

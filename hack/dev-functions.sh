@@ -88,7 +88,7 @@ function local_argocd_login() {
 	} >.env.local
 
 	# Create a secret storing the token and in-cluster ip
-	kubectl delete secret generic -n argocd prc-controller-secret || err "Secret not found. Creating.."
+	kubectl delete secret generic -n argocd prc-controller-secret >/dev/null || err "Secret not found. Creating.."
 	kubectl create secret generic -n argocd prc-controller-secret --from-literal="token=$token" --from-literal="serverip=$serverip" >/dev/null
 
 	echo "https://localhost:$argoserver_nodeport"
