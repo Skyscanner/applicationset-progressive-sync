@@ -6,13 +6,13 @@ require (
 	github.com/argoproj/argo-cd v0.8.1-0.20210218100039-a4ee25b59d8d
 	github.com/argoproj/gitops-engine v0.2.1-0.20210129183711-c5b7114c501f
 	github.com/go-logr/logr v0.3.0
-	github.com/onsi/ginkgo v1.15.1
-	github.com/onsi/gomega v1.11.0
 	github.com/kr/pretty v0.2.1 // indirect
+	github.com/onsi/ginkgo v1.15.2
+	github.com/onsi/gomega v1.11.0
+	google.golang.org/grpc v1.33.1
 	k8s.io/api v0.20.1
 	k8s.io/apimachinery v0.20.1
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
-	k8s.io/kubernetes v1.20.1 // indirect
 	sigs.k8s.io/controller-runtime v0.8.0
 )
 

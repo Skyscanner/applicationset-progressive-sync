@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
-	argocdclient "github.com/argoproj/argo-cd/pkg/apiclient"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,20 +75,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	acdClientOpts := argocdclient.ClientOptions{
-		ServerAddr: c.ArgoCDServerAddr,
-		Insecure:   true,
-		AuthToken:  c.ArgoCDAuthToken,
-	}
-
-	acdClient := argocdclient.NewClientOrDie(&acdClientOpts)
-	_, acdAppClient := acdClient.NewApplicationClientOrDie()
+	acdAppClient := utils.GetArgoCDAppClient(c)
 
 	if err = (&controllers.ProgressiveRolloutReconciler{
 		Client:          mgr.GetClient(),
 		Log:             ctrl.Log.WithName("controllers").WithName("ProgressiveRollout"),
 		Scheme:          mgr.GetScheme(),
-		ArgoCDClient:    acdClient,
 		ArgoCDAppClient: acdAppClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveRollout")

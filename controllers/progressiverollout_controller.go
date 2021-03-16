@@ -22,7 +22,6 @@ import (
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
-	argocdclient "github.com/argoproj/argo-cd/pkg/apiclient"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
@@ -45,8 +44,7 @@ type ProgressiveRolloutReconciler struct {
 	client.Client
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	ArgoCDClient    argocdclient.Client
-	ArgoCDAppClient applicationpkg.ApplicationServiceClient
+	ArgoCDAppClient utils.ArgoCDAppClient
 }
 
 // +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete

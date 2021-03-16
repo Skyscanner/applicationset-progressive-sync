@@ -10,27 +10,7 @@ type Configuration struct {
 	ArgoCDServerAddr string
 }
 
-func getArgoCDServerAddr() (string, error) {
-	path := DefaultConfigPath + ArgoCDServerAddrFile
-
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-
-	defer file.Close()
-
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
-}
-
-func getArgoCDAuthToken() (string, error) {
-	path := DefaultConfigPath + ArgoCDAuthTokenFile
-
+func readFromFile(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -47,12 +27,12 @@ func getArgoCDAuthToken() (string, error) {
 }
 
 func ReadConfiguration() (*Configuration, error) {
-	acdAuthToken, err := getArgoCDAuthToken()
+	acdAuthToken, err := readFromFile(ConfigDirectory + ArgoCDServerAddrFile)
 	if err != nil {
 		return nil, err
 	}
 
-	acdServerAddr, err := getArgoCDServerAddr()
+	acdServerAddr, err := readFromFile(ConfigDirectory + ArgoCDAuthTokenFile)
 	if err != nil {
 		return nil, err
 	}
