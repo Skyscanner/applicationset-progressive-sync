@@ -1,0 +1,15 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  annotations:
+    managed-by: argocd.argoproj.io
+  creationTimestamp: "2021-03-09T20:37:16Z"
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+  name: cluster-kubernetes.default.svc-3396314289
+  namespace: argocd
+type: Opaque
+data:
+  config: eyJ0bHNDbGllbnRDb25maWciOnsiaW5zZWN1cmUiOmZhbHNlfX0=
+  name: Y29udHJvbC1wbGFuZQ==
+  server: aHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3Zj

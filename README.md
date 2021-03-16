@@ -64,11 +64,61 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ### Local development with Kubebuilder
 
-1. Install `pre-commit`: see <https://pre-commit.com/#install>
-1. Install `kubebuilder`: see <https://book.kubebuilder.io/quick-start.html#installation>
-1. Install `ArgoCD Application` API pkg: see `hack/install-argocd-application.sh`
+To get the controller running against the configured Kubernetes cluster in ~/.kube/config, run:
 
-### Update ArgoCD Application API package
+```
+make install
+make run
+```
+
+### Setting up dev environment
+
+To facilitate local debugging and testing against real clusters, you may run:
+
+```
+bash hack/install-dev-deps.sh
+bash hack/setup-dev.sh [argocd-version] [appset-version]
+make install
+make deploy
+```
+
+this will install all the dependencies (`pre-commit`, `kubebuilder`, `argocd`, `kind`) and it will install the correct version of ArgoCD Application API package for you. If you omit `argocd-version` and/or `appset-version` it will default to the latest stable/tested versions of ArgoCD and Appset controller.
+
+After running the script, you will have 3 kind clusters created locally:
+ - `kind-argocd-control-plane` - cluster hosting the argocd installation and the progressive rollout operator. This cluster is also registered with Argo so that we can simulate using the same process for deploying to control cluster as well
+ - `kind-prc-cluster-1` and `kind-prc-cluster-2` - are the target clusters for deploying the apps to.
+
+ This gives us a total of 3 clusters allowing us to play with multiple stages of deploying. It will also log you in argocd cli. You can find additional login details in `.env.local` file that will be generated for your convenience.
+
+ #### Regenerating your access
+
+ In case that your access to the local argocd has become broken, you can regenerate it by running
+
+ ```
+ bash hack/login-argocd-local.sh
+ ```
+
+ This will create a socat link in kind docker network allowing you to access argocd server UI through your localhost.
+ The exact port will be outputted after the command has been run. Running this command will also update the values in `.env.local`.
+
+ #### Registering additional clusters
+
+ If you want to create additional clusters, you can do so by running
+ ```
+ bash hack/add-cluster <cluster-name> <recreate>
+ ```
+ This will spin up another kind cluster and register it against ArgoCD running in `kind-argocd-control-plane`
+
+ #### Deploying a test appset
+
+You can deploy a test appset to the default 3 clusters by running the following:
+
+```
+bash hack/deploy-test-appset.sh
+```
+Feel free to extend the cluster generation section of the appset spec if you want to deploy it clusters that you have manually created.
+
+#### Update ArgoCD Application API package
 
 Because of [https://github.com/argoproj/argo-cd/issues/4055](https://github.com/argoproj/argo-cd/issues/4055) we can't just run `go get github.com/argoproj/argo-cd`.
 

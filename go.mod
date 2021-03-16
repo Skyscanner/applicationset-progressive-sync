@@ -8,6 +8,7 @@ require (
 	github.com/go-logr/logr v0.3.0
 	github.com/onsi/ginkgo v1.15.1
 	github.com/onsi/gomega v1.11.0
+	github.com/kr/pretty v0.2.1 // indirect
 	k8s.io/api v0.20.1
 	k8s.io/apimachinery v0.20.1
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
