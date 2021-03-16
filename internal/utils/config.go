@@ -27,12 +27,12 @@ func readFromFile(path string) (string, error) {
 }
 
 func ReadConfiguration() (*Configuration, error) {
-	acdAuthToken, err := readFromFile(ConfigDirectory + ArgoCDServerAddrFile)
+	acdAuthToken, err := readFromFile(ConfigDirectory + ArgoCDAuthTokenFile)
 	if err != nil {
 		return nil, err
 	}
 
-	acdServerAddr, err := readFromFile(ConfigDirectory + ArgoCDAuthTokenFile)
+	acdServerAddr, err := readFromFile(ConfigDirectory + ArgoCDServerAddrFile)
 	if err != nil {
 		return nil, err
 	}

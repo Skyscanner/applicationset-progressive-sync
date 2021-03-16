@@ -99,7 +99,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			r.Log.Info("syncing app", "app", s)
 			_, err := r.syncApp(s.Name)
 			if err != nil {
-				log.Error(err, "unable to sync apps")
+				log.Error(err, "unable to sync app")
 				return ctrl.Result{}, err
 			}
 		}
@@ -320,4 +320,3 @@ func (r *ProgressiveRolloutReconciler) syncApp(appName string) (*argov1alpha1.Ap
 
 	return r.ArgoCDAppClient.Sync(ctx, &syncReq)
 }
-
