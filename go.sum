@@ -732,6 +732,7 @@ github.com/xanzy/ssh-agent v0.2.1 h1:TCbipTQL2JiiCprBWx9frJ2eJlCYT00NmctrHxVAr70
 github.com/xanzy/ssh-agent v0.2.1/go.mod h1:mLlQY/MoOhWBj+gOGMQkOeiEvkx+8pJSI+0Bx9h2kr4=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
+github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da/go.mod h1:E1AXubJBdNmFERAOucpDIxNzeGfLzg0mYh+UfMWdChA=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
@@ -1170,10 +1171,6 @@ k8s.io/controller-manager v0.20.1 h1:B9O25PcmZaStjlI5Y9ubNZlSfNxwTPeurUngCeV+f/M
 k8s.io/controller-manager v0.20.1/go.mod h1:Wfwz1Sn3ITXiMKO+Z2qhc9b34YgzOL7puRi9jb4wIUo=
 k8s.io/cri-api v0.20.4-rc.0/go.mod h1:2JRbKt+BFLTjtrILYVqQK5jqhI+XNdF6UiGMgczeBCI=
 k8s.io/cri-api v0.20.5-rc.0/go.mod h1:2JRbKt+BFLTjtrILYVqQK5jqhI+XNdF6UiGMgczeBCI=
-<<<<<<< HEAD
-k8s.io/csi-translation-lib v0.20.1 h1:2voWQcGKSzKgr+snfE7u1CqBaV6GBmRt13+Z5fMOqTI=
-=======
->>>>>>> main
 k8s.io/csi-translation-lib v0.20.1/go.mod h1:Jk3Ta91UveSd54W44P8qCXB57BQy7uqUrLaBqhT/4z4=
 k8s.io/gengo v0.0.0-20200413195148-3a45101e95ac/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=
 k8s.io/gengo v0.0.0-20201113003025-83324d819ded/go.mod h1:FiNAH4ZV3gBg2Kwh89tzAEV2be7d5xI0vBa/VySYy3E=
@@ -1186,30 +1183,19 @@ k8s.io/klog/v2 v2.4.0 h1:7+X0fUguPyrKEC4WjH8iGDg3laWgMo5tMnRTIGTTxGQ=
 k8s.io/klog/v2 v2.4.0/go.mod h1:Od+F08eJP+W3HUb4pSrPpgp9DGU4GzlpG/TmITuYh/Y=
 k8s.io/kube-aggregator v0.20.1 h1:IPiL4l4ODmpzfte6LSYXbXuDyuYmTDZ4vQIcLS9NIZ0=
 k8s.io/kube-aggregator v0.20.1/go.mod h1:1ZeyRfSg5HcRI8dihvWAc7VpXSMAw9UmZoWXBUOPyew=
-k8s.io/kube-controller-manager v0.20.1 h1:C8HkbnirGRVyvW0pP/vCYsJDWu5T6iFox9QUMJmKrrg=
 k8s.io/kube-controller-manager v0.20.1/go.mod h1:9iwMjyiO1pzgO9b2WvWmGoTilkal4ke7ceCcNWW6NAI=
 k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd h1:sOHNzJIkytDF6qadMNKhhDRpc6ODik8lVC6nOur7B2c=
 k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd/go.mod h1:WOJ3KddDSol4tAGcJo0Tvi+dK12EcqSLqcWsryKMpfM=
-k8s.io/kube-proxy v0.20.1 h1:XKrkJ2UEgZkooHQxTSzGA+nmhlgGnp+nP9k93ljO4dM=
 k8s.io/kube-proxy v0.20.1/go.mod h1:/PlQONAFpILYSKgmAg4sNsmlrXqPgwMSce/pWBtbbzk=
-k8s.io/kube-scheduler v0.20.1 h1:GdSS7ejpeg3MmnDCBilQ8dzRg7fHO0XsYP+47ua1C1Y=
 k8s.io/kube-scheduler v0.20.1/go.mod h1:3LrKGlT1iM1rsc4S8wSkTUaVrFsptQixESqBrtM0e6o=
 k8s.io/kubectl v0.20.1 h1:7h1vSrL/B3hLrhlCJhbTADElPKDbx+oVUt3+QDSXxBo=
 k8s.io/kubectl v0.20.1/go.mod h1:2bE0JLYTRDVKDiTREFsjLAx4R2GvUtL/mGYFXfFFMzY=
-k8s.io/kubelet v0.20.1 h1:HfTFK95qWKMyY/UzT4C19/ke5pOlTp65z6mHiPIQ1Fc=
 k8s.io/kubelet v0.20.1/go.mod h1:5zyqbuxkRJYcxNrh33VwHxd6T7HdqpuzpFldjgX8JMg=
 k8s.io/kubernetes v1.20.1 h1:SHJ+Ua3v2nzKB6JEGJilKv/JIiVJFo+dCs707Z3H0nk=
 k8s.io/kubernetes v1.20.1/go.mod h1:v2E/T5A+ikBt81n9HZ8VVns5IXSsMHP1ITIFuHY3d5s=
-k8s.io/legacy-cloud-providers v0.20.1 h1:CVwM/EzlFeW1O7AR/UFt1fBEa6d0PX/zr7AyKcJWaKQ=
 k8s.io/legacy-cloud-providers v0.20.1/go.mod h1:r2Qf8WVnfQndTp6dSPPfGRtjO1CoWVbW098M4SI7njY=
-k8s.io/metrics v0.20.1 h1:c03Mn9FpIOV3r5WSkF4VelFdlIGH9UYR4onIxrMBnHI=
 k8s.io/metrics v0.20.1/go.mod h1:JhpBE/fad3yRGsgEpiZz5FQQM5wJ18OTLkD7Tv40c0s=
-k8s.io/mount-utils v0.20.4-rc.0/go.mod h1:Jv9NRZ5L2LF87A17GaGlArD+r3JAJdZFvo4XD1cG4Kc=
 k8s.io/mount-utils v0.20.5-rc.0/go.mod h1:Jv9NRZ5L2LF87A17GaGlArD+r3JAJdZFvo4XD1cG4Kc=
-<<<<<<< HEAD
-k8s.io/sample-apiserver v0.20.1 h1:LeArCEfqpr12WvXs6CwZnPQxE3cdimzr1Sp8D/2GZ5g=
-=======
->>>>>>> main
 k8s.io/sample-apiserver v0.20.1/go.mod h1:Ti0ug/r3ascaPpc7z22LC3jg3+wv7oCpcNPs0YdREes=
 k8s.io/system-validators v1.2.0/go.mod h1:bPldcLgkIUK22ALflnsXk8pvkTEndYdNuaHH6gRrl0Q=
 k8s.io/utils v0.0.0-20201110183641-67b214c5f920 h1:CbnUZsM497iRC5QMVkHwyl8s2tB3g7yaSHkYPkpgelw=
@@ -1231,7 +1217,6 @@ sigs.k8s.io/kustomize v2.0.3+incompatible h1:JUufWFNlI44MdtnjUqVnvh29rR37PQFzPbL
 sigs.k8s.io/kustomize v2.0.3+incompatible/go.mod h1:MkjgH3RdOWrievjo6c9T245dYlB5QeXV4WCbnt/PEpU=
 sigs.k8s.io/structured-merge-diff/v4 v4.0.2 h1:YHQV7Dajm86OuqnIR6zAelnDWBRjo+YhYV9PmGrh1s8=
 sigs.k8s.io/structured-merge-diff/v4 v4.0.2/go.mod h1:bJZC9H9iH24zzfZ/41RGcq60oK1F7G282QMXDPYydCw=
-sigs.k8s.io/yaml v1.1.0 h1:4A07+ZFc2wgJwo8YNlQpr1rVlgUDlxXHhPJciaPY5gs=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sigs.k8s.io/yaml v1.2.0 h1:kr/MCeFWJWTwyaHoR9c8EjH9OumOmoF9YGiZd7lFm/Q=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
