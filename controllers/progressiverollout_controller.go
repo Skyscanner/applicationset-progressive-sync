@@ -97,7 +97,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
-			err := r.syncApp(s.Name)
+			_, err := r.syncApp(s.Name)
 			if err != nil {
 				log.Error(err, "unable to sync apps")
 				return ctrl.Result{}, err
@@ -311,17 +311,13 @@ func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps *[]argov1al
 }
 
 // syncApp sends a sync request for the target app
-func (r *ProgressiveRolloutReconciler) syncApp(appName string) error {
+func (r *ProgressiveRolloutReconciler) syncApp(appName string) (*argov1alpha1.Application, error) {
 	ctx := context.Background()
 
 	syncReq := applicationpkg.ApplicationSyncRequest{
 		Name: &appName,
 	}
 
-	_, err := r.ArgoCDAppClient.Sync(ctx, &syncReq)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return r.ArgoCDAppClient.Sync(ctx, &syncReq)
 }
+
