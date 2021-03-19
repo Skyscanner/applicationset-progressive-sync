@@ -11,9 +11,9 @@ import (
 	"testing"
 )
 
-type MockArgoCDAppClientSyncOK struct{}
+type mockArgoCDAppClientSyncOK struct{}
 
-func (c *MockArgoCDAppClientSyncOK) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
+func (c *mockArgoCDAppClientSyncOK) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
 	return &argov1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: *in.Name,
@@ -21,15 +21,15 @@ func (c *MockArgoCDAppClientSyncOK) Sync(ctx context.Context, in *applicationpkg
 	}, nil
 }
 
-type MockArgoCDAppClientSyncNotOK struct{}
+type mockArgoCDAppClientSyncNotOK struct{}
 
-func (c *MockArgoCDAppClientSyncNotOK) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
+func (c *mockArgoCDAppClientSyncNotOK) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
 	return nil, errors.New("rpc error: code = FailedPrecondition desc = authentication required")
 }
 
 func TestSync(t *testing.T) {
 	r := ProgressiveRolloutReconciler{
-		ArgoCDAppClient: &MockArgoCDAppClientSyncOK{},
+		ArgoCDAppClient: &mockArgoCDAppClientSyncOK{},
 	}
 
 	testAppName := "foo-bar"
@@ -43,7 +43,7 @@ func TestSync(t *testing.T) {
 
 func TestSyncErr(t *testing.T) {
 	r := ProgressiveRolloutReconciler{
-		ArgoCDAppClient: &MockArgoCDAppClientSyncNotOK{},
+		ArgoCDAppClient: &mockArgoCDAppClientSyncNotOK{},
 	}
 
 	testAppName := "foo-bar"

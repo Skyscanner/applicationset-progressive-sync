@@ -25,12 +25,12 @@ const (
 	interval = time.Millisecond * 10
 )
 
-type MockArgoCDAppClientCounter struct {
+type mockArgoCDAppClientCounter struct {
 	appsSynced []string
 	m          sync.Mutex
 }
 
-func (c *MockArgoCDAppClientCounter) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
+func (c *mockArgoCDAppClientCounter) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
 	c.m.Lock()
 	c.appsSynced = append(c.appsSynced, *in.Name)
 	defer c.m.Unlock()
@@ -38,7 +38,7 @@ func (c *MockArgoCDAppClientCounter) Sync(ctx context.Context, in *applicationpk
 	return nil, nil
 }
 
-func (c *MockArgoCDAppClientCounter) GetSyncedApps() []string {
+func (c *mockArgoCDAppClientCounter) GetSyncedApps() []string {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -69,7 +69,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		err := k8sClient.Create(context.Background(), ns)
 		Expect(err).To(BeNil(), "failed to create test namespace")
 
-		reconciler.ArgoCDAppClient = &MockArgoCDAppClient{}
+		reconciler.ArgoCDAppClient = &mockArgoCDAppClient{}
 	})
 
 	AfterEach(func() {
@@ -299,7 +299,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 
 		It("should send a request to sync an application", func() {
-			mockedArgoCDAppClient := &MockArgoCDAppClientCounter{}
+			mockedArgoCDAppClient := &mockArgoCDAppClientCounter{}
 			reconciler.ArgoCDAppClient = mockedArgoCDAppClient
 			testAppName := "single-stage-app"
 
@@ -355,7 +355,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
 
 			Eventually(func() []string {
-				return mockedArgoCDAppClient.GetSyncedApps()
+				return mockedArgoCDAppClient.appsSynced
 			}).Should(ContainElement(testAppName))
 		})
 	})

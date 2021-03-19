@@ -47,9 +47,9 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var reconciler *ProgressiveRolloutReconciler
 
-type MockArgoCDAppClient struct{}
+type mockArgoCDAppClient struct{}
 
-func (*MockArgoCDAppClient) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
+func (*mockArgoCDAppClient) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
 	return nil, nil
 }
 
@@ -90,7 +90,7 @@ var _ = BeforeSuite(func(done Done) {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	mockAcdClient := &MockArgoCDAppClient{}
+	mockAcdClient := &mockArgoCDAppClient{}
 	reconciler = &ProgressiveRolloutReconciler{
 		Client:          k8sManager.GetClient(),
 		Log:             ctrl.Log.WithName("controllers").WithName("progressiverollout"),

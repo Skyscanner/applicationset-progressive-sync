@@ -7,6 +7,6 @@ const (
 	AppSetAPIGroup                     = "argoproj.io/v1alpha1"
 	ArgoCDAuthTokenFile                = "argocd-auth-token"
 	ArgoCDServerAddrFile               = "argocd-server-addr"
-	ConfigDirectory                    = "config/"
+	ConfigDirectory                    = ".prcconfig/"
 	ProgressiveRolloutSyncedAtStageKey = "apr.skyscanner.net/syncedAtStage"
 )
