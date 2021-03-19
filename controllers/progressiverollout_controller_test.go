@@ -355,7 +355,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
 
 			Eventually(func() []string {
-				return mockedArgoCDAppClient.appsSynced
+				return mockedArgoCDAppClient.GetSyncedApps()
 			}).Should(ContainElement(testAppName))
 		})
 	})
