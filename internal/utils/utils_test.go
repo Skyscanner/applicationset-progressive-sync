@@ -1,38 +1,48 @@
 package utils
 
 import (
+	"testing"
+
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestIsArgoCDCluster(t *testing.T) {
 	testCases := []struct {
+		name     string
 		labels   map[string]string
 		expected bool
 	}{{
-		labels: map[string]string{"foo": "bar", ArgoCDSecretTypeLabel: ArgoCDSecretTypeCluster, "key": "value"}, expected: true,
+		name:     "correct secret label key and value",
+		labels:   map[string]string{"foo": "bar", ArgoCDSecretTypeLabel: ArgoCDSecretTypeCluster, "key": "value"},
+		expected: true,
 	}, {
+		name:     "correct secret label key but wrong value",
 		labels:   map[string]string{"foo": "bar", ArgoCDSecretTypeLabel: "wrong-value", "key": "value"},
 		expected: false,
 	}, {
+		name:     "wrong secret label key and value",
 		labels:   map[string]string{"foo": "bar", "wrong-label": "wrong-value", "key": "value"},
 		expected: false,
 	}, {
+		name:     "correct secret label value but wrong key ",
 		labels:   map[string]string{"foo": "bar", "wrong-label": ArgoCDSecretTypeCluster, "key": "value"},
 		expected: false,
 	}, {
+		name:     "missing secret label",
 		labels:   map[string]string{"foo": "bar", "key": "value"},
 		expected: false,
 	}}
 
 	for _, testCase := range testCases {
-		got := IsArgoCDCluster(testCase.labels)
-		g := NewWithT(t)
-		g.Expect(got).To(Equal(testCase.expected))
+		t.Run(testCase.name, func(t *testing.T) {
+			got := IsArgoCDCluster(testCase.labels)
+			g := NewWithT(t)
+			g.Expect(got).To(Equal(testCase.expected))
+		})
 	}
 }
 

@@ -14,3 +14,17 @@ repos:
     - id: helm-docs
       args:
         - --chart-search-root=charts
+- repo: https://github.com/shellcheck-py/shellcheck-py
+  rev: v0.7.1.1
+  hooks:
+  - id: shellcheck
+    args:
+      - -x
+- repo: local
+  hooks:
+  - id: shell-format
+    name: shell-format
+    entry: shfmt -l -d -w .
+    language: system
+    types: [shell]
+    pass_filenames: false
