@@ -165,3 +165,6 @@ hack/.hack.*
 
 # Ignore .env files
 .env.local
+
+# Ignore local PRC config
+.prcconfig/*
