@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strings"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
@@ -93,14 +94,20 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 
 		// Get the Applications to update
-		scheduledApps := scheduler.Scheduler(apps, stage)
+		scheduledApps := scheduler.Scheduler(outOfSyncApps, stage)
 
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
+
 			_, err := r.syncApp(s.Name)
+
 			if err != nil {
-				log.Error(err, "unable to sync app")
-				return ctrl.Result{}, err
+				if strings.Contains(err.Error(), "another operation is already in progress") {
+					log.Info("another operation is already in progress", "app", s)
+				} else {
+					log.Error(err, "unable to sync app", "app", s)
+					return ctrl.Result{}, err
+				}
 			}
 		}
 
