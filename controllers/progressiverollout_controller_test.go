@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
@@ -17,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"sync"
 	"time"
 )
 
@@ -27,19 +27,22 @@ const (
 
 type MockArgoCDAppClientCounter struct {
 	appsSynced []string
+	m          sync.Mutex
 }
 
 func (c *MockArgoCDAppClientCounter) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
+	c.m.Lock()
 	c.appsSynced = append(c.appsSynced, *in.Name)
+	defer c.m.Unlock()
+
 	return nil, nil
 }
 
-type MockArgoCDAppClientAlreadySyncing struct {
-	testApp argov1alpha1.Application
-}
+func (c *MockArgoCDAppClientCounter) GetSyncedApps() []string {
+	c.m.Lock()
+	defer c.m.Unlock()
 
-func (c *MockArgoCDAppClientAlreadySyncing) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
-	return nil, errors.New("rpc error: code = FailedPrecondition desc = another operation is already in progress")
+	return c.appsSynced
 }
 
 var _ = Describe("ProgressiveRollout Controller", func() {
@@ -352,7 +355,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
 
 			Eventually(func() []string {
-				return mockedArgoCDAppClient.appsSynced
+				return mockedArgoCDAppClient.GetSyncedApps()
 			}).Should(ContainElement(testAppName))
 		})
 	})

@@ -11,9 +11,7 @@ import (
 	"testing"
 )
 
-type MockArgoCDAppClientSyncOK struct {
-	testApp argov1alpha1.Application
-}
+type MockArgoCDAppClientSyncOK struct{}
 
 func (c *MockArgoCDAppClientSyncOK) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
 	return &argov1alpha1.Application{
@@ -23,9 +21,7 @@ func (c *MockArgoCDAppClientSyncOK) Sync(ctx context.Context, in *applicationpkg
 	}, nil
 }
 
-type MockArgoCDAppClientSyncNotOK struct {
-	testApp argov1alpha1.Application
-}
+type MockArgoCDAppClientSyncNotOK struct{}
 
 func (c *MockArgoCDAppClientSyncNotOK) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
 	return nil, errors.New("rpc error: code = FailedPrecondition desc = authentication required")
