@@ -80,19 +80,17 @@ function local_argocd_login() {
 	argocd login --insecure --username prc --password prc localhost:"$argoserver_nodeport" >/dev/null
 
 	{
-		echo "ARGOCD_TOKEN=$token"
+		echo "ARGOCD_AUTH_TOKEN=$token"
 		echo "ARGOCD_USERNAME=prc"
 		echo "ARGOCD_PASSWORD=prc"
 		echo "ARGOCD_INCLUSTER_ADDRESS=$serverip"
-		echo "ARGOCD_LOCAL_ADDRESS=https://localhost:$argoserver_nodeport"
+		echo "ARGOCD_SERVER_ADDR=localhost:$argoserver_nodeport"
 	} >.env.local
 
-	if [ ! -d .prcconfig ]; then
-		mkdir -p .prcconfig
-	fi
-
-	echo -n "$token" | tr -d '\r' >.prcconfig/argocd-auth-token
-	echo -n "localhost:$argoserver_nodeport" >.prcconfig/argocd-server-addr
+	{
+		echo "ARGOCD_AUTH_TOKEN=$token"
+		echo "ARGOCD_SERVER_ADDR=argocd-server"
+	} >config/manager/.env.cluster
 
 	# Create a secret storing the token and in-cluster ip
 	kubectl delete secret generic -n argocd prc-controller-secret >/dev/null || err "Secret not found. Creating.."

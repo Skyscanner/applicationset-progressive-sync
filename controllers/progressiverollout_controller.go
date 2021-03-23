@@ -94,7 +94,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 
 		// Get the Applications to update
-		scheduledApps := scheduler.Scheduler(outOfSyncApps, stage)
+		scheduledApps := scheduler.Scheduler(apps, stage)
 
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
@@ -102,9 +102,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			_, err := r.syncApp(s.Name)
 
 			if err != nil {
-				if strings.Contains(err.Error(), "another operation is already in progress") {
-					log.Info("another operation is already in progress", "app", s)
-				} else {
+				if !strings.Contains(err.Error(), "another operation is already in progress") {
 					log.Error(err, "unable to sync app", "app", s)
 					return ctrl.Result{}, err
 				}

@@ -5,4 +5,11 @@ kind: Kustomization
 images:
 - name: controller
   newName: controller
-  newTag: latest
+  newTag: 0.0.1
+secretGenerator:
+- envs:
+  - .env.cluster
+  name: prc-config
+  type: Opaque
+generatorOptions:
+  disableNameSuffixHash: true

@@ -12,6 +12,7 @@ type ArgoCDAppClient interface {
 	Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*v1alpha1.Application, error)
 }
 
+// GetArgoCDAppClient builds an Argo CD application client with the provided configuration
 func GetArgoCDAppClient(c *Configuration) ArgoCDAppClient {
 	acdClientOpts := argocdclient.ClientOptions{
 		ServerAddr: c.ArgoCDServerAddr,

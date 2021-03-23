@@ -22,11 +22,16 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      volumes:
+        - name: prcconfig
+          secret:
+            defaultMode: 420
+            secretName: aprprc-config
       containers:
       - command:
         - /manager
-        args:
-        - --enable-leader-election
+        args: []
+        # - --enable-leader-election
         image: controller:latest
         name: manager
         resources:
@@ -36,4 +41,8 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        volumeMounts:
+            - mountPath: /.prcconfig
+              name: prcconfig
+              readOnly: true
       terminationGracePeriodSeconds: 10
