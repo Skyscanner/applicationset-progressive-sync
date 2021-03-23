@@ -60,6 +60,35 @@ Expect a non-functional controller and breaking changes until Milestone 2 is com
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
+## Configuration
+
+The controller connects to an Argo CD server and requires configuration to do so:
+```
+ARGOCD_AUTH_TOKEN: <token of the Argo CD user>
+ARGOCD_SERVER_ADDR: <address of the Argo CD server>
+```
+
+The above configuration is loaded taking into account the following priority order:
+
+1. Environment Variables.
+
+
+```
+ARGOCD_AUTH_TOKEN=ey...
+ARGOCD_SERVER_ADDR=argocd-server
+```
+
+
+2. Files in the Config Directory.
+```
+.
+├── .prcconfig
+│   ├── ARGOCD_AUTH_TOKEN # file content: "ey..."
+│   ├── ARGOCD_SERVER_ADDR # file content: "argocd-server"
+```
+
+If neither is present, the controller will **fail** to start.
+
 ## Development
 
 ### Local development with Kubebuilder
@@ -70,6 +99,26 @@ To get the controller running against the configured Kubernetes cluster in ~/.ku
 make install
 make run
 ```
+
+Please remember the `ARGOCD_AUTH_TOKEN` and `ARGOCD_SERVER_ADDR` variables need to be present in order 
+to run against a Kubernetes cluster with Argo CD. If the cluster was configured using the `hack/setup-dev.sh` script,
+these variables are part of the `.env.local` file.
+
+
+### Deploying to a Kubernetes cluster
+
+To deploy the controller to a Kubernetes cluster, run:
+```
+make install
+make docker-build
+make deploy
+```
+
+In order to so, a `.env.cluster` file needs to exist in the `config/manager` folder, containing
+both required variables, in accordance with the provided `.example` file. 
+
+If using `kind` clusters, docker images need to be loaded manually using `kind load docker-image <image>:<version> --name <cluster-name>`
+.
 
 ### Setting up dev environment
 
@@ -89,7 +138,6 @@ After running the script, you will have 3 kind clusters created locally:
  - `kind-prc-cluster-1` and `kind-prc-cluster-2` - are the target clusters for deploying the apps to.
 
  This gives us a total of 3 clusters allowing us to play with multiple stages of deploying. It will also log you in argocd cli. You can find additional login details in `.env.local` file that will be generated for your convenience.
-
  #### Regenerating your access
 
  In case that your access to the local argocd has become broken, you can regenerate it by running
