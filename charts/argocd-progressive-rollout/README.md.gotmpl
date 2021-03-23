@@ -11,8 +11,8 @@
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add {{ template "chart.name" . }} {{ template "chart.homepage" . }}/charts/{{ template "chart.name" . }}
-helm install my-release {{ template "chart.name" . }}/{{ template "chart.name" . }}
+helm repo add {{ template "chart.name" . }} https://skyscanner.github.io/argocd-progressive-rollout/
+helm upgrade -i my-release {{ template "chart.name" . }}/{{ template "chart.name" . }} --namespace argocd
 ```
 
 ### Helm v2 Compatibility
