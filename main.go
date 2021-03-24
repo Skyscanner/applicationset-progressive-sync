@@ -75,8 +75,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	acdAppClient := utils.GetArgoCDAppClient(c)
-
 	if err = (&controllers.ProgressiveRolloutReconciler{
 		Client:          mgr.GetClient(),
 		Log:             ctrl.Log.WithName("controllers").WithName("ProgressiveRollout"),

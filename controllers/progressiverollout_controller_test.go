@@ -32,8 +32,8 @@ type mockArgoCDAppClientCounter struct {
 
 func (c *mockArgoCDAppClientCounter) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
 	c.m.Lock()
-	c.appsSynced = append(c.appsSynced, *in.Name)
 	defer c.m.Unlock()
+	c.appsSynced = append(c.appsSynced, *in.Name)
 
 	return nil, nil
 }
