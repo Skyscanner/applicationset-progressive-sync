@@ -43,7 +43,6 @@ func readFromEnvOrFile(secretName string) (string, error) {
 	return value, nil
 }
 
-
 /*
 ReadConfiguration returns a Configuration, reading it from environment variables if present, or from files in
 the configuration directory otherwise

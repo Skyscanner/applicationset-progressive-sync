@@ -42,7 +42,7 @@ spec:
             cpu: 100m
             memory: 20Mi
         volumeMounts:
-            - mountPath: /.prcconfig
+            - mountPath: /etc/prcconfig
               name: prcconfig
               readOnly: true
       terminationGracePeriodSeconds: 10

@@ -79,10 +79,10 @@ ARGOCD_SERVER_ADDR=argocd-server
 ```
 
 
-2. Files in the Config Directory.
+2. Files in the Config Directory (`/etc/prcconfig/`).
 ```
-.
-├── .prcconfig
+/etc/
+├── prcconfig/
 │   ├── ARGOCD_AUTH_TOKEN # file content: "ey..."
 │   ├── ARGOCD_SERVER_ADDR # file content: "argocd-server"
 ```
@@ -117,8 +117,7 @@ make deploy
 In order to so, a `.env.cluster` file needs to exist in the `config/manager` folder, containing
 both required variables, in accordance with the provided `.example` file. 
 
-If using `kind` clusters, docker images need to be loaded manually using `kind load docker-image <image>:<version> --name <cluster-name>`
-.
+If using `kind` clusters, docker images need to be loaded manually using `kind load docker-image <image>:<version> --name <cluster-name>`.
 
 ### Setting up dev environment
 
