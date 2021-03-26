@@ -5,18 +5,16 @@ import (
 	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
-	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
+	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"sync"
 	"time"
 )
 
@@ -24,26 +22,6 @@ const (
 	timeout  = time.Second * 10
 	interval = time.Millisecond * 10
 )
-
-type mockArgoCDAppClientCalledWithApp struct {
-	appsSynced []string
-	m          sync.Mutex
-}
-
-func (c *mockArgoCDAppClientCalledWithApp) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
-	c.m.Lock()
-	defer c.m.Unlock()
-	c.appsSynced = append(c.appsSynced, *in.Name)
-
-	return nil, nil
-}
-
-func (c *mockArgoCDAppClientCalledWithApp) GetSyncedApps() []string {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	return c.appsSynced
-}
 
 var _ = Describe("ProgressiveRollout Controller", func() {
 
@@ -69,7 +47,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		err := k8sClient.Create(context.Background(), ns)
 		Expect(err).To(BeNil(), "failed to create test namespace")
 
-		reconciler.ArgoCDAppClient = &mockArgoCDAppClient{}
+		reconciler.ArgoCDAppClient = &mocks.ArgoCDAppClientStub{}
 	})
 
 	AfterEach(func() {
@@ -336,7 +314,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 
 		It("should send a request to sync an application", func() {
-			mockedArgoCDAppClient := &mockArgoCDAppClientCalledWithApp{}
+			mockedArgoCDAppClient := &mocks.MockArgoCDAppClientCalledWith{}
 			reconciler.ArgoCDAppClient = mockedArgoCDAppClient
 			testAppName := "single-stage-app"
 

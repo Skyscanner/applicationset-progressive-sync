@@ -17,13 +17,11 @@
 package controllers
 
 import (
-	"context"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
-	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
+	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"google.golang.org/grpc"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"math/rand"
@@ -46,12 +44,6 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var reconciler *ProgressiveRolloutReconciler
-
-type mockArgoCDAppClient struct{}
-
-func (*mockArgoCDAppClient) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
-	return nil, nil
-}
 
 func TestController(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -90,7 +82,7 @@ var _ = BeforeSuite(func(done Done) {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	mockAcdClient := &mockArgoCDAppClient{}
+	mockAcdClient := &mocks.ArgoCDAppClientStub{}
 	reconciler = &ProgressiveRolloutReconciler{
 		Client:          k8sManager.GetClient(),
 		Log:             ctrl.Log.WithName("controllers").WithName("progressiverollout"),

@@ -158,7 +158,8 @@ After running the script, you will have 3 kind clusters created locally:
  - `kind-prc-cluster-1` and `kind-prc-cluster-2` - are the target clusters for deploying the apps to.
 
  This gives us a total of 3 clusters allowing us to play with multiple stages of deploying. It will also log you in argocd cli. You can find additional login details in `.env.local` file that will be generated for your convenience.
- #### Regenerating your access
+ 
+#### Regenerating your access
 
  In case that your access to the local argocd has become broken, you can regenerate it by running
 

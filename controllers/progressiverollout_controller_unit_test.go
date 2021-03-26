@@ -1,35 +1,14 @@
 package controllers
 
 import (
-	"context"
-	"errors"
-	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
-	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
+	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
 	. "github.com/onsi/gomega"
-	"google.golang.org/grpc"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
-type mockArgoCDAppClientSyncOK struct{}
-
-func (c *mockArgoCDAppClientSyncOK) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
-	return &argov1alpha1.Application{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: *in.Name,
-		},
-	}, nil
-}
-
-type mockArgoCDAppClientSyncNotOK struct{}
-
-func (c *mockArgoCDAppClientSyncNotOK) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
-	return nil, errors.New("rpc error: code = FailedPrecondition desc = authentication required")
-}
-
 func TestSync(t *testing.T) {
 	r := ProgressiveRolloutReconciler{
-		ArgoCDAppClient: &mockArgoCDAppClientSyncOK{},
+		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncOK{},
 	}
 
 	testAppName := "foo-bar"
@@ -43,7 +22,7 @@ func TestSync(t *testing.T) {
 
 func TestSyncErr(t *testing.T) {
 	r := ProgressiveRolloutReconciler{
-		ArgoCDAppClient: &mockArgoCDAppClientSyncNotOK{},
+		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncNotOK{},
 	}
 
 	testAppName := "foo-bar"
