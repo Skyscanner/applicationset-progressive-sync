@@ -23,10 +23,10 @@ spec:
         control-plane: controller-manager
     spec:
       volumes:
-        - name: prcconfig
+        - name: prc-config
           secret:
             defaultMode: 420
-            secretName: aprprc-config
+            secretName: prc-config
       containers:
       - command:
         - /manager
@@ -43,6 +43,6 @@ spec:
             memory: 20Mi
         volumeMounts:
             - mountPath: /etc/prcconfig
-              name: prcconfig
+              name: prc-config
               readOnly: true
       terminationGracePeriodSeconds: 10

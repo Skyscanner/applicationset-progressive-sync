@@ -6,10 +6,5 @@ images:
 - name: controller
   newName: controller
   newTag: latest
-secretGenerator:
-- envs:
-  - .env.cluster
-  name: prc-config
-  type: Opaque
 generatorOptions:
   disableNameSuffixHash: true

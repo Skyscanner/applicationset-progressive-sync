@@ -13,10 +13,10 @@ type ArgoCDAppClient interface {
 }
 
 // GetArgoCDAppClient builds an Argo CD application client with the provided configuration
-func GetArgoCDAppClient(c *Configuration) ArgoCDAppClient {
+func GetArgoCDAppClient(c Configuration) ArgoCDAppClient {
 	acdClientOpts := argocdclient.ClientOptions{
 		ServerAddr: c.ArgoCDServerAddr,
-		Insecure:   true,
+		Insecure:   c.ArgoCDInsecure,
 		AuthToken:  c.ArgoCDAuthToken,
 	}
 

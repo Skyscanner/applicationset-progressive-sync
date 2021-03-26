@@ -25,12 +25,12 @@ const (
 	interval = time.Millisecond * 10
 )
 
-type mockArgoCDAppClientCounter struct {
+type mockArgoCDAppClientCalledWithApp struct {
 	appsSynced []string
 	m          sync.Mutex
 }
 
-func (c *mockArgoCDAppClientCounter) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
+func (c *mockArgoCDAppClientCalledWithApp) Sync(ctx context.Context, in *applicationpkg.ApplicationSyncRequest, opts ...grpc.CallOption) (*argov1alpha1.Application, error) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.appsSynced = append(c.appsSynced, *in.Name)
@@ -38,7 +38,7 @@ func (c *mockArgoCDAppClientCounter) Sync(ctx context.Context, in *applicationpk
 	return nil, nil
 }
 
-func (c *mockArgoCDAppClientCounter) GetSyncedApps() []string {
+func (c *mockArgoCDAppClientCalledWithApp) GetSyncedApps() []string {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -336,7 +336,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 
 		It("should send a request to sync an application", func() {
-			mockedArgoCDAppClient := &mockArgoCDAppClientCounter{}
+			mockedArgoCDAppClient := &mockArgoCDAppClientCalledWithApp{}
 			reconciler.ArgoCDAppClient = mockedArgoCDAppClient
 			testAppName := "single-stage-app"
 

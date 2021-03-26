@@ -165,4 +165,3 @@ hack/.hack.*
 
 # Ignore .env files
 .env.local
-config/manager/.env.cluster

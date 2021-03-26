@@ -103,7 +103,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 			if err != nil {
 				if !strings.Contains(err.Error(), "another operation is already in progress") {
-					log.Error(err, "unable to sync app", "app", s)
+					log.Error(err, "unable to sync app", "message", err.Error())
 					return ctrl.Result{}, err
 				}
 			}

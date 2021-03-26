@@ -66,6 +66,7 @@ The controller connects to an Argo CD server and requires configuration to do so
 ```
 ARGOCD_AUTH_TOKEN: <token of the Argo CD user>
 ARGOCD_SERVER_ADDR: <address of the Argo CD server>
+ARGOCD_INSECURE: <true/false>
 ```
 
 The above configuration is loaded taking into account the following priority order:
@@ -76,15 +77,17 @@ The above configuration is loaded taking into account the following priority ord
 ```
 ARGOCD_AUTH_TOKEN=ey...
 ARGOCD_SERVER_ADDR=argocd-server
+ARGOCD_INSECURE=true
 ```
 
 
-2. Files in the Config Directory (`/etc/prcconfig/`).
+2. Files in the Config Directory (`/etc/prc-config/`).
 ```
 /etc/
 ├── prcconfig/
-│   ├── ARGOCD_AUTH_TOKEN # file content: "ey..."
-│   ├── ARGOCD_SERVER_ADDR # file content: "argocd-server"
+│   ├── ARGOCD_AUTH_TOKEN  # file content: ey...
+│   ├── ARGOCD_SERVER_ADDR # file content: argocd-server
+│   ├── ARGOCD_INSECURE    # file content: true
 ```
 
 If neither is present, the controller will **fail** to start.
@@ -95,12 +98,12 @@ If neither is present, the controller will **fail** to start.
 
 To get the controller running against the configured Kubernetes cluster in ~/.kube/config, run:
 
-```
+```shell
 make install
 make run
 ```
 
-Please remember the `ARGOCD_AUTH_TOKEN` and `ARGOCD_SERVER_ADDR` variables need to be present in order 
+Please remember the `ARGOCD_AUTH_TOKEN`, `ARGOCD_SERVER_ADDR` and `ARGOCD_INSECURE`  environment variables need to be present in order 
 to run against a Kubernetes cluster with Argo CD. If the cluster was configured using the `hack/setup-dev.sh` script,
 these variables are part of the `.env.local` file.
 
@@ -108,22 +111,40 @@ these variables are part of the `.env.local` file.
 ### Deploying to a Kubernetes cluster
 
 To deploy the controller to a Kubernetes cluster, run:
-```
+```shell
 make install
 make docker-build
 make deploy
 ```
-
-In order to so, a `.env.cluster` file needs to exist in the `config/manager` folder, containing
-both required variables, in accordance with the provided `.example` file. 
+  
+In order to do so, the target cluster needs to have a secret named `prc-config` containing the three necessary
+variables: `ARGOCD_AUTH_TOKEN`, `ARGOCD_SERVER_ADDR` and `ARGOCD_INSECURE`. If using the dev environment
+in the following section, this secret has already been created.
 
 If using `kind` clusters, docker images need to be loaded manually using `kind load docker-image <image>:<version> --name <cluster-name>`.
+
+#### Configuration Secret
+
+Here's a sample secret of the necessary configuration:
+
+```yaml
+apiVersion: v1
+data:
+  ARGOCD_AUTH_TOKEN: ey...
+  ARGOCD_INSECURE: true
+  ARGOCD_SERVER_ADDR: argocd-server
+kind: Secret
+metadata:
+  name: prc-config
+  namespace: argocd
+type: Opaque
+```
 
 ### Setting up dev environment
 
 To facilitate local debugging and testing against real clusters, you may run:
 
-```
+```shell
 bash hack/install-dev-deps.sh
 bash hack/setup-dev.sh [argocd-version] [appset-version]
 make install
@@ -141,7 +162,7 @@ After running the script, you will have 3 kind clusters created locally:
 
  In case that your access to the local argocd has become broken, you can regenerate it by running
 
- ```
+ ```shell
  bash hack/login-argocd-local.sh
  ```
 
@@ -151,7 +172,7 @@ After running the script, you will have 3 kind clusters created locally:
  #### Registering additional clusters
 
  If you want to create additional clusters, you can do so by running
- ```
+ ```shell
  bash hack/add-cluster <cluster-name> <recreate>
  ```
  This will spin up another kind cluster and register it against ArgoCD running in `kind-argocd-control-plane`
@@ -160,7 +181,7 @@ After running the script, you will have 3 kind clusters created locally:
 
 You can deploy a test appset to the default 3 clusters by running the following:
 
-```
+```shell
 bash hack/deploy-test-appset.sh
 ```
 Feel free to extend the cluster generation section of the appset spec if you want to deploy it clusters that you have manually created.
