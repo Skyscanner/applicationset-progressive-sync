@@ -6,5 +6,3 @@ images:
 - name: controller
   newName: controller
   newTag: latest
-generatorOptions:
-  disableNameSuffixHash: true
