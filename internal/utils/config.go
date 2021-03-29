@@ -33,9 +33,9 @@ func readFromFile(path string) (string, error) {
 // readFromEnvOrFile returns the value of an environment variable if present, or from a file otherwise
 func readFromEnvOrFile(paramName string) (string, error) {
 	var err error
-	value := os.Getenv(paramName)
+	value, ok := os.LookupEnv(paramName)
 
-	if len(value) == 0 {
+	if !ok {
 		value, err = readFromFile(ConfigDirectory + paramName)
 		if err != nil {
 			return "", err
