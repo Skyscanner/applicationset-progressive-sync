@@ -90,7 +90,7 @@ ARGOCD_INSECURE=true
 │   ├── ARGOCD_INSECURE    # file content: true
 ```
 
-If neither is present, the controller will **fail** to start.
+If at least one of the options is missing, the controller will **fail** to start.
 
 ## Development
 
