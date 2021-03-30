@@ -25,7 +25,6 @@ spec:
       volumes:
         - name: prc-config
           secret:
-            defaultMode: 420
             secretName: prc-config
       containers:
       - command:
