@@ -19,10 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
+	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -37,13 +37,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strings"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
 type ProgressiveRolloutReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	ArgoCDAppClient utils.ArgoCDAppClient
 }
 
 // +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete
@@ -95,8 +97,16 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		scheduledApps := scheduler.Scheduler(apps, stage)
 
 		for _, s := range scheduledApps {
-			// TODO: add sync method here
 			r.Log.Info("syncing app", "app", s)
+
+			_, err := r.syncApp(s.Name)
+
+			if err != nil {
+				if !strings.Contains(err.Error(), "another operation is already in progress") {
+					log.Error(err, "unable to sync app", "message", err.Error())
+					return ctrl.Result{}, err
+				}
+			}
 		}
 
 		if scheduler.IsStageFailed(apps, stage) {
@@ -303,4 +313,15 @@ func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps []argov1alp
 		}
 	}
 	return nil
+}
+
+// syncApp sends a sync request for the target app
+func (r *ProgressiveRolloutReconciler) syncApp(appName string) (*argov1alpha1.Application, error) {
+	ctx := context.Background()
+
+	syncReq := applicationpkg.ApplicationSyncRequest{
+		Name: &appName,
+	}
+
+	return r.ArgoCDAppClient.Sync(ctx, &syncReq)
 }

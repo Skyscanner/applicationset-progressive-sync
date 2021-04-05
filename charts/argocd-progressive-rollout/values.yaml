@@ -62,3 +62,8 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+configSecret:
+  argoCDAuthToken: ""
+  argoCDServerAddr: "argocd-server"
+  argoCDInsecure: true

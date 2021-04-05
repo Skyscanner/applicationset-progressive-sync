@@ -18,6 +18,7 @@ package controllers
 
 import (
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
+	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -81,9 +82,11 @@ var _ = BeforeSuite(func(done Done) {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	mockAcdClient := &mocks.ArgoCDAppClientStub{}
 	reconciler = &ProgressiveRolloutReconciler{
-		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("progressiverollout"),
+		Client:          k8sManager.GetClient(),
+		Log:             ctrl.Log.WithName("controllers").WithName("progressiverollout"),
+		ArgoCDAppClient: mockAcdClient,
 	}
 	err = reconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())

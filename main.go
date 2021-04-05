@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -68,10 +69,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	c, err := utils.ReadConfiguration()
+	if err != nil {
+		setupLog.Error(err, "unable to read configuration")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.ProgressiveRolloutReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ProgressiveRollout"),
-		Scheme: mgr.GetScheme(),
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("controllers").WithName("ProgressiveRollout"),
+		Scheme:          mgr.GetScheme(),
+		ArgoCDAppClient: utils.GetArgoCDAppClient(c),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveRollout")
 		os.Exit(1)

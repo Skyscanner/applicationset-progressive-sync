@@ -56,7 +56,7 @@ sleep 5
 
 echo "All done"
 echo "ArgoCD server is available at: $local_address"
-echo "You can find the password and the token stored in .env.local file for your convinience."
+echo "You can find the password and the token stored in .env.local file for your convenience."
 
 open "$local_address"
 

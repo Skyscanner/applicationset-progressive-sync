@@ -22,6 +22,10 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      volumes:
+        - name: prc-config
+          secret:
+            secretName: prc-config
       containers:
       - command:
         - /manager
@@ -36,4 +40,8 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        volumeMounts:
+            - mountPath: /etc/prcconfig
+              name: prc-config
+              readOnly: true
       terminationGracePeriodSeconds: 10
