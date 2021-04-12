@@ -5,6 +5,7 @@ import (
 	"fmt"
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
+	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"testing"
 	"time"
 )
 
@@ -46,6 +48,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		err := k8sClient.Create(context.Background(), ns)
 		Expect(err).To(BeNil(), "failed to create test namespace")
 
+		reconciler.ArgoCDAppClient = &mocks.ArgoCDAppClientStub{}
 	})
 
 	AfterEach(func() {
@@ -310,6 +313,67 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			expected := singleStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(singleStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 		})
+
+		It("should send a request to sync an application", func() {
+			mockedArgoCDAppClient := &mocks.MockArgoCDAppClientCalledWith{}
+			reconciler.ArgoCDAppClient = mockedArgoCDAppClient
+			testAppName := "single-stage-app"
+
+			By("creating an ArgoCD cluster")
+			cluster := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
+				Data: map[string][]byte{
+					"server": []byte("https://single-stage-pr.kubernetes.io"),
+				},
+			}
+			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+
+			By("creating an application targeting the cluster")
+			singleStageApp := &argov1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testAppName,
+					Namespace: namespace,
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: utils.AppSetAPIGroup,
+						Kind:       utils.AppSetKind,
+						Name:       "single-stage-appset",
+						UID:        uuid.NewUUID(),
+					}},
+				},
+				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
+					Server:    "https://single-stage-pr.kubernetes.io",
+					Namespace: namespace,
+					Name:      "remote-cluster",
+				}},
+				Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Status: argov1alpha1.SyncStatusCodeOutOfSync}},
+			}
+			Expect(k8sClient.Create(ctx, singleStageApp)).To(Succeed())
+
+			By("creating a progressive rollout")
+			singleStagePR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
+				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetAPIRef,
+						Kind:     utils.AppSetKind,
+						Name:     "single-stage-appset",
+					},
+					Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
+						Name:        "stage 1",
+						MaxParallel: intstr.IntOrString{IntVal: 1},
+						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+							Selector: metav1.LabelSelector{MatchLabels: nil},
+						}},
+					}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
+
+			Eventually(func() []string {
+				return mockedArgoCDAppClient.GetSyncedApps()
+			}).Should(ContainElement(testAppName))
+		})
 	})
 })
 
@@ -340,4 +404,32 @@ func ExpectCondition(
 		}
 		return ""
 	})
+}
+
+func TestSync(t *testing.T) {
+	r := ProgressiveRolloutReconciler{
+		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncOK{},
+	}
+
+	testAppName := "foo-bar"
+
+	application, error := r.syncApp(testAppName)
+
+	g := NewWithT(t)
+	g.Expect(error).To(BeNil())
+	g.Expect(application.Name).To(Equal(testAppName))
+}
+
+func TestSyncErr(t *testing.T) {
+	r := ProgressiveRolloutReconciler{
+		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncNotOK{},
+	}
+
+	testAppName := "foo-bar"
+
+	application, error := r.syncApp(testAppName)
+
+	g := NewWithT(t)
+	g.Expect(application).To(BeNil())
+	g.Expect(error).ToNot(BeNil())
 }

@@ -7,8 +7,9 @@ require (
 	github.com/argoproj/gitops-engine v0.2.1-0.20210129183711-c5b7114c501f
 	github.com/go-logr/logr v0.3.0
 	github.com/kr/pretty v0.2.1 // indirect
-	github.com/onsi/ginkgo v1.14.2
-	github.com/onsi/gomega v1.10.3
+	github.com/onsi/ginkgo v1.15.2
+	github.com/onsi/gomega v1.11.0
+	google.golang.org/grpc v1.33.1
 	k8s.io/api v0.20.1
 	k8s.io/apimachinery v0.20.1
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible

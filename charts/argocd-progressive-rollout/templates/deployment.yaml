@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "argocd-progressive-rollout.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "argocd-progressive-rollout.labels" . | nindent 4 }}
 spec:
@@ -18,6 +19,10 @@ spec:
       labels:
         {{- include "argocd-progressive-rollout.selectorLabels" . | nindent 8 }}
     spec:
+      volumes:
+        - name: prc-config
+          secret:
+            secretName: prc-config
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -43,6 +48,10 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: /etc/prcconfig
+              name: prc-config
+              readOnly: true
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

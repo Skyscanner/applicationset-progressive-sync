@@ -3,6 +3,7 @@ apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: {{ template "argocd-progressive-rollout.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "argocd-progressive-rollout.labels" . | nindent 4 }}
   annotations:
