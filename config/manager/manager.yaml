@@ -28,10 +28,14 @@ spec:
             secretName: prc-config
       containers:
       - command:
-        - /start
+        - ./start.sh
         args:
         - --enable-leader-election
         image: controller:latest
+        # TODO: Kustomize this based on env
+        ports:
+        - containerPort: 2345
+          name: delve-dbg-port
         # imagePullPolicy: Never
         name: manager
         resources:

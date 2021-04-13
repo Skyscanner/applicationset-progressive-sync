@@ -1,0 +1,29 @@
+
+# TODO: Create this service when make deploying a debug version to local kind cluster
+# This will also require the creation of the following:
+# docker run \                                                                                                                                                                      (base) 
+#     --name apr-delve-socat-proxy \
+#     --detach \
+#     --restart always \
+#     --publish 2345:2345 \
+#     --link argocd-control-plane-control-plane:target \
+#     --network kind \
+#     alpine/socat \
+#     tcp-listen:2345,fork,reuseaddr tcp-connect:target:2345
+# to create a port forward to the docker container that is hosting the controlplane.
+# We could add this either to `make deploy` command, or to the control cluster creation script
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: apr-delve-service
+  namespace: argocd
+spec:
+  ports:
+  - name: delve-dbg-port
+    port: 2345
+    targetPort: delve-dbg-port
+  selector:
+    control-plane: controller-manager
