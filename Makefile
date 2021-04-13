@@ -20,7 +20,9 @@ all: manager
 
 # Run tests
 test: generate fmt vet manifests
-	([[ "$(SKIP_TESTS)" != "TRUE" ]] && ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress) || echo "Some tests failed or where skipped.."
+	@if [ "$(SKIP_TESTS)" != "TRUE" ]; then \
+		ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress ; \
+	fi
 
 install-ci:
 	go get -v github.com/onsi/ginkgo/ginkgo

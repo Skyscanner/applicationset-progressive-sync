@@ -7,7 +7,7 @@ if [[ "${DEBUG}" == "TRUE" ]]; then
     # or your debugger loses connection, delve process wil be left hanging without being able to reconnect
     # You will have to manually kill it or recycle the pod if this is deployed to k8s..
     echo "Starting manager in debug mode"
-    dlv --listen=:2345 --headless=true --api-version=2 exec ./manager -- "$@"
+    dlv --listen=:2345 --headless=true --api-version=2 exec ./manager-debug -- "$@"
 else
     echo "Starting manager in release mode"
     ./manager "$@"

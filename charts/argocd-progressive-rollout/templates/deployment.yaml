@@ -35,7 +35,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
-            - /manager
+            - /start.sh
             - --metrics-addr={{ .Values.args.metricsAddr }}
             {{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
             - --enable-leader-election=true
