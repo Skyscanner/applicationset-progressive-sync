@@ -3,6 +3,26 @@ entries:
   argocd-progressive-rollout:
   - apiVersion: v2
     appVersion: main
+    created: "2021-04-13T08:54:52.407184591Z"
+    description: A Helm chart to install the ArgoCD Progressive Rollout controller.
+    digest: ba9088d4c90dff5a702e42f5c54ccf830127333e6619f5217c7126feb83b1863
+    home: https://github.com/Skyscanner/argocd-progressive-rollout
+    keywords:
+    - argoproj
+    - appset
+    - gitops
+    maintainers:
+    - email: matteo.ruina@gmail.com
+      name: maruina
+    name: argocd-progressive-rollout
+    sources:
+    - https://github.com/Skyscanner/argocd-progressive-rollout
+    type: application
+    urls:
+    - https://github.com/Skyscanner/argocd-progressive-rollout/releases/download/argocd-progressive-rollout-0.1.4-prealpha/argocd-progressive-rollout-0.1.4-prealpha.tgz
+    version: 0.1.4-prealpha
+  - apiVersion: v2
+    appVersion: main
     created: "2021-04-12T09:37:41.815632796Z"
     description: A Helm chart to install the ArgoCD Progressive Rollout controller.
     digest: c4dee763cc8c55365e75991a9434392058dfd3a0ae54013154929c4a377581ef
@@ -81,4 +101,4 @@ entries:
     urls:
     - https://github.com/Skyscanner/argocd-progressive-rollout/releases/download/argocd-progressive-rollout-0.1.0-prealpha/argocd-progressive-rollout-0.1.0-prealpha.tgz
     version: 0.1.0-prealpha
-generated: "2021-04-12T09:37:41.815668996Z"
+generated: "2021-04-13T08:54:52.407242591Z"
