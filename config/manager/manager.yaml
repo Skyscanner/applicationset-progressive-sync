@@ -28,10 +28,11 @@ spec:
             secretName: prc-config
       containers:
       - command:
-        - /manager
+        - /start
         args:
         - --enable-leader-election
         image: controller:latest
+        # imagePullPolicy: Never
         name: manager
         resources:
           limits:

@@ -1,8 +1,13 @@
-
+SHELL := /bin/bash
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
+DEBUG ?= "False"
+SKIP_TESTS ?= "False"
+# Capitalize variables
+override SKIP_TESTS := $(shell SKIP_TESTS="$(SKIP_TESTS)"; echo $${SKIP_TESTS} | awk '{ print toupper($0) }')
+override DEBUG := $(shell DEBUG="$(DEBUG)"; echo $${DEBUG} | awk '{ print toupper($0) }')
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -15,7 +20,7 @@ all: manager
 
 # Run tests
 test: generate fmt vet manifests
-	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress
+	([[ "$(SKIP_TESTS)" != "TRUE" ]] && ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress) || echo "Some tests failed or where skipped.."
 
 install-ci:
 	go get -v github.com/onsi/ginkgo/ginkgo
@@ -40,6 +45,7 @@ uninstall: manifests
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
+	kind load docker-image ${IMG} --name argocd-control-plane
 	cd config/manager && kustomize edit set image controller=${IMG}
 	kustomize build config/default | kubectl apply -f -
 
@@ -61,7 +67,11 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
-	docker build . -t ${IMG}
+	@if [ "$(DEBUG)" = "TRUE" ]; then \
+		docker build . -t ${IMG} --target=debug ; \
+	else \
+		docker build . -t ${IMG} --target=release ; \
+	fi
 
 # Push the docker image
 docker-push:

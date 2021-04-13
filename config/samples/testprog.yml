@@ -1,0 +1,20 @@
+apiVersion: deployment.skyscanner.net/v1alpha1
+kind: ProgressiveRollout
+metadata:
+  name: go-infrabin
+  namespace: argocd
+spec:
+  sourceRef:
+    apiGroup: argoproj.io/v1alpha1
+    kind: ApplicationSet
+    name: go-infrabin
+  stages:
+    - name: deploy to in-cluster
+      maxParallel: 1
+      maxTargets: 1
+      targets:
+        clusters:
+          selector:
+            matchLabels:
+              name: in-cluster
+

@@ -148,6 +148,7 @@ To facilitate local debugging and testing against real clusters, you may run:
 bash hack/install-dev-deps.sh
 bash hack/setup-dev.sh [argocd-version] [appset-version]
 make install
+make docker-build
 make deploy
 ```
 
