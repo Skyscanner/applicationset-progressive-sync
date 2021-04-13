@@ -53,7 +53,8 @@ func TestController(t *testing.T) {
 		[]Reporter{printer.NewlineReporter{}})
 }
 
-var _ = BeforeSuite(func(done Done) {
+var _ = BeforeSuite(func() {
+	done := make(chan interface{})
 	logf.SetLogger(
 		zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)),
 	)
@@ -95,13 +96,12 @@ var _ = BeforeSuite(func(done Done) {
 		defer GinkgoRecover()
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
 		Expect(err).ToNot(HaveOccurred())
+		close(done)
 	}()
-
+	Eventually(done, timeout).Should(BeClosed())
 	k8sClient = k8sManager.GetClient()
 	Expect(k8sClient).ToNot(BeNil())
-
-	close(done)
-}, 60)
+})
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
