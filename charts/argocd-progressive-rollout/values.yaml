@@ -64,6 +64,6 @@ tolerations: []
 affinity: {}
 
 configSecret:
-  argoCDAuthToken: ""
+  argoCDAuthToken: "example-token"
   argoCDServerAddr: "argocd-server"
-  argoCDInsecure: true
+  argoCDInsecure: "true"
