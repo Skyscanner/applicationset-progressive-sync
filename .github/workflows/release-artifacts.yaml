@@ -18,8 +18,8 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - name: Get dependencies
-      run: go mod download
+    - name: Get tools
+      run: make tools
 
     - name: Get tag
       uses: olegtarasov/get-tag@v2

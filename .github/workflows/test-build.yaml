@@ -29,7 +29,7 @@ jobs:
           sudo mv /tmp/kubebuilder_${version}_${os}_${arch} /usr/local/kubebuilder
           export PATH=$PATH:/usr/local/kubebuilder/bin
 
-      - name: Install tools
+      - name: Get tools
         run: make tools
 
       - name: Test
