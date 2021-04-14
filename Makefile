@@ -13,14 +13,13 @@ endif
 
 all: manager
 
-# Run tests
-test: generate fmt vet manifests
-	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress
+# Make tools
+tools:
+	go generate -tags tools tools/tools.go
 
-install-ci:
-	go get -v github.com/onsi/ginkgo/ginkgo
-	go get -v github.com/onsi/gomega
-	go get -v -t ./...
+# Run tests
+test: tools generate fmt vet manifests
+	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress
 
 # Build manager binary
 manager: generate fmt vet
@@ -66,27 +65,3 @@ docker-build: test
 # Push the docker image
 docker-push:
 	docker push ${IMG}
-
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
-
-ginkgo:
-ifeq (, $(shell which ginkgo))
-GINKGO=$(GOBIN)/ginkgo
-else
-GINKGO=$(shell which ginkgo)
-endif
