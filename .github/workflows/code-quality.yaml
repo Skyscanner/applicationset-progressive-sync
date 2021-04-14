@@ -20,8 +20,8 @@ jobs:
         with:
           languages: go
 
-      - name: Get dependencies
-        run: go mod download
+      - name: Get tools
+        run: make tools
 
       - name: Build
         run: make manager
