@@ -73,6 +73,31 @@ type ProgressiveRolloutStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Stages     []StageStatus      `json:"stages,omitempty"`
+}
+
+// StageStatusPhase defines the observed stage phase
+// +kubebuilder:validation:Enum={inProgress,completed,failed}
+type StageStatusPhase string
+
+const (
+	PhaseInProgress StageStatusPhase = "inProgress"
+	PhaseCompleted  StageStatusPhase = "completed"
+	PhaseFailed     StageStatusPhase = "failed"
+)
+
+// StageStatus defines the observed stage status
+type StageStatus struct {
+	Name       string           `json:"name"`
+	Phase      StageStatusPhase `json:"stage,omitempty"`
+	Message    string           `json:"message,omitempty"`
+	Targets    []string         `json:"targets,omitempty"`
+	Syncing    []string         `json:"syncing,omitempty"`
+	Requeued   []string         `json:"requeued,omitempty"`
+	Failed     []string         `json:"failed,omitempty"`
+	Completed  []string         `json:"completed,omitempty"`
+	StartedAd  metav1.Time      `json:"startedAt,omitempty"`
+	FinishedAt metav1.Time      `json:"finishedAt,omitempty"`
 }
 
 // GetStatusConditions returns a pointer to the Status.Conditions slice
@@ -80,6 +105,7 @@ func (in *ProgressiveRollout) GetStatusConditions() *[]metav1.Condition {
 	return &in.Status.Conditions
 }
 
+// NewStatusCondition adds a new Condition
 func (in *ProgressiveRollout) NewStatusCondition(t string, s metav1.ConditionStatus, r string, m string) metav1.Condition {
 	return metav1.Condition{
 		Type:               t,
