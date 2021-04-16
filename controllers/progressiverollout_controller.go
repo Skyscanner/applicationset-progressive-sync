@@ -99,7 +99,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
 
-			_, err := r.syncApp(s.Name)
+			_, err = r.syncApp(s.Name)
 
 			if err != nil {
 				if !strings.Contains(err.Error(), "another operation is already in progress") {
