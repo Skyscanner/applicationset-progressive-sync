@@ -22,7 +22,11 @@ spec:
       volumes:
         - name: prc-config
           secret:
+            {{- if .Values.configSecretName }}
+            secretName: {{ .Values.configSecretName }}
+            {{- else }}
             secretName: prc-config
+            {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -50,7 +54,11 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - mountPath: /etc/prcconfig
+              {{- if .Values.configSecretName }}
+              name: {{ .Values.configSecretName }}
+              {{- else }}
               name: prc-config
+              {{- end }}
               readOnly: true
       {{- with .Values.nodeSelector }}
       nodeSelector:

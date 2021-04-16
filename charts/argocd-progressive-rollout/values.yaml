@@ -63,7 +63,11 @@ tolerations: []
 
 affinity: {}
 
-configSecret:
+# configSecretName is a secret object which supplies tokens, configs, etc.
+# If this value is not provided, a secret will be generated
+configSecretName: "prc-config"
+# config options
+config:
   argoCDAuthToken: "example-token"
   argoCDServerAddr: "argocd-server"
   argoCDInsecure: "true"

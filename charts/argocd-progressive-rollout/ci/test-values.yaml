@@ -1,2 +1,1 @@
-configSecret:
-  argoCDAuthToken: "citoken"
+configSecretName: ""

@@ -1,6 +1,6 @@
 # argocd-progressive-rollout
 
-![Version: 0.1.4-prealpha](https://img.shields.io/badge/Version-0.1.4--prealpha-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: main](https://img.shields.io/badge/AppVersion-main-informational?style=flat-square)
+![Version: 0.1.5-prealpha](https://img.shields.io/badge/Version-0.1.5--prealpha-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: main](https://img.shields.io/badge/AppVersion-main-informational?style=flat-square)
 
 A Helm chart to install the ArgoCD Progressive Rollout controller.
 
@@ -28,9 +28,10 @@ Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 | affinity | object | `{}` |  |
 | args.enableLeaderElection | bool | `false` |  |
 | args.metricsAddr | string | `":8080"` |  |
-| configSecret.argoCDAuthToken | string | `"example-token"` |  |
-| configSecret.argoCDInsecure | string | `"true"` |  |
-| configSecret.argoCDServerAddr | string | `"argocd-server"` |  |
+| config.argoCDAuthToken | string | `"example-token"` |  |
+| config.argoCDInsecure | string | `"true"` |  |
+| config.argoCDServerAddr | string | `"argocd-server"` |  |
+| configSecretName | string | `"prc-config"` |  |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.repository | string | `"maruina/argocd-progressive-rollout"` |  |
