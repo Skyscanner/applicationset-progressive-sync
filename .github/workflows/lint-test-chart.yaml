@@ -48,6 +48,12 @@ jobs:
         run: kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/$ARGOCD_VERSION/manifests/crds/application-crd.yaml
         if: steps.list-changed.outputs.changed == 'true'
 
+      - name: Install external secret for chart testing
+        run: |
+          kubectl create namespace argocd
+          kubectl apply -f charts/argocd-progressive-rollout/ci/external-secret.yaml
+        if: steps.list-changed.outputs.changed == 'true'
+
       - name: Run chart-testing (install)
         run: ct install --config ct.yaml
         if: steps.list-changed.outputs.changed == 'true'

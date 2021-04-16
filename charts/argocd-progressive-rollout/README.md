@@ -31,7 +31,8 @@ Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 | config.argoCDAuthToken | string | `"example-token"` |  |
 | config.argoCDInsecure | string | `"true"` |  |
 | config.argoCDServerAddr | string | `"argocd-server"` |  |
-| configSecretName | string | `"prc-config"` |  |
+| configSecret.annotations | object | `{}` |  |
+| configSecret.name | string | `""` |  |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.repository | string | `"maruina/argocd-progressive-rollout"` |  |
