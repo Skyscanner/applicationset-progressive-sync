@@ -241,8 +241,7 @@ spec:
                       type: string
                     type: array
                   stage:
-                    description: StageStatusPhase defines the observed phase of a
-                      stage
+                    description: StageStatusPhase defines the observed stage phase
                     enum:
                     - inProgress
                     - completed

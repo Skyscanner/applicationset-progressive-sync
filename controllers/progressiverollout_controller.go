@@ -71,25 +71,26 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		log = r.Log.WithValues("stage", stage.Name)
 
 		// Get the clusters to update
-		clusters, err := r.getClustersFromSelector(stage.Targets.Clusters.Selector)
-		if err != nil {
-			log.Error(err, "unable to fetch clusters")
-			return ctrl.Result{}, err
+		clusters, cErr := r.getClustersFromSelector(stage.Targets.Clusters.Selector)
+		if cErr != nil {
+			log.Error(cErr, "unable to fetch clusters")
+			return ctrl.Result{}, cErr
 		}
 		r.Log.V(1).Info("clusters selected", "clusters", fmt.Sprintf("%v", clusters.Items))
 
 		// Get the Applications owned by the ProgressiveRollout targeting the clusters
-		apps, err := r.getOwnedAppsFromClusters(clusters, pr)
-		if err != nil {
-			log.Error(err, "unable to fetch apps")
-			return ctrl.Result{}, err
+		apps, aErr := r.getOwnedAppsFromClusters(clusters, pr)
+		if aErr != nil {
+			log.Error(aErr, "unable to fetch apps")
+			return ctrl.Result{}, aErr
 		}
 		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v", apps))
 
 		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 		// This action allows the Scheduler to keep track at which stage an Application has been synced.
 		outOfSyncApps := utils.FilterAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-		if err = r.removeAnnotationFromApps(outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
+		if err := r.removeAnnotationFromApps(outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
+			log.Error(err, "unable to remove out-of-sync annotation")
 			return ctrl.Result{}, err
 		}
 
@@ -99,7 +100,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
 
-			_, err = r.syncApp(s.Name)
+			_, err := r.syncApp(s.Name)
 
 			if err != nil {
 				if !strings.Contains(err.Error(), "another operation is already in progress") {
