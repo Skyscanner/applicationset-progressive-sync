@@ -11,9 +11,12 @@ import (
 	"testing"
 )
 
+const (
+	SchedulerTestNamespace = "test-scheduler"
+	StageName = "stage"
+)
+
 func TestScheduler(t *testing.T) {
-	namespace := "default"
-	stageName := "stage"
 	testCases := []struct {
 		name     string
 		apps     []argov1alpha1.Application
@@ -26,7 +29,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -37,7 +40,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -48,7 +51,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-three",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -58,7 +61,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -67,7 +70,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -78,7 +81,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-three",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -94,7 +97,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -105,7 +108,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -116,7 +119,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-three",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -127,8 +130,8 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "app-four",
-						Namespace:   namespace,
-						Annotations: map[string]string{utils.ProgressiveRolloutSyncedAtStageKey: stageName},
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveRolloutSyncedAtStageKey: StageName},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -139,8 +142,8 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "app-five",
-						Namespace:   namespace,
-						Annotations: map[string]string{utils.ProgressiveRolloutSyncedAtStageKey: stageName},
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveRolloutSyncedAtStageKey: StageName},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -151,7 +154,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -160,7 +163,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -176,7 +179,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -187,7 +190,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -198,7 +201,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-three",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -209,7 +212,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-four",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -220,7 +223,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-five",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -230,7 +233,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -239,7 +242,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-five",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -250,7 +253,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-four",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -266,7 +269,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -277,7 +280,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -288,7 +291,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-three",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -299,7 +302,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-four",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -310,7 +313,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-five",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -320,7 +323,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("100%"),
 				MaxTargets:  intstr.Parse("50%"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -329,7 +332,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-five",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -340,7 +343,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-four",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -356,7 +359,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -367,9 +370,9 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 						Annotations: map[string]string{
-							utils.ProgressiveRolloutSyncedAtStageKey: stageName,
+							utils.ProgressiveRolloutSyncedAtStageKey: StageName,
 						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
@@ -383,9 +386,9 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-three",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 						Annotations: map[string]string{
-							utils.ProgressiveRolloutSyncedAtStageKey: stageName,
+							utils.ProgressiveRolloutSyncedAtStageKey: StageName,
 						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
@@ -399,9 +402,9 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-four",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 						Annotations: map[string]string{
-							utils.ProgressiveRolloutSyncedAtStageKey: stageName,
+							utils.ProgressiveRolloutSyncedAtStageKey: StageName,
 						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
@@ -415,7 +418,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-five",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -425,7 +428,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("1"),
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -438,7 +441,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -448,7 +451,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("1"),
 				MaxTargets:  intstr.Parse("1"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -457,7 +460,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -473,7 +476,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -484,7 +487,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -495,7 +498,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-three",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -506,7 +509,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-four",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -517,7 +520,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-five",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -527,7 +530,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("3"),
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -536,7 +539,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-five",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -547,7 +550,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-four",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -558,7 +561,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -574,7 +577,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -585,7 +588,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -595,7 +598,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("10%"),
 				MaxTargets:  intstr.Parse("10%"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -604,7 +607,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -621,7 +624,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -632,7 +635,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -643,7 +646,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "app-three",
-						Namespace:   namespace,
+						Namespace:   SchedulerTestNamespace,
 						Annotations: map[string]string{utils.ProgressiveRolloutSyncedAtStageKey: "previous-stage"},
 					},
 					Status: argov1alpha1.ApplicationStatus{
@@ -654,7 +657,7 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("2"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -663,7 +666,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -674,7 +677,7 @@ func TestScheduler(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
-						Namespace: namespace,
+						Namespace: SchedulerTestNamespace,
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
@@ -689,7 +692,7 @@ func TestScheduler(t *testing.T) {
 			name: "Applications: outOfSync 0, syncedInCurrentStage 0, progressing 0, | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 0",
 			apps: nil,
 			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name:        stageName,
+				Name:        StageName,
 				MaxParallel: intstr.Parse("3"),
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{},
@@ -706,4 +709,162 @@ func TestScheduler(t *testing.T) {
 			g.Expect(got).To(Equal(testCase.expected))
 		})
 	}
+}
+
+func TestIsStageFailed(t *testing.T) {
+	testCases := []struct{
+		name string
+		apps []argov1alpha1.Application
+		stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage
+		expected bool
+	}{
+		{
+			name: "stage failed",
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusUnknown,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-two",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusProgressing,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusMissing,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusSuspended,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-six",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusDegraded,
+						},
+					},
+				},
+			},
+			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
+				Name: StageName,
+			},
+			expected: true,
+		},
+		{
+			name: "stage not failed",
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusUnknown,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-two",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusProgressing,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusMissing,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusSuspended,
+						},
+					},
+				},
+			},
+			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
+				Name: StageName,
+			},
+			expected: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := IsStageFailed(testCase.apps, testCase.stage)
+			g := NewWithT(t)
+			g.Expect(got).To(Equal(testCase.expected))
+		})
+	}
+
 }
