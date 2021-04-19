@@ -28,7 +28,7 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	*/
 
 	var scheduledApps []argov1alpha1.Application
-	outOfSyncApps := utils.FilterAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 	// If there are no OutOfSync Applications, return
 	if len(outOfSyncApps) == 0 {
 		return scheduledApps
@@ -67,9 +67,14 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	return scheduledApps
 }
 
-func IsStageFailed(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {
-	// TODO: add logic
-	return false
+// IsStageFailed returns true if at least one app is failed
+func IsStageFailed(apps []argov1alpha1.Application) bool {
+	// An app is failed if:
+	// - its Health Status Code is Degraded
+	// - its Sync Status Code is Synced
+	degradedApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusDegraded)
+	degradedSyncedApps := utils.GetAppsBySyncStatusCode(degradedApps, argov1alpha1.SyncStatusCodeSynced)
+	return len(degradedSyncedApps) > 0
 }
 
 func IsStageInProgress(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {

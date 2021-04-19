@@ -715,7 +715,6 @@ func TestIsStageFailed(t *testing.T) {
 	testCases := []struct{
 		name string
 		apps []argov1alpha1.Application
-		stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage
 		expected bool
 	}{
 		{
@@ -730,6 +729,9 @@ func TestIsStageFailed(t *testing.T) {
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusUnknown,
 						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
 					},
 				},
 				{
@@ -740,6 +742,9 @@ func TestIsStageFailed(t *testing.T) {
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
 						},
 					},
 				},
@@ -752,6 +757,9 @@ func TestIsStageFailed(t *testing.T) {
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusProgressing,
 						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
 					},
 				},
 				{
@@ -762,6 +770,9 @@ func TestIsStageFailed(t *testing.T) {
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusMissing,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
 						},
 					},
 				},
@@ -774,6 +785,9 @@ func TestIsStageFailed(t *testing.T) {
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusSuspended,
 						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeUnknown,
+						},
 					},
 				},
 				{
@@ -785,11 +799,11 @@ func TestIsStageFailed(t *testing.T) {
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusDegraded,
 						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
 					},
 				},
-			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name: StageName,
 			},
 			expected: true,
 		},
@@ -805,6 +819,9 @@ func TestIsStageFailed(t *testing.T) {
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusUnknown,
 						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
 					},
 				},
 				{
@@ -815,6 +832,9 @@ func TestIsStageFailed(t *testing.T) {
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
 						},
 					},
 				},
@@ -827,6 +847,9 @@ func TestIsStageFailed(t *testing.T) {
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusProgressing,
 						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
 					},
 				},
 				{
@@ -837,6 +860,9 @@ func TestIsStageFailed(t *testing.T) {
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusMissing,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
 						},
 					},
 				},
@@ -849,11 +875,11 @@ func TestIsStageFailed(t *testing.T) {
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusSuspended,
 						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
 					},
 				},
-			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{
-				Name: StageName,
 			},
 			expected: false,
 		},
@@ -861,10 +887,9 @@ func TestIsStageFailed(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageFailed(testCase.apps, testCase.stage)
+			got := IsStageFailed(testCase.apps)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
 	}
-
 }
