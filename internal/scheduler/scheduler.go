@@ -67,12 +67,12 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	return scheduledApps
 }
 
-func IsStageComplete(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {
-	//TODO: add logic
-	return true
+func IsStageFailed(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {
+	// TODO: add logic
+	return false
 }
 
-func IsStageFailed(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {
+func IsStageInProgress(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {
 	// TODO: add logic
 	return false
 }

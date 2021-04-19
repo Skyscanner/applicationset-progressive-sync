@@ -116,15 +116,14 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, nil
 		}
 
-		if scheduler.IsStageComplete(apps, stage) {
-			// TODO: update status
-			r.Log.Info("stage completed")
-		} else {
+		if scheduler.IsStageInProgress(apps, stage) {
 			// TODO: update status
 			r.Log.Info("stage in progress")
 			// Stage in progress, we reconcile again until the stage is completed or failed
 			return ctrl.Result{Requeue: true}, nil
 		}
+
+		r.Log.Info("stage completed")
 	}
 
 	log.Info("all stages completed")
