@@ -20,9 +20,17 @@ spec:
         {{- include "argocd-progressive-rollout.selectorLabels" . | nindent 8 }}
     spec:
       volumes:
-        - name: prc-config
+        {{- if .Values.configSecret.name }}
+        - name: {{ .Values.configSecret.name }}
+        {{- else }}
+        - name: {{ include "argocd-progressive-rollout.fullname" . }}-config
+        {{- end }}
           secret:
-            secretName: prc-config
+            {{- if .Values.configSecret.name }}
+            secretName: {{ .Values.configSecret.name }}
+            {{- else }}
+            secretName: {{ include "argocd-progressive-rollout.fullname" . }}-config
+            {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -50,7 +58,11 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - mountPath: /etc/prcconfig
-              name: prc-config
+              {{- if .Values.configSecret.name }}
+              name: {{ .Values.configSecret.name }}
+              {{- else }}
+              name: {{ include "argocd-progressive-rollout.fullname" . }}-config
+              {{- end }}
               readOnly: true
       {{- with .Values.nodeSelector }}
       nodeSelector:
