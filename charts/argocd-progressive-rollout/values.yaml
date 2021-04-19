@@ -9,7 +9,7 @@ installCRDs: false
 image:
   repository: maruina/argocd-progressive-rollout
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # -- Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
 args:
@@ -21,11 +21,11 @@ nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
-  # Specifies whether a service account should be created
+  # -- Specifies whether a service account should be created
   create: true
-  # Annotations to add to the service account
+  # -- Annotations to add to the service account
   annotations: {}
-  # The name of the service account to use.
+  # -- The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
@@ -46,7 +46,7 @@ securityContext: {}
   # runAsUser: 1000
 
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
+  # -- We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
@@ -63,13 +63,16 @@ tolerations: []
 
 affinity: {}
 
-# configSecret is a secret object which supplies tokens, configs, etc.
+# -- configSecret is a secret object which supplies tokens, configs, etc.
 configSecret:
-  # If this value is not provided, a secret will be generated
+  # -- If this value is not provided, a secret will be generated
   name: ""
   annotations: {}
-# config options
+# -- Config options
 config:
+  # -- ArgoCD token
   argoCDAuthToken: "example-token"
+  # -- ArgoCD server service address
   argoCDServerAddr: "argocd-server"
+  # -- Allow insecure connection with ArgoCD server
   argoCDInsecure: "true"

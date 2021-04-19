@@ -28,15 +28,16 @@ Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 | affinity | object | `{}` |  |
 | args.enableLeaderElection | bool | `false` |  |
 | args.metricsAddr | string | `":8080"` |  |
-| config.argoCDAuthToken | string | `"example-token"` |  |
-| config.argoCDInsecure | string | `"true"` |  |
-| config.argoCDServerAddr | string | `"argocd-server"` |  |
-| configSecret.annotations | object | `{}` |  |
-| configSecret.name | string | `""` |  |
+| config | object | `{"argoCDAuthToken":"example-token","argoCDInsecure":"true","argoCDServerAddr":"argocd-server"}` | Config options |
+| config.argoCDAuthToken | string | `"example-token"` | ArgoCD token |
+| config.argoCDInsecure | string | `"true"` | Allow insecure connection with ArgoCD server |
+| config.argoCDServerAddr | string | `"argocd-server"` | ArgoCD server service address |
+| configSecret | object | `{"annotations":{},"name":""}` | configSecret is a secret object which supplies tokens, configs, etc. |
+| configSecret.name | string | `""` | If this value is not provided, a secret will be generated |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.repository | string | `"maruina/argocd-progressive-rollout"` |  |
-| image.tag | string | `""` |  |
+| image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[]` |  |
 | installCRDs | bool | `false` |  |
 | nameOverride | string | `""` |  |
@@ -47,9 +48,9 @@ Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 | replicaCount | int | `1` |  |
 | resources | object | `{}` |  |
 | securityContext | object | `{}` |  |
-| serviceAccount.annotations | object | `{}` |  |
-| serviceAccount.create | bool | `true` |  |
-| serviceAccount.name | string | `""` |  |
+| serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
+| serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
+| serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template |
 | tolerations | list | `[]` |  |
 
 ----------------------------------------------
