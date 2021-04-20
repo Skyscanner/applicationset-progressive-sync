@@ -243,8 +243,8 @@ spec:
                   stage:
                     description: StageStatusPhase defines the observed stage phase
                     enum:
-                    - InProgress
-                    - Completed
+                    - Progressing
+                    - Succeeded
                     - Failed
                     type: string
                   startedAt:

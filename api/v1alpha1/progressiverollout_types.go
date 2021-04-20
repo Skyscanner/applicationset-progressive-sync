@@ -77,12 +77,12 @@ type ProgressiveRolloutStatus struct {
 }
 
 // StageStatusPhase defines the observed stage phase
-// +kubebuilder:validation:Enum={InProgress,Completed,Failed}
+// +kubebuilder:validation:Enum={Progressing,Succeeded,Failed}
 type StageStatusPhase string
 
 const (
-	PhaseInProgress StageStatusPhase = "InProgress"
-	PhaseCompleted  StageStatusPhase = "Completed"
+	PhaseProgressing StageStatusPhase = "Progressing"
+	PhaseSucceeded  StageStatusPhase = "Succeeded"
 	PhaseFailed     StageStatusPhase = "Failed"
 )
 
