@@ -13,7 +13,7 @@ import (
 
 const (
 	SchedulerTestNamespace = "test-scheduler"
-	StageName = "stage"
+	StageName              = "stage"
 )
 
 func TestScheduler(t *testing.T) {
@@ -712,9 +712,9 @@ func TestScheduler(t *testing.T) {
 }
 
 func TestIsStageFailed(t *testing.T) {
-	testCases := []struct{
-		name string
-		apps []argov1alpha1.Application
+	testCases := []struct {
+		name     string
+		apps     []argov1alpha1.Application
 		expected bool
 	}{
 		{
