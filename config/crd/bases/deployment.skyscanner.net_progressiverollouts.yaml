@@ -243,9 +243,9 @@ spec:
                   stage:
                     description: StageStatusPhase defines the observed stage phase
                     enum:
-                    - inProgress
-                    - completed
-                    - failed
+                    - InProgress
+                    - Completed
+                    - Failed
                     type: string
                   startedAt:
                     format: date-time
