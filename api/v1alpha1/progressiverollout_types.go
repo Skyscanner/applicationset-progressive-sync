@@ -76,30 +76,6 @@ type ProgressiveRolloutStatus struct {
 	Stages     []StageStatus      `json:"stages,omitempty"`
 }
 
-// StageStatusPhase defines the observed stage phase
-// +kubebuilder:validation:Enum={Progressing,Succeeded,Failed}
-type StageStatusPhase string
-
-const (
-	PhaseProgressing StageStatusPhase = "Progressing"
-	PhaseSucceeded  StageStatusPhase = "Succeeded"
-	PhaseFailed     StageStatusPhase = "Failed"
-)
-
-// StageStatus defines the observed stage status
-type StageStatus struct {
-	Name       string           `json:"name"`
-	Phase      StageStatusPhase `json:"stage,omitempty"`
-	Message    string           `json:"message,omitempty"`
-	Targets    []string         `json:"targets,omitempty"`
-	Syncing    []string         `json:"syncing,omitempty"`
-	Requeued   []string         `json:"requeued,omitempty"`
-	Failed     []string         `json:"failed,omitempty"`
-	Completed  []string         `json:"completed,omitempty"`
-	StartedAd  metav1.Time      `json:"startedAt,omitempty"`
-	FinishedAt metav1.Time      `json:"finishedAt,omitempty"`
-}
-
 // GetStatusConditions returns a pointer to the Status.Conditions slice
 func (in *ProgressiveRollout) GetStatusConditions() *[]metav1.Condition {
 	return &in.Status.Conditions

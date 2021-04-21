@@ -214,7 +214,7 @@ func (in *StageStatus) DeepCopyInto(out *StageStatus) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	in.StartedAd.DeepCopyInto(&out.StartedAd)
+	in.StartedAt.DeepCopyInto(&out.StartedAt)
 	in.FinishedAt.DeepCopyInto(&out.FinishedAt)
 }
 
