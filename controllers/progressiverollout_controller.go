@@ -73,7 +73,11 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		// Get the clusters to update
 		clusters, cErr := r.getClustersFromSelector(stage.Targets.Clusters.Selector)
 		if cErr != nil {
-			log.Error(cErr, "unable to fetch clusters")
+			message := "unable to fetch clusters"
+			log.Error(cErr, message)
+			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseFailed, pr); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, cErr
 		}
 		r.Log.V(1).Info("clusters selected", "clusters", fmt.Sprintf("%v", clusters.Items))
@@ -82,6 +86,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		apps, aErr := r.getOwnedAppsFromClusters(clusters, pr)
 		if aErr != nil {
 			log.Error(aErr, "unable to fetch apps")
+			// TODO: stage status - failed
 			return ctrl.Result{}, aErr
 		}
 		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v", apps))
@@ -91,11 +96,15 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 		if err := r.removeAnnotationFromApps(outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
 			log.Error(err, "unable to remove out-of-sync annotation")
+			// TODO: stage status - failed
 			return ctrl.Result{}, err
 		}
 
 		// Get the Applications to update
+		// TODO: update the scheduler to return the InProgress apps
 		scheduledApps := scheduler.Scheduler(apps, stage)
+
+		// TODO: status status - update targets
 
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
@@ -105,25 +114,28 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			if err != nil {
 				if !strings.Contains(err.Error(), "another operation is already in progress") {
 					log.Error(err, "unable to sync app", "message", err.Error())
+					// TODO: stage status - failed
+					// TODO: stage status - update failed clusters
 					return ctrl.Result{}, err
 				}
 			}
 		}
 
 		if scheduler.IsStageFailed(apps) {
-			// TODO: updated status
+			// TODO: stage status - failed
 			r.Log.Info("stage failed")
 			return ctrl.Result{}, nil
 		}
 
 		if scheduler.IsStageInProgress(apps, stage) {
-			// TODO: update status
+			// TODO: stage status - progressing
 			r.Log.Info("stage in progress")
 			// Stage in progress, we reconcile again until the stage is completed or failed
 			return ctrl.Result{Requeue: true}, nil
 		}
 
 		r.Log.Info("stage completed")
+		// TODO: stage status - completed
 	}
 
 	log.Info("all stages completed")
@@ -311,6 +323,23 @@ func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps []argov1alp
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// updateStageStatus updates the target stage give a stage name, message and phase
+func (r *ProgressiveRolloutReconciler) updateStageStatus(name, message string, phase deploymentskyscannernetv1alpha1.StageStatusPhase, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) error {
+	ctx := context.Background()
+
+	stageStatus := pr.NewStageStatus(
+		name,
+		message,
+		phase,
+	)
+	deploymentskyscannernetv1alpha1.SetStageStatus(&pr.Status.Stages, stageStatus)
+	if err := r.Client.Status().Update(ctx, &pr); err != nil {
+		r.Log.Error(err, "failed to update object status")
+		return err
 	}
 	return nil
 }

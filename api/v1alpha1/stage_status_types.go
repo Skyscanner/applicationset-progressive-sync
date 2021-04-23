@@ -35,16 +35,11 @@ func (in *ProgressiveRollout) GetStageStatus() *[]StageStatus {
 }
 
 // NewStageStatus adds a new StageStatus
-func (in *ProgressiveRollout) NewStageStatus(n, m string, p StageStatusPhase, t, s, r, f, c []string) StageStatus {
+func (in *ProgressiveRollout) NewStageStatus(name, message string, phase StageStatusPhase) StageStatus {
 	return StageStatus{
-		Name:       n,
-		Phase:      p,
-		Message:    m,
-		Targets:    t,
-		Syncing:    s,
-		Requeued:   r,
-		Failed:     f,
-		Completed:  c,
+		Name:       name,
+		Phase:      phase,
+		Message:    message,
 		StartedAt:  metav1.Time{},
 		FinishedAt: metav1.Time{},
 	}
@@ -61,11 +56,6 @@ func SetStageStatus(stageStatus *[]StageStatus, newStatus StageStatus) {
 
 	existingStatus.Phase = newStatus.Phase
 	existingStatus.Message = newStatus.Message
-	existingStatus.Targets = newStatus.Targets
-	existingStatus.Syncing = newStatus.Syncing
-	existingStatus.Requeued = newStatus.Requeued
-	existingStatus.Failed = newStatus.Failed
-	existingStatus.Completed = newStatus.Completed
 
 	if existingStatus.Phase == PhaseProgressing && existingStatus.StartedAt.IsZero() {
 		existingStatus.StartedAt = metav1.NewTime(time.Now())
