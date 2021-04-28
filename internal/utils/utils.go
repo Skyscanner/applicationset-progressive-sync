@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"fmt"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
 	corev1 "k8s.io/api/core/v1"
 	"sort"
+	"strings"
 )
 
 // IsArgoCDCluster returns true if one of the labels is the ArgoCD secret label with the secret type cluster as value
@@ -61,4 +63,20 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 	}
 
 	return result
+}
+
+func GetAppsName(apps []argov1alpha1.Application) string {
+	var names []string
+	for _, a := range apps {
+		names = append(names, a.GetName())
+	}
+	return fmt.Sprint(strings.Join(names, ", "))
+}
+
+func GetClustersName(clusters []corev1.Secret) string {
+	var names []string
+	for _, c := range clusters {
+		names = append(names, c.GetName())
+	}
+	return fmt.Sprint(strings.Join(names, ", "))
 }
