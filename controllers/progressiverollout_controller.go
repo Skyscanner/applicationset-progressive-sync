@@ -80,16 +80,16 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 			return ctrl.Result{}, cErr
 		}
-		r.Log.V(1).Info("clusters selected", "clusters", fmt.Sprintf("%v", clusters.Items))
+		r.Log.V(1).Info("clusters selected", "clusters", utils.GetClustersName(clusters.Items))
 
-		// Get the Applications owned by the ProgressiveRollout targeting the clusters
+		// Get only the Applications owned by the ProgressiveRollout targeting the selected clusters
 		apps, aErr := r.getOwnedAppsFromClusters(clusters, pr)
 		if aErr != nil {
 			log.Error(aErr, "unable to fetch apps")
 			// TODO: stage status - failed
 			return ctrl.Result{}, aErr
 		}
-		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v", apps))
+		r.Log.V(1).Info("apps selected", "apps", utils.GetAppsName(apps))
 
 		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 		// This action allows the Scheduler to keep track at which stage an Application has been synced.
