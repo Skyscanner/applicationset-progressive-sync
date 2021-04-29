@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 // StageStatusPhase defines the observed stage phase
@@ -43,18 +42,15 @@ func (in *ProgressiveRollout) NewStageStatus(name, message string, phase StageSt
 // SetStageStatus sets the corresponding StageStatus in stageStatus to newStatus
 // - If a stage doesn't exist, it will be added to StageStatus slice
 // - If a stage already exists it will be updated
-func SetStageStatus(stageStatus *[]StageStatus, newStatus StageStatus) {
-
-	nowTime := metav1.NewTime(time.Now())
-
+func SetStageStatus(stageStatus *[]StageStatus, newStatus StageStatus, updateTime *metav1.Time) {
 	// If StartedAt is not set and the stage is in progress, assign StartedAt
 	if newStatus.Phase == PhaseProgressing && newStatus.StartedAt.IsZero() {
-		newStatus.StartedAt = &nowTime
+		newStatus.StartedAt = updateTime
 	}
 	// If the stage is not progressing it is either completed of failed.
 	// If FinishedAt is not set we assign it.
 	if newStatus.Phase != PhaseProgressing && newStatus.FinishedAt.IsZero() {
-		newStatus.FinishedAt = &nowTime
+		newStatus.FinishedAt = updateTime
 	}
 
 	// Get the status if it already exists

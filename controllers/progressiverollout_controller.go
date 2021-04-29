@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	"strings"
+	"time"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
@@ -340,7 +341,8 @@ func (r *ProgressiveRolloutReconciler) updateStageStatus(name, message string, p
 		message,
 		phase,
 	)
-	deploymentskyscannernetv1alpha1.SetStageStatus(&pr.Status.Stages, stageStatus)
+	nowTime := metav1.NewTime(time.Now())
+	deploymentskyscannernetv1alpha1.SetStageStatus(&pr.Status.Stages, stageStatus, &nowTime)
 	if err := r.Client.Status().Update(ctx, &pr); err != nil {
 		r.Log.Error(err, "failed to update object status")
 		return err
