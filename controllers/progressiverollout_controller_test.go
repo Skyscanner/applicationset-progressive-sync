@@ -9,6 +9,7 @@ import (
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -312,6 +313,17 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			expected := singleStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(singleStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+
+			expectedStageStatus := []deploymentskyscannernetv1alpha1.StageStatus{{
+				Name:    "stage 1",
+				Message: "stage is completed",
+				Phase:   deploymentskyscannernetv1alpha1.PhaseSucceeded,
+			}}
+
+			Expect(len(singleStagePR.Status.Stages)).Should(Equal(len(expectedStageStatus)))
+			for i, _ := range singleStagePR.Status.Stages {
+				Expect(singleStagePR.Status.Stages[i]).To(MatchStage(expectedStageStatus[i]))
+			}
 		})
 
 		It("should send a request to sync an application", func() {
@@ -385,6 +397,15 @@ func statusString(status metav1.ConditionStatus, reason string, message string) 
 // HaveStatus is a gomega matcher for a condition status, reason and message
 func HaveStatus(status metav1.ConditionStatus, reason string, message string) gomegatypes.GomegaMatcher {
 	return Equal(statusString(status, reason, message))
+}
+
+// MatchStage is a gomega matcher for a stage, matching name, message and phase
+func MatchStage(expected deploymentskyscannernetv1alpha1.StageStatus) gomegatypes.GomegaMatcher {
+	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+		"Name":    Equal(expected.Name),
+		"Message": Equal(expected.Message),
+		"Phase":   Equal(expected.Phase),
+	})
 }
 
 // ExpectCondition take a condition type and returns its status, reason and message
