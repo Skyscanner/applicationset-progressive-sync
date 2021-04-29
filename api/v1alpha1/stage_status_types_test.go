@@ -68,8 +68,8 @@ func TestSetStageStatus(t *testing.T) {
 			name:        "add stage to empty list",
 			stageStatus: &[]StageStatus{},
 			newStatus: StageStatus{
-				Name:      "stage 1",
-				Phase:     PhaseProgressing,
+				Name:  "stage 1",
+				Phase: PhaseProgressing,
 			},
 			expected: &[]StageStatus{{
 				Name:       "stage 1",
@@ -81,13 +81,13 @@ func TestSetStageStatus(t *testing.T) {
 		}, {
 			name: "add stage to list",
 			stageStatus: &[]StageStatus{{
-				Name:       "stage 1",
-				Phase:      PhaseProgressing,
-				StartedAt:  &pastTime,
+				Name:      "stage 1",
+				Phase:     PhaseProgressing,
+				StartedAt: &pastTime,
 			}},
 			newStatus: StageStatus{
-				Name:       "stage 2",
-				Phase:      PhaseProgressing,
+				Name:  "stage 2",
+				Phase: PhaseProgressing,
 			},
 			expected: &[]StageStatus{{
 				Name:       "stage 1",
@@ -105,20 +105,20 @@ func TestSetStageStatus(t *testing.T) {
 		}, {
 			name: "update stage in list",
 			stageStatus: &[]StageStatus{{
-				Name:       "stage 1",
-				Phase:      PhaseProgressing,
-				StartedAt:  &pastTime,
+				Name:      "stage 1",
+				Phase:     PhaseProgressing,
+				StartedAt: &pastTime,
 			}, {
-				Name:       "stage 2",
-				Phase:      PhaseProgressing,
-				Message:    "old message",
-				StartedAt:  &pastTime,
+				Name:      "stage 2",
+				Phase:     PhaseProgressing,
+				Message:   "old message",
+				StartedAt: &pastTime,
 			}},
 			newStatus: StageStatus{
-				Name:       "stage 2",
-				Phase:      PhaseSucceeded,
-				Message:    "new message",
-				StartedAt:  &pastTime,
+				Name:      "stage 2",
+				Phase:     PhaseSucceeded,
+				Message:   "new message",
+				StartedAt: &pastTime,
 			},
 			expected: &[]StageStatus{{
 				Name:       "stage 1",
