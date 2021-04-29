@@ -20,13 +20,8 @@ type StageStatus struct {
 	Name       string           `json:"name"`
 	Phase      StageStatusPhase `json:"stage,omitempty"`
 	Message    string           `json:"message,omitempty"`
-	Targets    []string         `json:"targets,omitempty"`
-	Syncing    []string         `json:"syncing,omitempty"`
-	Requeued   []string         `json:"requeued,omitempty"`
-	Failed     []string         `json:"failed,omitempty"`
-	Completed  []string         `json:"completed,omitempty"`
-	StartedAt  metav1.Time      `json:"startedAt,omitempty"`
-	FinishedAt metav1.Time      `json:"finishedAt,omitempty"`
+	StartedAt  *metav1.Time     `json:"startedAt,omitempty"`
+	FinishedAt *metav1.Time     `json:"finishedAt,omitempty"`
 }
 
 // GetStageStatus returns a pointer to the Status.Stages slice
@@ -40,13 +35,29 @@ func (in *ProgressiveRollout) NewStageStatus(name, message string, phase StageSt
 		Name:       name,
 		Phase:      phase,
 		Message:    message,
-		StartedAt:  metav1.Time{},
-		FinishedAt: metav1.Time{},
+		StartedAt:  nil,
+		FinishedAt: nil,
 	}
 }
 
 // SetStageStatus sets the corresponding StageStatus in stageStatus to newStatus
+// - If a stage doesn't exist, it will be added to StageStatus slice
+// - If a stage already exists it will be updated
 func SetStageStatus(stageStatus *[]StageStatus, newStatus StageStatus) {
+
+	nowTime := metav1.NewTime(time.Now())
+
+	// If StartedAt is not set and the stage is in progress, assign StartedAt
+	if newStatus.Phase == PhaseProgressing && newStatus.StartedAt.IsZero() {
+		newStatus.StartedAt = &nowTime
+	}
+	// If the stage is not progressing it is either completed of failed.
+	// If FinishedAt is not set we assign it.
+	if newStatus.Phase != PhaseProgressing && newStatus.FinishedAt.IsZero() {
+		newStatus.FinishedAt = &nowTime
+	}
+
+	// Get the status if it already exists
 	existingStatus := FindStageStatus(*stageStatus, newStatus.Name)
 
 	if existingStatus == nil {
@@ -56,13 +67,8 @@ func SetStageStatus(stageStatus *[]StageStatus, newStatus StageStatus) {
 
 	existingStatus.Phase = newStatus.Phase
 	existingStatus.Message = newStatus.Message
-
-	if existingStatus.Phase == PhaseProgressing && existingStatus.StartedAt.IsZero() {
-		existingStatus.StartedAt = metav1.NewTime(time.Now())
-	}
-	if existingStatus.Phase != PhaseProgressing && existingStatus.FinishedAt.IsZero() {
-		existingStatus.FinishedAt = metav1.NewTime(time.Now())
-	}
+	existingStatus.StartedAt = newStatus.StartedAt
+	existingStatus.FinishedAt = newStatus.FinishedAt
 }
 
 // FindStageStatus finds the given stage by name in stage status.

@@ -221,14 +221,6 @@ spec:
               items:
                 description: StageStatus defines the observed stage status
                 properties:
-                  completed:
-                    items:
-                      type: string
-                    type: array
-                  failed:
-                    items:
-                      type: string
-                    type: array
                   finishedAt:
                     format: date-time
                     type: string
@@ -236,10 +228,6 @@ spec:
                     type: string
                   name:
                     type: string
-                  requeued:
-                    items:
-                      type: string
-                    type: array
                   stage:
                     description: StageStatusPhase defines the observed stage phase
                     enum:
@@ -250,14 +238,6 @@ spec:
                   startedAt:
                     format: date-time
                     type: string
-                  syncing:
-                    items:
-                      type: string
-                    type: array
-                  targets:
-                    items:
-                      type: string
-                    type: array
                 required:
                 - name
                 type: object
