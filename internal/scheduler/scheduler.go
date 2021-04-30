@@ -77,7 +77,8 @@ func IsStageFailed(apps []argov1alpha1.Application) bool {
 	return len(degradedSyncedApps) > 0
 }
 
-func IsStageInProgress(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {
-	// TODO: add logic
-	return false
+// IsStageInProgress returns true if at least one app is is in progress
+func IsStageInProgress(apps []argov1alpha1.Application) bool {
+	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
+	return len(progressingApps) > 0
 }

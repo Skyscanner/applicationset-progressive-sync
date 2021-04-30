@@ -141,7 +141,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, nil
 		}
 
-		if scheduler.IsStageInProgress(apps, stage) {
+		if scheduler.IsStageInProgress(apps) {
 			message := "stage in progress"
 			r.Log.Info(message)
 			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseProgressing, pr); err != nil {
