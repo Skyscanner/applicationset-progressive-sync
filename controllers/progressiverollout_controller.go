@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
@@ -37,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strings"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
@@ -50,6 +51,7 @@ type ProgressiveRolloutReconciler struct {
 
 // +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications,verbs=get;list;watch
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications/status,verbs=get;list;watch
