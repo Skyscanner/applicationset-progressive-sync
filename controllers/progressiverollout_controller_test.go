@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
 	"time"
 )
@@ -94,10 +95,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				Spec: argov1alpha1.ApplicationSpec{},
 			}
-			Expect(k8sClient.Create(ctx, ownedApp)).To(Succeed())
 
-			requests := reconciler.requestsForApplicationChange(ownedApp)
-			Expect(len(requests)).Should(Equal(1))
+			var requests []reconcile.Request
+			Eventually(func() int {
+				requests = reconciler.requestsForApplicationChange(ownedApp)
+				return len(requests)
+			}).Should(Equal(1))
 			Expect(requests[0].NamespacedName).To(Equal(types.NamespacedName{
 				Namespace: namespace,
 				Name:      "owner-pr",
@@ -119,10 +122,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				Spec: argov1alpha1.ApplicationSpec{},
 			}
-			Expect(k8sClient.Create(ctx, nonOwnedApp)).To(Succeed())
 
-			requests := reconciler.requestsForApplicationChange(nonOwnedApp)
-			Expect(len(requests)).Should(Equal(0))
+			Eventually(func() int {
+				requests := reconciler.requestsForApplicationChange(nonOwnedApp)
+				return len(requests)
+			}).Should(Equal(0))
 		})
 	})
 
@@ -172,10 +176,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			cluster := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte(serverURL)}}
-			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 
-			requests := reconciler.requestsForSecretChange(cluster)
-			Expect(len(requests)).Should(Equal(1))
+			Eventually(func() int {
+				requests := reconciler.requestsForSecretChange(cluster)
+				return len(requests)
+			}).Should(Equal(1))
 		})
 
 		It("should not forward an event for a generic secret", func() {
@@ -183,10 +188,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			generic := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "generic", Namespace: namespace}, Data: map[string][]byte{"secret": []byte("insecure")},
 			}
-			Expect(k8sClient.Create(ctx, generic)).To(Succeed())
 
-			requests := reconciler.requestsForSecretChange(generic)
 			Eventually(func() int {
+				requests := reconciler.requestsForSecretChange(generic)
 				return len(requests)
 			}).Should(Equal(0))
 		})
@@ -216,10 +220,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			internalCluster := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte("https://local-kubernetes.default.svc")}}
-			Expect(k8sClient.Create(ctx, internalCluster)).To(Succeed())
 
-			requests := reconciler.requestsForSecretChange(internalCluster)
-			Expect(len(requests)).Should(Equal(0))
+			Eventually(func() int {
+				requests := reconciler.requestsForSecretChange(internalCluster)
+				return len(requests)
+			}).Should(Equal(0))
 		})
 	})
 
