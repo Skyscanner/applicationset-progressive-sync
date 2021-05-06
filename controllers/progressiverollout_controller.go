@@ -152,7 +152,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 
 		if scheduler.IsStageComplete(apps) {
-			message := "stage is completed"
+			message := "stage completed"
 			r.Log.Info(message)
 			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseSucceeded, pr); err != nil {
 				return ctrl.Result{}, err

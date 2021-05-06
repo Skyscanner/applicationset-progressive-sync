@@ -338,9 +338,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(cErr).To(BeNil())
 
 			By("creating one application targeting each cluster")
-			appOne, aErr := createApplication(ctx, namespace, testPrefix, clusters[0])
+			appOne, aErr := createApplication(ctx, testPrefix, clusters[0])
 			Expect(aErr).To(BeNil())
-			appTwo, aErr := createApplication(ctx, namespace, testPrefix, clusters[1])
+			appTwo, aErr := createApplication(ctx, testPrefix, clusters[1])
 			Expect(aErr).To(BeNil())
 
 			By("creating a progressive rollout")
@@ -394,7 +394,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatusPhase(ctx, prKey, "stage 0").Should(Equal(deploymentskyscannernetv1alpha1.PhaseProgressing))
+			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+				Name:    "stage 0",
+				Phase:   deploymentskyscannernetv1alpha1.PhaseProgressing,
+				Message: "stage in progress",
+			}))
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
 
 			By("finishing first application")
@@ -407,7 +411,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatusPhase(ctx, prKey, "stage 0").Should(Equal(deploymentskyscannernetv1alpha1.PhaseSucceeded))
+			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+				Name:    "stage 0",
+				Phase:   deploymentskyscannernetv1alpha1.PhaseSucceeded,
+				Message: "stage completed",
+			}))
 
 			By("progressing in second application")
 			Eventually(func() error {
@@ -422,7 +430,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatusPhase(ctx, prKey, "stage 1").Should(Equal(deploymentskyscannernetv1alpha1.PhaseProgressing))
+			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+				Name:    "stage 1",
+				Phase:   deploymentskyscannernetv1alpha1.PhaseProgressing,
+				Message: "stage in progress",
+			}))
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(2))
 
 			By("finishing second application")
@@ -435,7 +447,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatusPhase(ctx, prKey, "stage 1").Should(Equal(deploymentskyscannernetv1alpha1.PhaseSucceeded))
+			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+				Name:    "stage 1",
+				Phase:   deploymentskyscannernetv1alpha1.PhaseSucceeded,
+				Message: "stage completed",
+			}))
 
 			expected := twoStagesPR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(twoStagesPR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
@@ -443,34 +459,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	})
 })
 
-func ExpectStageStatusPhase(ctx context.Context, prKey client.ObjectKey, stageName string) AsyncAssertion {
-	return Eventually(func() interface{} {
-		pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
-		err := k8sClient.Get(ctx, prKey, pr)
-		if err != nil {
-			return nil
-		}
-		stageStatus := deploymentskyscannernetv1alpha1.FindStageStatus(pr.Status.Stages, stageName)
-		if stageStatus != nil {
-			return stageStatus.Phase
-		}
-
-		return nil
-	})
-}
-
-func ExpectStagesInStatus(ctx context.Context, prKey client.ObjectKey) AsyncAssertion {
-	return Eventually(func() int {
-		pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
-		err := k8sClient.Get(ctx, prKey, pr)
-		if err != nil {
-			return -1
-		}
-
-		return len(pr.Status.Stages)
-	})
-}
-
+// createClusters is a helper function that creates N clusters in a given namespace with a common name prefix
 func createClusters(ctx context.Context, namespace string, prefix string, number int) ([]corev1.Secret, error) {
 	var clusters []corev1.Secret
 
@@ -497,14 +486,15 @@ func createClusters(ctx context.Context, namespace string, prefix string, number
 	return clusters, nil
 }
 
-func createApplication(ctx context.Context, namespace string, prefix string, cluster corev1.Secret) (*argov1alpha1.Application, error) {
+// createApplication is a helper function that creates an ArgoCD application given a prefix and a cluster
+func createApplication(ctx context.Context, prefix string, cluster corev1.Secret) (*argov1alpha1.Application, error) {
 	appSetName := fmt.Sprintf("%s-appset", prefix)
 
 	appName := fmt.Sprintf("%s-app-%s", prefix, cluster.Name)
 	app := &argov1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      appName,
-			Namespace: namespace,
+			Namespace: cluster.Namespace,
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: utils.AppSetAPIGroup,
 				Kind:       utils.AppSetKind,
@@ -514,7 +504,7 @@ func createApplication(ctx context.Context, namespace string, prefix string, clu
 		},
 		Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
 			Server:    string(cluster.Data["server"]),
-			Namespace: namespace,
+			Namespace: cluster.Namespace,
 			Name:      cluster.Name,
 		}},
 		Status: argov1alpha1.ApplicationStatus{
@@ -570,6 +560,37 @@ func ExpectCondition(
 			}
 		}
 		return ""
+	})
+}
+
+// ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a progressive rollout Object Key and a stage name
+func ExpectStageStatus(ctx context.Context, prKey client.ObjectKey, stageName string) AsyncAssertion {
+	return Eventually(func() deploymentskyscannernetv1alpha1.StageStatus {
+		pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+		err := k8sClient.Get(ctx, prKey, pr)
+		if err != nil {
+			return deploymentskyscannernetv1alpha1.StageStatus{}
+		}
+		stageStatus := deploymentskyscannernetv1alpha1.FindStageStatus(pr.Status.Stages, stageName)
+		if stageStatus != nil {
+			return *stageStatus
+		}
+
+		// TODO: Can we have MatchStage take a * and return nil here?
+		return deploymentskyscannernetv1alpha1.StageStatus{}
+	})
+}
+
+// ExpectStagesInStatus returns an AsyncAssertion for the length of stages with status in the Progressive Rollout object
+func ExpectStagesInStatus(ctx context.Context, prKey client.ObjectKey) AsyncAssertion {
+	return Eventually(func() int {
+		pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+		err := k8sClient.Get(ctx, prKey, pr)
+		if err != nil {
+			return -1
+		}
+
+		return len(pr.Status.Stages)
 	})
 }
 
