@@ -12,6 +12,7 @@ const (
 	PhaseProgressing StageStatusPhase = "Progressing"
 	PhaseSucceeded   StageStatusPhase = "Succeeded"
 	PhaseFailed      StageStatusPhase = "Failed"
+	PhaseUnknown     StageStatusPhase = "Unknown"
 )
 
 // StageStatus defines the observed stage status

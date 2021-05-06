@@ -132,15 +132,6 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 		}
 
-		if scheduler.IsStageFailed(apps) {
-			message := "stage failed"
-			r.Log.Info(message)
-			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseFailed, pr); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, nil
-		}
-
 		if scheduler.IsStageInProgress(apps) {
 			message := "stage in progress"
 			r.Log.Info(message)
@@ -151,10 +142,29 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		message := "stage is completed"
-		r.Log.Info(message)
-		if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseSucceeded, pr); err != nil {
-			return ctrl.Result{}, err
+		if scheduler.IsStageFailed(apps) {
+			message := "stage failed"
+			r.Log.Info(message)
+			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseFailed, pr); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+
+		if scheduler.IsStageComplete(apps) {
+			message := "stage is completed"
+			r.Log.Info(message)
+			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseSucceeded, pr); err != nil {
+				return ctrl.Result{}, err
+			}
+		} else {
+			message := "stage is unknown"
+			r.Log.Info(message)
+			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseUnknown, pr); err != nil {
+				return ctrl.Result{}, err
+			}
+			// We can set Requeue: true once we have a timeout in place
+			return ctrl.Result{}, nil
 		}
 	}
 
