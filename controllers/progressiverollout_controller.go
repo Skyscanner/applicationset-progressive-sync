@@ -72,18 +72,20 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	if pr.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
-		// then lets add the finalizer and update the object.
+		// then lets add the finalizer and update the object
 		if !controllerutil.ContainsFinalizer(&pr, deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer) {
 			controllerutil.AddFinalizer(&pr, deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer)
 			if err := r.Update(ctx, &pr); err != nil {
 				r.Log.Error(err, "failed to update object")
 				return ctrl.Result{}, err
 			}
+			// Requeue after adding the finalizer
+			return ctrl.Result{Requeue: true}, nil
 		}
 	} else {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(&pr, deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer) {
-			// remove our finalizer from the list and update it.
+			// Remove our finalizer from the list and update it
 			controllerutil.RemoveFinalizer(&pr, deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer)
 			if err := r.Update(ctx, &pr); err != nil {
 				r.Log.Error(err, "failed to update object")
