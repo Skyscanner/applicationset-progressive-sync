@@ -63,24 +63,3 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 
 	return result
 }
-
-// HasString returns true if a slice contains the given string
-func HasString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
-}
-
-// RemoveString returns a new slice without the given string
-func RemoveString(slice []string, s string) (result []string) {
-	for _, item := range slice {
-		if item == s {
-			continue
-		}
-		result = append(result, item)
-	}
-	return result
-}
