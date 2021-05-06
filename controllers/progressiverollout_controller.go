@@ -60,8 +60,8 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	log := r.Log.WithValues("progressiverollout", req.NamespacedName)
 
 	// Get the ProgressiveRollout object
-	pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
-	if err := r.Get(ctx, req.NamespacedName, &pr); err != nil {
+	pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+	if err := r.Get(ctx, req.NamespacedName, pr); err != nil {
 		log.Error(err, "unable to fetch ProgressiveRollout")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -163,7 +163,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// Progressive rollout completed
 	completed := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
-	if err := r.patchStatus(ctx, &pr); err != nil {
+	if err := r.patchStatus(ctx, pr); err != nil {
 		r.Log.Error(err, "failed to update object status")
 		return ctrl.Result{}, err
 	}
@@ -308,8 +308,8 @@ func (r *ProgressiveRolloutReconciler) getClustersFromSelector(selector metav1.L
 }
 
 // getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveRollout
-func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
-	apps := []argov1alpha1.Application{{}}
+func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.SecretList, pr *deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
+	var apps []argov1alpha1.Application
 	appList := argov1alpha1.ApplicationList{}
 	ctx := context.Background()
 
@@ -347,8 +347,9 @@ func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps []argov1alp
 	return nil
 }
 
-// updateStageStatus updates the target stage give a stage name, message and phase
-func (r *ProgressiveRolloutReconciler) updateStageStatus(name, message string, phase deploymentskyscannernetv1alpha1.StageStatusPhase, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) error {
+// TODO: should we split this call into an addStageStatus and an update
+// updateStageStatus updates the target stage given a stage name, message and phase
+func (r *ProgressiveRolloutReconciler) updateStageStatus(name, message string, phase deploymentskyscannernetv1alpha1.StageStatusPhase, pr *deploymentskyscannernetv1alpha1.ProgressiveRollout) error {
 	ctx := context.Background()
 
 	stageStatus := pr.NewStageStatus(
@@ -357,8 +358,8 @@ func (r *ProgressiveRolloutReconciler) updateStageStatus(name, message string, p
 		phase,
 	)
 	nowTime := metav1.NewTime(time.Now())
-	deploymentskyscannernetv1alpha1.SetStageStatus(&pr.Status.Stages, stageStatus, &nowTime)
-	if err := r.patchStatus(ctx, &pr); err != nil {
+	pr.SetStageStatus(stageStatus, &nowTime)
+	if err := r.patchStatus(ctx, pr); err != nil {
 		r.Log.Error(err, "failed to update object status")
 		return err
 	}

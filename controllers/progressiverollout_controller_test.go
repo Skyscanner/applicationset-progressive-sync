@@ -7,6 +7,7 @@ import (
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
+	"github.com/argoproj/gitops-engine/pkg/health"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
 )
@@ -31,7 +33,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		ctx                     context.Context
 		namespace, appSetAPIRef string
 		ns                      *corev1.Namespace
-		ownerPR, singleStagePR  *deploymentskyscannernetv1alpha1.ProgressiveRollout
+		ownerPR, singleStagePR *deploymentskyscannernetv1alpha1.ProgressiveRollout
 	)
 
 	appSetAPIRef = utils.AppSetAPIGroup
@@ -258,74 +260,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 	})
 
-	Describe("Reconciliation loop", func() {
-		It("should reconcile", func() {
-			By("creating an ArgoCD cluster")
-			cluster := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
-				Data: map[string][]byte{
-					"server": []byte("https://single-stage-pr.kubernetes.io"),
-				},
-			}
-			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 
-			By("creating an application targeting the cluster")
-			singleStageApp := &argov1alpha1.Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "single-stage-app",
-					Namespace: namespace,
-					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: utils.AppSetAPIGroup,
-						Kind:       utils.AppSetKind,
-						Name:       "single-stage-appset",
-						UID:        uuid.NewUUID(),
-					}},
-				},
-				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
-					Server:    "https://single-stage-pr.kubernetes.io",
-					Namespace: namespace,
-					Name:      "remote-cluster",
-				}},
-				Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Status: argov1alpha1.SyncStatusCodeOutOfSync}},
-			}
-			Expect(k8sClient.Create(ctx, singleStageApp)).To(Succeed())
-
-			By("creating a progressive rollout")
-			singleStagePR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
-				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
-				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
-					SourceRef: corev1.TypedLocalObjectReference{
-						APIGroup: &appSetAPIRef,
-						Kind:     utils.AppSetKind,
-						Name:     "single-stage-appset",
-					},
-					Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
-						Name:        "stage 1",
-						MaxParallel: intstr.IntOrString{IntVal: 1},
-						MaxTargets:  intstr.IntOrString{IntVal: 1},
-						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
-							Selector: metav1.LabelSelector{MatchLabels: nil},
-						}},
-					}},
-				},
-			}
-			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
-
-			expected := singleStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
-			ExpectCondition(singleStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
-
-			expectedStageStatus := []deploymentskyscannernetv1alpha1.StageStatus{{
-				Name:    "stage 1",
-				Message: "stage is completed",
-				Phase:   deploymentskyscannernetv1alpha1.PhaseSucceeded,
-			}}
-
-			Expect(len(singleStagePR.Status.Stages)).Should(Equal(len(expectedStageStatus)))
-			for i, _ := range singleStagePR.Status.Stages {
-				Expect(singleStagePR.Status.Stages[i]).To(MatchStage(expectedStageStatus[i]))
-			}
-		})
-
+	Describe("Sync application", func() {
 		It("should send a request to sync an application", func() {
 			mockedArgoCDAppClient := &mocks.MockArgoCDAppClientCalledWith{}
 			reconciler.ArgoCDAppClient = mockedArgoCDAppClient
@@ -387,7 +323,205 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(ContainElement(testAppName))
 		})
 	})
+
+	Describe("Reconciliation loop", func() {
+		It("should reconcile two stages", func() {
+			testPrefix := "two-stages"
+
+			By("creating 2 ArgoCD cluster")
+			clusters, cErr := createClusters(ctx, namespace, testPrefix, 2)
+			Expect(clusters).To(Not(BeNil()))
+			Expect(cErr).To(BeNil())
+
+			By("creating one application targeting each cluster")
+			appOne, aErr := createApplication(ctx, namespace, testPrefix, clusters[0])
+			Expect(aErr).To(BeNil())
+			appTwo, aErr := createApplication(ctx, namespace, testPrefix, clusters[1])
+			Expect(aErr).To(BeNil())
+
+			By("creating a progressive rollout")
+			twoStagesPR := &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
+				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetAPIRef,
+						Kind:     utils.AppSetKind,
+						Name:     fmt.Sprintf("%s-appset", testPrefix),
+					},
+					Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
+						Name:        "stage 0",
+						MaxParallel: intstr.IntOrString{IntVal: 1},
+						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+								"cluster.name": clusters[0].Name,
+							}},
+						}},
+					}, {
+						Name:        "stage 1",
+						MaxParallel: intstr.IntOrString{IntVal: 1},
+						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+								"cluster.name": clusters[1].Name,
+							}},
+						}},
+					}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, twoStagesPR)).To(Succeed())
+
+			prKey := client.ObjectKey{
+				Namespace: namespace,
+				Name:      fmt.Sprintf("%s-pr", testPrefix),
+			}
+
+			By("progressing in first application")
+			app := &argov1alpha1.Application{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      appOne.Name,
+				}, app)
+			}).Should(Succeed())
+			app.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusProgressing,
+				Message: "progressing",
+			}
+			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+
+			ExpectStageStatusPhase(ctx, prKey, "stage 0").Should(Equal(deploymentskyscannernetv1alpha1.PhaseProgressing))
+			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
+
+			By("finishing first application")
+			app.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusHealthy,
+				Message: "healthy",
+			}
+			app.Status.Sync = argov1alpha1.SyncStatus{
+				Status: argov1alpha1.SyncStatusCodeSynced,
+			}
+			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+
+			ExpectStageStatusPhase(ctx, prKey, "stage 0").Should(Equal(deploymentskyscannernetv1alpha1.PhaseSucceeded))
+
+			By("progressing in second application")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      appTwo.Name,
+				}, app)
+			}).Should(Succeed())
+			app.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusProgressing,
+				Message: "progressing",
+			}
+			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+
+			ExpectStageStatusPhase(ctx, prKey, "stage 1").Should(Equal(deploymentskyscannernetv1alpha1.PhaseProgressing))
+			ExpectStagesInStatus(ctx, prKey).Should(Equal(2))
+
+			By("finishing second application")
+			app.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusHealthy,
+				Message: "healthy",
+			}
+			app.Status.Sync = argov1alpha1.SyncStatus{
+				Status: argov1alpha1.SyncStatusCodeSynced,
+			}
+			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+
+			ExpectStageStatusPhase(ctx, prKey, "stage 1").Should(Equal(deploymentskyscannernetv1alpha1.PhaseSucceeded))
+
+			expected := twoStagesPR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
+			ExpectCondition(twoStagesPR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+		})
+	})
 })
+
+func ExpectStageStatusPhase(ctx context.Context, prKey client.ObjectKey, stageName string) AsyncAssertion {
+	return Eventually(func() interface{} {
+		pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+		err := k8sClient.Get(ctx, prKey, pr)
+		if err != nil {
+			return nil
+		}
+		stageStatus := deploymentskyscannernetv1alpha1.FindStageStatus(pr.Status.Stages, stageName)
+		if stageStatus != nil {
+			return stageStatus.Phase
+		}
+
+		return nil
+	})
+}
+
+func ExpectStagesInStatus(ctx context.Context, prKey client.ObjectKey) AsyncAssertion {
+	return Eventually(func() int {
+		pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+		err := k8sClient.Get(ctx, prKey, pr)
+		if err != nil {
+			return -1
+		}
+
+		return len(pr.Status.Stages)
+	})
+}
+
+func createClusters(ctx context.Context, namespace string, prefix string, number int) ([]corev1.Secret, error) {
+	var clusters []corev1.Secret
+
+	for i := 0; i < number; i++ {
+		clusterName := fmt.Sprintf("%s-cluster-%d", prefix, i)
+		cluster := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: namespace, Labels: map[string]string{
+				utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster,
+				"cluster.name":              clusterName,
+			}},
+			Data: map[string][]byte{
+				"server": []byte(fmt.Sprintf("https://%s.kubernetes.io", clusterName)),
+			},
+		}
+
+		err := k8sClient.Create(ctx, &cluster)
+		if err != nil {
+			return nil, err
+		}
+
+		clusters = append(clusters, cluster)
+	}
+
+	return clusters, nil
+}
+
+func createApplication(ctx context.Context, namespace string, prefix string, cluster corev1.Secret) (*argov1alpha1.Application, error) {
+	appSetName := fmt.Sprintf("%s-appset", prefix)
+
+	appName := fmt.Sprintf("%s-app-%s", prefix, cluster.Name)
+	app := &argov1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      appName,
+			Namespace: namespace,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: utils.AppSetAPIGroup,
+				Kind:       utils.AppSetKind,
+				Name:       appSetName,
+				UID:        uuid.NewUUID(),
+			}},
+		},
+		Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
+			Server:    string(cluster.Data["server"]),
+			Namespace: namespace,
+			Name:      cluster.Name,
+		}},
+		Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Status: argov1alpha1.SyncStatusCodeOutOfSync}},
+	}
+	err := k8sClient.Create(ctx, app)
+	if err != nil {
+		return nil, err
+	}
+
+	return app, nil
+}
 
 // statusString returns a formatted string with a condition status, reason and message
 func statusString(status metav1.ConditionStatus, reason string, message string) string {

@@ -39,34 +39,6 @@ func (in *ProgressiveRollout) NewStageStatus(name, message string, phase StageSt
 	}
 }
 
-// SetStageStatus sets the corresponding StageStatus in stageStatus to newStatus
-// - If a stage doesn't exist, it will be added to StageStatus slice
-// - If a stage already exists it will be updated
-func SetStageStatus(stageStatus *[]StageStatus, newStatus StageStatus, updateTime *metav1.Time) {
-	// If StartedAt is not set and the stage is in progress, assign StartedAt
-	if newStatus.Phase == PhaseProgressing && newStatus.StartedAt.IsZero() {
-		newStatus.StartedAt = updateTime
-	}
-	// If the stage is not progressing it is either completed of failed.
-	// If FinishedAt is not set we assign it.
-	if newStatus.Phase != PhaseProgressing && newStatus.FinishedAt.IsZero() {
-		newStatus.FinishedAt = updateTime
-	}
-
-	// Get the status if it already exists
-	existingStatus := FindStageStatus(*stageStatus, newStatus.Name)
-
-	if existingStatus == nil {
-		*stageStatus = append(*stageStatus, newStatus)
-		return
-	}
-
-	existingStatus.Phase = newStatus.Phase
-	existingStatus.Message = newStatus.Message
-	existingStatus.StartedAt = newStatus.StartedAt
-	existingStatus.FinishedAt = newStatus.FinishedAt
-}
-
 // FindStageStatus finds the given stage by name in stage status.
 func FindStageStatus(ss []StageStatus, statusName string) *StageStatus {
 	for i, s := range ss {
