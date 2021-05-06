@@ -9,8 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const namespace = "test-namespace"
-
 func TestOwns(t *testing.T) {
 	testCases := []struct {
 		name            string
@@ -40,10 +38,7 @@ func TestOwns(t *testing.T) {
 
 	ref := utils.AppSetAPIGroup
 	pr := ProgressiveRollout{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pr",
-			Namespace: namespace,
-		},
+		ObjectMeta: metav1.ObjectMeta{Name: "pr", Namespace: "namespace"},
 		Spec: ProgressiveRolloutSpec{
 			SourceRef: corev1.TypedLocalObjectReference{
 				APIGroup: &ref,
