@@ -368,7 +368,7 @@ func (r *ProgressiveRolloutReconciler) updateStageStatus(name, message string, p
 		phase,
 	)
 	nowTime := metav1.NewTime(time.Now())
-	pr.SetStageStatus(stageStatus, nowTime)
+	pr.SetStageStatus(stageStatus, &nowTime)
 	if err := r.patchStatus(ctx, pr); err != nil {
 		r.Log.Error(err, "failed to update object status")
 		return err

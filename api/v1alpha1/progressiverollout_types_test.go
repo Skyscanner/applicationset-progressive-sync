@@ -158,7 +158,7 @@ func TestSetStageStatus(t *testing.T) {
 				},
 			}
 
-			pr.SetStageStatus(testCase.newStatus, mockTime)
+			pr.SetStageStatus(testCase.newStatus, &mockTime)
 			g := NewWithT(t)
 			g.Expect(pr.Status.Stages).To(Equal(testCase.expected))
 		})
