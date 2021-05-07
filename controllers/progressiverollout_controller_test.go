@@ -318,15 +318,21 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
 
 			createdPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
-			Eventually(func() error {
-				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(singleStagePR), &createdPR)
-				return err
-			}).Should(BeNil())
-			Expect(len(createdPR.ObjectMeta.Finalizers)).To(Equal(1))
+			Eventually(func() int {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(singleStagePR), &createdPR)
+				return len(createdPR.ObjectMeta.Finalizers)
+			}).Should(Equal(1))
 			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer))
 
 			expected := singleStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(singleStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+
+			deletedPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			Expect(k8sClient.Delete(ctx, singleStagePR)).To(Succeed())
+			Eventually(func() error {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(singleStagePR), &deletedPR)
+				return err
+			}).Should(HaveOccurred())
 		})
 
 		It("should send a request to sync an application", func() {
