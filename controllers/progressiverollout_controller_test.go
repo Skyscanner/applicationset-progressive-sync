@@ -566,8 +566,8 @@ func ExpectCondition(
 // ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a progressive rollout Object Key and a stage name
 func ExpectStageStatus(ctx context.Context, prKey client.ObjectKey, stageName string) AsyncAssertion {
 	return Eventually(func() deploymentskyscannernetv1alpha1.StageStatus {
-		pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
-		err := k8sClient.Get(ctx, prKey, pr)
+		pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+		err := k8sClient.Get(ctx, prKey, &pr)
 		if err != nil {
 			return deploymentskyscannernetv1alpha1.StageStatus{}
 		}
@@ -584,8 +584,8 @@ func ExpectStageStatus(ctx context.Context, prKey client.ObjectKey, stageName st
 // ExpectStagesInStatus returns an AsyncAssertion for the length of stages with status in the Progressive Rollout object
 func ExpectStagesInStatus(ctx context.Context, prKey client.ObjectKey) AsyncAssertion {
 	return Eventually(func() int {
-		pr := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
-		err := k8sClient.Get(ctx, prKey, pr)
+		pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+		err := k8sClient.Get(ctx, prKey, &pr)
 		if err != nil {
 			return -1
 		}
