@@ -3,6 +3,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
@@ -15,9 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"testing"
-	"time"
 )
 
 const (
@@ -314,6 +316,14 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
+
+			createdPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			Eventually(func() error {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(singleStagePR), &createdPR)
+				return err
+			}).Should(BeNil())
+			Expect(len(createdPR.ObjectMeta.Finalizers)).To(Equal(1))
+			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer))
 
 			expected := singleStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(singleStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
