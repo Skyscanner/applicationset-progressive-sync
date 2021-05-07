@@ -24,4 +24,8 @@ const (
 	// StagesCompleteReason represent the fact that all
 	// the progressive rollout stages have been completed
 	StagesCompleteReason string = "StagesCompleted"
+
+	// StagesFailedReason represent the fact that a
+	// progressive rollout stage has failed
+	StagesFailedReason string = "StagesFailed"
 )

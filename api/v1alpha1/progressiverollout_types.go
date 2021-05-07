@@ -110,9 +110,9 @@ func (in *ProgressiveRollout) SetStageStatus(newStatus StageStatus, updateTime *
 	if newStatus.Phase == PhaseProgressing && newStatus.StartedAt.IsZero() {
 		newStatus.StartedAt = updateTime
 	}
-	// If the stage is not progressing it is either completed of failed.
+	// If the stage is not progressing it is either completed or failed.
 	// If FinishedAt is not set we assign it.
-	if newStatus.Phase != PhaseProgressing && newStatus.FinishedAt.IsZero() {
+	if (newStatus.Phase == PhaseFailed || newStatus.Phase == PhaseSucceeded) && newStatus.FinishedAt.IsZero() {
 		newStatus.FinishedAt = updateTime
 	}
 
