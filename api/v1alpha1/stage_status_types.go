@@ -5,7 +5,7 @@ import (
 )
 
 // StageStatusPhase defines the observed stage phase
-// +kubebuilder:validation:Enum={Progressing,Succeeded,Failed}
+// +kubebuilder:validation:Enum={Progressing,Succeeded,Failed,Unknown}
 type StageStatusPhase string
 
 const (

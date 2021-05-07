@@ -132,6 +132,15 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 		}
 
+		if scheduler.IsStageFailed(apps) {
+			message := "stage failed"
+			r.Log.Info(message)
+			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseFailed, pr); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+
 		if scheduler.IsStageInProgress(apps) {
 			message := "stage in progress"
 			r.Log.Info(message)
@@ -140,15 +149,6 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 			// Stage in progress, we reconcile again until the stage is completed or failed
 			return ctrl.Result{Requeue: true}, nil
-		}
-
-		if scheduler.IsStageFailed(apps) {
-			message := "stage failed"
-			r.Log.Info(message)
-			if err := r.updateStageStatus(stage.Name, message, deploymentskyscannernetv1alpha1.PhaseFailed, pr); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, nil
 		}
 
 		if scheduler.IsStageComplete(apps) {
@@ -336,7 +336,7 @@ func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.
 		}
 	}
 
-	utils.SortAppsByName(&apps)
+	utils.SortAppsByName(apps)
 
 	return apps, nil
 }

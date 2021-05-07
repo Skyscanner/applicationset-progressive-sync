@@ -21,8 +21,8 @@ func SortSecretsByName(secrets *corev1.SecretList) {
 }
 
 // SortAppsByName sort the Application slice in place by the app name
-func SortAppsByName(apps *[]argov1alpha1.Application) {
-	sort.SliceStable(*apps, func(i, j int) bool { return (*apps)[i].Name < (*apps)[j].Name })
+func SortAppsByName(apps []argov1alpha1.Application) {
+	sort.SliceStable(apps, func(i, j int) bool { return (apps)[i].Name < (apps)[j].Name })
 }
 
 // GetAppsBySyncStatusCode returns the Applications matching the specified sync status code
@@ -65,6 +65,7 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 	return result
 }
 
+// GetClustersName returns a string containing a comma-separated list of names of the given apps
 func GetAppsName(apps []argov1alpha1.Application) string {
 	var names []string
 	for _, a := range apps {
@@ -73,6 +74,7 @@ func GetAppsName(apps []argov1alpha1.Application) string {
 	return fmt.Sprint(strings.Join(names, ", "))
 }
 
+// GetClustersName returns a string containing a comma-separated list of names of the given clusters
 func GetClustersName(clusters []corev1.Secret) string {
 	var names []string
 	for _, c := range clusters {

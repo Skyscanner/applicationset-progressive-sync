@@ -703,7 +703,7 @@ func TestScheduler(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			utils.SortAppsByName(&testCase.apps)
+			utils.SortAppsByName(testCase.apps)
 			got := Scheduler(testCase.apps, testCase.stage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
@@ -888,6 +888,316 @@ func TestIsStageFailed(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			got := IsStageFailed(testCase.apps)
+			g := NewWithT(t)
+			g.Expect(got).To(Equal(testCase.expected))
+		})
+	}
+}
+
+func TestIsStageInProgress(t *testing.T) {
+	testCases := []struct {
+		name     string
+		apps     []argov1alpha1.Application
+		expected bool
+	}{
+		{
+			name: "stage in progress",
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusUnknown,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-two",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusDegraded,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusMissing,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusSuspended,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-six",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusProgressing,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "stage not in progress",
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusUnknown,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-two",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusDegraded,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusMissing,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusSuspended,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := IsStageInProgress(testCase.apps)
+			g := NewWithT(t)
+			g.Expect(got).To(Equal(testCase.expected))
+		})
+	}
+}
+
+func TestIsStageComplete(t *testing.T) {
+	testCases := []struct {
+		name     string
+		apps     []argov1alpha1.Application
+		expected bool
+	}{
+		{
+			name: "stage is complete",
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-two",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "stage is not complete",
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-one",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-two",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusDegraded,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusMissing,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeUnknown,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := IsStageComplete(testCase.apps)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})

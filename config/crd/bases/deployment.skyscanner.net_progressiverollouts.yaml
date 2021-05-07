@@ -234,6 +234,7 @@ spec:
                     - Progressing
                     - Succeeded
                     - Failed
+                    - Unknown
                     type: string
                   startedAt:
                     format: date-time
