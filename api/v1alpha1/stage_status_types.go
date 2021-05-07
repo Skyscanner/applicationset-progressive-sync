@@ -30,7 +30,7 @@ func (in *ProgressiveRollout) GetStageStatus() []StageStatus {
 }
 
 // NewStageStatus adds a new StageStatus
-func (in *ProgressiveRollout) NewStageStatus(name, message string, phase StageStatusPhase) StageStatus {
+func NewStageStatus(name, message string, phase StageStatusPhase) StageStatus {
 	return StageStatus{
 		Name:       name,
 		Phase:      phase,
