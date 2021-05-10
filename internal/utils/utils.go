@@ -2,11 +2,12 @@ package utils
 
 import (
 	"fmt"
+	"sort"
+	"strings"
+
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
 	corev1 "k8s.io/api/core/v1"
-	"sort"
-	"strings"
 )
 
 // IsArgoCDCluster returns true if one of the labels is the ArgoCD secret label with the secret type cluster as value
