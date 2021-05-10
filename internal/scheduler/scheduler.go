@@ -28,7 +28,7 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	*/
 
 	var scheduledApps []argov1alpha1.Application
-	outOfSyncApps := utils.FilterAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 	// If there are no OutOfSync Applications, return
 	if len(outOfSyncApps) == 0 {
 		return scheduledApps
@@ -67,12 +67,30 @@ func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1a
 	return scheduledApps
 }
 
-func IsStageComplete(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {
-	//TODO: add logic
-	return true
+// IsStageFailed returns true if at least one app is failed
+func IsStageFailed(apps []argov1alpha1.Application) bool {
+	// An app is failed if:
+	// - its Health Status Code is Degraded
+	// - its Sync Status Code is Synced
+	degradedApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusDegraded)
+	degradedSyncedApps := utils.GetAppsBySyncStatusCode(degradedApps, argov1alpha1.SyncStatusCodeSynced)
+	return len(degradedSyncedApps) > 0
 }
 
-func IsStageFailed(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) bool {
-	// TODO: add logic
-	return false
+// IsStageInProgress returns true if at least one app is is in progress
+func IsStageInProgress(apps []argov1alpha1.Application) bool {
+	// An app is in progress if:
+	// - its Health Status Code is Progressing
+	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
+	return len(progressingApps) > 0
+}
+
+// IsStageComplete returns true if all applications are Synced and Healthy
+func IsStageComplete(apps []argov1alpha1.Application) bool {
+	// An app is complete if:
+	// - its Health Status Code is Healthy
+	// - its Sync Status Code is Synced
+	completeApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
+	completeSyncedApps := utils.GetAppsBySyncStatusCode(completeApps, argov1alpha1.SyncStatusCodeSynced)
+	return len(completeSyncedApps) == len(apps)
 }
