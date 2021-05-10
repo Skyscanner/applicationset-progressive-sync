@@ -401,9 +401,9 @@ func (r *ProgressiveRolloutReconciler) syncApp(appName string) (*argov1alpha1.Ap
 // patchStatus patches the progressive rollout object status
 func (r *ProgressiveRolloutReconciler) patchStatus(ctx context.Context, pr *deploymentskyscannernetv1alpha1.ProgressiveRollout) error {
 	key := client.ObjectKeyFromObject(pr)
-	latest := &deploymentskyscannernetv1alpha1.ProgressiveRollout{}
-	if err := r.Client.Get(ctx, key, latest); err != nil {
+	latest := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+	if err := r.Client.Get(ctx, key, &latest); err != nil {
 		return err
 	}
-	return r.Client.Status().Patch(ctx, pr, client.MergeFrom(latest))
+	return r.Client.Status().Patch(ctx, pr, client.MergeFrom(&latest))
 }
