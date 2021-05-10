@@ -17,6 +17,11 @@
 package controllers
 
 import (
+	"math/rand"
+	"path/filepath"
+	"testing"
+	"time"
+
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
@@ -24,16 +29,12 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"math/rand"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
-	"time"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -77,6 +78,10 @@ var _ = BeforeSuite(func(done Done) {
 
 	// +kubebuilder:scaffold:scheme
 
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(k8sClient).NotTo(BeNil())
+
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
 	})
@@ -96,9 +101,6 @@ var _ = BeforeSuite(func(done Done) {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
 		Expect(err).ToNot(HaveOccurred())
 	}()
-
-	k8sClient = k8sManager.GetClient()
-	Expect(k8sClient).ToNot(BeNil())
 
 	close(done)
 }, 60)
