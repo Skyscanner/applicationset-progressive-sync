@@ -127,6 +127,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 					}
 
 					// TODO: stage status - update failed clusters
+
 					return ctrl.Result{}, sErr
 				}
 			}
@@ -147,6 +148,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 				return ctrl.Result{}, err
 			}
 			r.Log.Info("rollout failed")
+			// We can set Requeue: true once we have a timeout in place
 			return ctrl.Result{}, nil
 		}
 
@@ -366,7 +368,6 @@ func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps []argov1alp
 	return nil
 }
 
-// TODO: should we split this call into an addStageStatus and an update
 // updateStageStatus updates the target stage given a stage name, message and phase
 func (r *ProgressiveRolloutReconciler) updateStageStatus(name, message string, phase deploymentskyscannernetv1alpha1.StageStatusPhase, pr *deploymentskyscannernetv1alpha1.ProgressiveRollout) error {
 	ctx := context.Background()
