@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
@@ -37,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strings"
 )
 
 // ProgressiveRolloutReconciler reconciles a ProgressiveRollout object
@@ -88,7 +89,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 		// This action allows the Scheduler to keep track at which stage an Application has been synced.
-		outOfSyncApps := utils.FilterAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+		outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 		if err = r.removeAnnotationFromApps(outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -109,21 +110,13 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 		}
 
-		if scheduler.IsStageFailed(apps, stage) {
+		if scheduler.IsStageFailed(apps) {
 			// TODO: updated status
 			r.Log.Info("stage failed")
 			return ctrl.Result{}, nil
 		}
 
-		if scheduler.IsStageComplete(apps, stage) {
-			// TODO: update status
-			r.Log.Info("stage completed")
-		} else {
-			// TODO: update status
-			r.Log.Info("stage in progress")
-			// Stage in progress, we reconcile again until the stage is completed or failed
-			return ctrl.Result{Requeue: true}, nil
-		}
+		r.Log.Info("stage completed")
 	}
 
 	log.Info("all stages completed")
@@ -294,7 +287,7 @@ func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.
 		}
 	}
 
-	utils.SortAppsByName(&apps)
+	utils.SortAppsByName(apps)
 
 	return apps, nil
 }

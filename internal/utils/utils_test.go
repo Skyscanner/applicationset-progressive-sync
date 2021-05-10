@@ -74,14 +74,14 @@ func TestSortSecretsByName(t *testing.T) {
 func TestSortAppsByName(t *testing.T) {
 	namespace := "default"
 	testCase := struct {
-		apps     *[]argov1alpha1.Application
-		expected *[]argov1alpha1.Application
+		apps     []argov1alpha1.Application
+		expected []argov1alpha1.Application
 	}{
-		apps: &[]argov1alpha1.Application{{
+		apps: []argov1alpha1.Application{{
 			ObjectMeta: metav1.ObjectMeta{Name: "appA", Namespace: namespace}}, {
 			ObjectMeta: metav1.ObjectMeta{Name: "appC", Namespace: namespace}}, {
 			ObjectMeta: metav1.ObjectMeta{Name: "appB", Namespace: namespace}}},
-		expected: &[]argov1alpha1.Application{{
+		expected: []argov1alpha1.Application{{
 			ObjectMeta: metav1.ObjectMeta{Name: "appA", Namespace: namespace}}, {
 			ObjectMeta: metav1.ObjectMeta{Name: "appB", Namespace: namespace}}, {
 			ObjectMeta: metav1.ObjectMeta{Name: "appC", Namespace: namespace}}},
