@@ -24,11 +24,6 @@ type StageStatus struct {
 	FinishedAt *metav1.Time     `json:"finishedAt,omitempty"`
 }
 
-// GetStageStatus returns the Status.Stages slice
-func (in *ProgressiveRollout) GetStageStatus() []StageStatus {
-	return in.Status.Stages
-}
-
 // NewStageStatus adds a new StageStatus
 func NewStageStatus(name, message string, phase StageStatusPhase) StageStatus {
 	return StageStatus{
