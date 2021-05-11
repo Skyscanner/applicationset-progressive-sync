@@ -45,6 +45,12 @@ rules:
 - apiGroups:
   - deployment.skyscanner.net
   resources:
+  - progressiverollouts/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deployment.skyscanner.net
+  resources:
   - progressiverollouts/status
   verbs:
   - get

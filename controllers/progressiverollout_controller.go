@@ -36,6 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -52,6 +53,7 @@ type ProgressiveRolloutReconciler struct {
 
 // +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=deployment.skyscanner.net,resources=progressiverollouts/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications,verbs=get;list;watch
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications/status,verbs=get;list;watch
@@ -68,6 +70,32 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
+
+	if pr.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object
+		if !controllerutil.ContainsFinalizer(&pr, deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer) {
+			controllerutil.AddFinalizer(&pr, deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer)
+			if err := r.Update(ctx, &pr); err != nil {
+				r.Log.Error(err, "failed to update object")
+				return ctrl.Result{}, err
+			}
+			// Requeue after adding the finalizer
+			return ctrl.Result{Requeue: true}, nil
+		}
+	} else {
+		// The object is being deleted
+		if controllerutil.ContainsFinalizer(&pr, deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer) {
+			// Remove our finalizer from the list and update it
+			controllerutil.RemoveFinalizer(&pr, deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer)
+			if err := r.Update(ctx, &pr); err != nil {
+				r.Log.Error(err, "failed to update object")
+				return ctrl.Result{}, err
+			}
+		}
+		// Stop reconciliation as the item is being deleted
+		return ctrl.Result{}, nil
+	}
 
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)

@@ -3,6 +3,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
@@ -19,8 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"testing"
-	"time"
 )
 
 const (
@@ -389,9 +390,23 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Phase:   deploymentskyscannernetv1alpha1.PhaseSucceeded,
 				Message: "stage completed",
 			}))
+      
+			createdPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			Eventually(func() int {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(twoStagesPR), &createdPR)
+				return len(createdPR.ObjectMeta.Finalizers)
+			}).Should(Equal(1))
+			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer))
 
 			expected := twoStagesPR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(twoStagesPR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+
+			deletedPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			Expect(k8sClient.Delete(ctx, twoStagesPR)).To(Succeed())
+			Eventually(func() error {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(twoStagesPR), &deletedPR)
+				return err
+			}).Should(HaveOccurred())
 		})
 
 		It("should fail if unable to sync application", func() {
@@ -482,8 +497,22 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: "stage failed",
 			}))
 
+			createdPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			Eventually(func() int {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(failedStagePR), &createdPR)
+				return len(createdPR.ObjectMeta.Finalizers)
+			}).Should(Equal(1))
+			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer))
+
 			expected := failedStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesFailedReason, "stage 0 stage failed")
 			ExpectCondition(failedStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+
+			deletedPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			Expect(k8sClient.Delete(ctx, failedStagePR)).To(Succeed())
+			Eventually(func() error {
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(failedStagePR), &deletedPR)
+				return err
+			}).Should(HaveOccurred())
 		})
 	})
 

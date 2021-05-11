@@ -18,6 +18,9 @@ all: manager
 tools:
 	go generate -tags tools tools/tools.go
 
+lint: fmt vet
+	golangci-lint run
+
 # Run tests
 test: tools generate fmt vet manifests
 	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress
