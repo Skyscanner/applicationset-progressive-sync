@@ -217,6 +217,32 @@ spec:
                 - type
                 type: object
               type: array
+            stages:
+              items:
+                description: StageStatus defines the observed stage status
+                properties:
+                  finishedAt:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  name:
+                    type: string
+                  stage:
+                    description: StageStatusPhase defines the observed stage phase
+                    enum:
+                    - Progressing
+                    - Succeeded
+                    - Failed
+                    - Unknown
+                    type: string
+                  startedAt:
+                    format: date-time
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
           type: object
       type: object
   version: v1alpha1
