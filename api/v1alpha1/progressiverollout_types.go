@@ -72,6 +72,7 @@ type ProgressiveRolloutStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Stages     []StageStatus      `json:"stages,omitempty"`
 }
 
 // GetStatusConditions returns a pointer to the Status.Conditions slice
@@ -79,6 +80,7 @@ func (in *ProgressiveRollout) GetStatusConditions() *[]metav1.Condition {
 	return &in.Status.Conditions
 }
 
+// NewStatusCondition adds a new Condition
 func (in *ProgressiveRollout) NewStatusCondition(t string, s metav1.ConditionStatus, r string, m string) metav1.Condition {
 	return metav1.Condition{
 		Type:               t,
@@ -97,6 +99,34 @@ func (in *ProgressiveRollout) Owns(owners []metav1.OwnerReference) bool {
 		}
 	}
 	return false
+}
+
+// SetStageStatus sets the corresponding StageStatus in stageStatus to newStatus
+// - If a stage doesn't exist, it will be added to StageStatus slice
+// - If a stage already exists it will be updated
+func (in *ProgressiveRollout) SetStageStatus(newStatus StageStatus, updateTime *metav1.Time) {
+	// If StartedAt is not set and the stage is in progress, assign StartedAt
+	if newStatus.Phase == PhaseProgressing && newStatus.StartedAt.IsZero() {
+		newStatus.StartedAt = updateTime
+	}
+	// If the stage is not progressing it is either completed or failed.
+	// If FinishedAt is not set we assign it.
+	if (newStatus.Phase == PhaseFailed || newStatus.Phase == PhaseSucceeded) && newStatus.FinishedAt.IsZero() {
+		newStatus.FinishedAt = updateTime
+	}
+
+	// Get the status if it already exists
+	existingStatus := FindStageStatus(in.Status.Stages, newStatus.Name)
+
+	if existingStatus == nil {
+		in.Status.Stages = append(in.Status.Stages, newStatus)
+		return
+	}
+
+	existingStatus.Phase = newStatus.Phase
+	existingStatus.Message = newStatus.Message
+	existingStatus.StartedAt = newStatus.StartedAt
+	existingStatus.FinishedAt = newStatus.FinishedAt
 }
 
 // +kubebuilder:object:root=true

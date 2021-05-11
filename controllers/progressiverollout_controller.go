@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
 	"github.com/Skyscanner/argocd-progressive-rollout/internal/scheduler"
@@ -102,28 +103,44 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 		// Get the clusters to update
 		clusters, err := r.getClustersFromSelector(stage.Targets.Clusters.Selector)
 		if err != nil {
-			log.Error(err, "unable to fetch clusters")
+			message := "unable to fetch clusters"
+			log.Error(err, message)
+			if err := r.updateStageStatus(ctx, stage.Name, message, deploymentskyscannernetv1alpha1.PhaseUnknown, &pr); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, err
 		}
-		r.Log.V(1).Info("clusters selected", "clusters", fmt.Sprintf("%v", clusters.Items))
+		r.Log.V(1).Info("clusters selected", "clusters", utils.GetClustersName(clusters.Items))
 
-		// Get the Applications owned by the ProgressiveRollout targeting the clusters
-		apps, err := r.getOwnedAppsFromClusters(clusters, pr)
+		// Get only the Applications owned by the ProgressiveRollout targeting the selected clusters
+		apps, err := r.getOwnedAppsFromClusters(clusters, &pr)
 		if err != nil {
-			log.Error(err, "unable to fetch apps")
+			message := "unable to fetch apps"
+			log.Error(err, message)
+			if err := r.updateStageStatus(ctx, stage.Name, message, deploymentskyscannernetv1alpha1.PhaseUnknown, &pr); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, err
 		}
-		r.Log.V(1).Info("apps selected", "apps", fmt.Sprintf("%v", apps))
+		r.Log.V(1).Info("apps selected", "apps", utils.GetAppsName(apps))
 
 		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 		// This action allows the Scheduler to keep track at which stage an Application has been synced.
 		outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-		if err = r.removeAnnotationFromApps(outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
+		if err := r.removeAnnotationFromApps(outOfSyncApps, utils.ProgressiveRolloutSyncedAtStageKey); err != nil {
+			message := "unable to remove out-of-sync annotation"
+			log.Error(err, message)
+			if err := r.updateStageStatus(ctx, stage.Name, message, deploymentskyscannernetv1alpha1.PhaseUnknown, &pr); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, err
 		}
 
 		// Get the Applications to update
+		// TODO: update the scheduler to return the InProgress apps
 		scheduledApps := scheduler.Scheduler(apps, stage)
+
+		// TODO: status status - update targets
 
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
@@ -132,19 +149,63 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 			if err != nil {
 				if !strings.Contains(err.Error(), "another operation is already in progress") {
-					log.Error(err, "unable to sync app", "message", err.Error())
+					message := "unable to sync app"
+					log.Error(err, message, "message", err.Error())
+					if err := r.updateStageStatus(ctx, stage.Name, message, deploymentskyscannernetv1alpha1.PhaseUnknown, &pr); err != nil {
+						return ctrl.Result{}, err
+					}
+
+					// TODO: stage status - update failed clusters
+
 					return ctrl.Result{}, err
 				}
 			}
 		}
 
 		if scheduler.IsStageFailed(apps) {
-			// TODO: updated status
-			r.Log.Info("stage failed")
+			message := "stage failed"
+			r.Log.Info(message)
+			if err := r.updateStageStatus(ctx, stage.Name, message, deploymentskyscannernetv1alpha1.PhaseFailed, &pr); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			failedMessage := fmt.Sprintf("%s stage failed", stage.Name)
+			failed := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesFailedReason, failedMessage)
+			apimeta.SetStatusCondition(pr.GetStatusConditions(), failed)
+			if err := r.patchStatus(ctx, &pr); err != nil {
+				r.Log.Error(err, "failed to update object status")
+				return ctrl.Result{}, err
+			}
+			r.Log.Info("rollout failed")
+			// We can set Requeue: true once we have a timeout in place
 			return ctrl.Result{}, nil
 		}
 
-		r.Log.Info("stage completed")
+		if scheduler.IsStageInProgress(apps) {
+			message := "stage in progress"
+			r.Log.Info(message)
+			if err := r.updateStageStatus(ctx, stage.Name, message, deploymentskyscannernetv1alpha1.PhaseProgressing, &pr); err != nil {
+				return ctrl.Result{}, err
+			}
+			// Stage in progress, we reconcile again until the stage is completed or failed
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		if scheduler.IsStageComplete(apps) {
+			message := "stage completed"
+			r.Log.Info(message)
+			if err := r.updateStageStatus(ctx, stage.Name, message, deploymentskyscannernetv1alpha1.PhaseSucceeded, &pr); err != nil {
+				return ctrl.Result{}, err
+			}
+		} else {
+			message := "stage is unknown"
+			r.Log.Info(message)
+			if err := r.updateStageStatus(ctx, stage.Name, message, deploymentskyscannernetv1alpha1.PhaseUnknown, &pr); err != nil {
+				return ctrl.Result{}, err
+			}
+			// We can set Requeue: true once we have a timeout in place
+			return ctrl.Result{}, nil
+		}
 	}
 
 	log.Info("all stages completed")
@@ -152,7 +213,7 @@ func (r *ProgressiveRolloutReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// Progressive rollout completed
 	completed := pr.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
 	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
-	if err := r.Client.Status().Update(ctx, &pr); err != nil {
+	if err := r.patchStatus(ctx, &pr); err != nil {
 		r.Log.Error(err, "failed to update object status")
 		return ctrl.Result{}, err
 	}
@@ -297,8 +358,8 @@ func (r *ProgressiveRolloutReconciler) getClustersFromSelector(selector metav1.L
 }
 
 // getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveRollout
-func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.SecretList, pr deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
-	apps := []argov1alpha1.Application{{}}
+func (r *ProgressiveRolloutReconciler) getOwnedAppsFromClusters(clusters corev1.SecretList, pr *deploymentskyscannernetv1alpha1.ProgressiveRollout) ([]argov1alpha1.Application, error) {
+	var apps []argov1alpha1.Application
 	appList := argov1alpha1.ApplicationList{}
 	ctx := context.Background()
 
@@ -336,6 +397,22 @@ func (r *ProgressiveRolloutReconciler) removeAnnotationFromApps(apps []argov1alp
 	return nil
 }
 
+// updateStageStatus updates the target stage given a stage name, message and phase
+func (r *ProgressiveRolloutReconciler) updateStageStatus(ctx context.Context, name, message string, phase deploymentskyscannernetv1alpha1.StageStatusPhase, pr *deploymentskyscannernetv1alpha1.ProgressiveRollout) error {
+	stageStatus := deploymentskyscannernetv1alpha1.NewStageStatus(
+		name,
+		message,
+		phase,
+	)
+	nowTime := metav1.NewTime(time.Now())
+	pr.SetStageStatus(stageStatus, &nowTime)
+	if err := r.patchStatus(ctx, pr); err != nil {
+		r.Log.Error(err, "failed to update object status")
+		return err
+	}
+	return nil
+}
+
 // syncApp sends a sync request for the target app
 func (r *ProgressiveRolloutReconciler) syncApp(appName string) (*argov1alpha1.Application, error) {
 	ctx := context.Background()
@@ -345,4 +422,14 @@ func (r *ProgressiveRolloutReconciler) syncApp(appName string) (*argov1alpha1.Ap
 	}
 
 	return r.ArgoCDAppClient.Sync(ctx, &syncReq)
+}
+
+// patchStatus patches the progressive rollout object status
+func (r *ProgressiveRolloutReconciler) patchStatus(ctx context.Context, pr *deploymentskyscannernetv1alpha1.ProgressiveRollout) error {
+	key := client.ObjectKeyFromObject(pr)
+	latest := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+	if err := r.Client.Get(ctx, key, &latest); err != nil {
+		return err
+	}
+	return r.Client.Status().Patch(ctx, pr, client.MergeFrom(&latest))
 }
