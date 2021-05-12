@@ -390,7 +390,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Phase:   deploymentskyscannernetv1alpha1.PhaseSucceeded,
 				Message: "stage completed",
 			}))
-      
+
 			createdPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
 			Eventually(func() int {
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(twoStagesPR), &createdPR)
