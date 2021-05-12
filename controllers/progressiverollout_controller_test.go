@@ -63,7 +63,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	Describe("requestsForApplicationChange function", func() {
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			ownerPR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
 				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
 				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
@@ -133,7 +133,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	Describe("requestsForSecretChange function", func() {
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			ownerPR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
 				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
 				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
