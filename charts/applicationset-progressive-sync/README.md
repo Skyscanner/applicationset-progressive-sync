@@ -1,6 +1,6 @@
 # applicationset-progressive-sync
 
-![Version: 0.1.5-prealpha](https://img.shields.io/badge/Version-0.1.5--prealpha-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: main](https://img.shields.io/badge/AppVersion-main-informational?style=flat-square)
+![Version: 0.1.5-prealpha](https://img.shields.io/badge/Version-0.1.5--prealpha-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v0.2.0-prealpha](https://img.shields.io/badge/AppVersion-v0.2.0--prealpha-informational?style=flat-square)
 
 A Helm chart to install the applicationset-progressive-sync controller.
 
