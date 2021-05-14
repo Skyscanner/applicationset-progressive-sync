@@ -424,7 +424,7 @@ func (r *ProgressiveSyncReconciler) syncApp(appName string) (*argov1alpha1.Appli
 	return r.ArgoCDAppClient.Sync(ctx, &syncReq)
 }
 
-// patchStatus patches the progressive rollout object status
+// patchStatus patches the progressive sync object status
 func (r *ProgressiveSyncReconciler) patchStatus(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) error {
 	key := client.ObjectKeyFromObject(pr)
 	latest := syncv1alpha1.ProgressiveSync{}

@@ -281,7 +281,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			appTwo, aErr := createApplication(ctx, testPrefix, clusters[1])
 			Expect(aErr).To(BeNil())
 
-			By("creating a progressive rollout")
+			By("creating a progressive sync")
 			twoStagesPR := &syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
@@ -423,7 +423,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			_, aErr = createApplication(ctx, testPrefix, clusters[1])
 			Expect(aErr).To(BeNil())
 
-			By("creating a progressive rollout")
+			By("creating a progressive sync")
 			failedStagePR := &syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
@@ -552,7 +552,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, singleStageApp)).To(Succeed())
 
-			By("creating a progressive rollout")
+			By("creating a progressive sync")
 			singleStagePR = &syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
@@ -684,7 +684,7 @@ func ExpectCondition(
 	})
 }
 
-// ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a progressive rollout Object Key and a stage name
+// ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a progressive sync Object Key and a stage name
 func ExpectStageStatus(ctx context.Context, prKey client.ObjectKey, stageName string) AsyncAssertion {
 	return Eventually(func() syncv1alpha1.StageStatus {
 		pr := syncv1alpha1.ProgressiveSync{}

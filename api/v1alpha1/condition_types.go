@@ -18,14 +18,14 @@ package v1alpha1
 
 const (
 	// CompletedCondition is the condition type used
-	// to record the last progressive rollout result.
+	// to record the last progressive sync result.
 	CompletedCondition string = "Completed"
 
 	// StagesCompleteReason represent the fact that all
-	// the progressive rollout stages have been completed
+	// the progressive sync stages have been completed
 	StagesCompleteReason string = "StagesCompleted"
 
 	// StagesFailedReason represent the fact that a
-	// progressive rollout stage has failed
+	// progressive sync stage has failed
 	StagesFailedReason string = "StagesFailed"
 )
