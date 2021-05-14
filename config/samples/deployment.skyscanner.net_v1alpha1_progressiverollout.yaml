@@ -1,4 +1,4 @@
-apiVersion: sync.skyscanner.net/v1alpha1
+apiVersion: argoproj.skyscanner.net/v1alpha1
 kind: ProgressiveSync
 metadata:
   name: go-infrabin

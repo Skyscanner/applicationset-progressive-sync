@@ -65,7 +65,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "b84175a0.sync.skyscanner.net",
+		LeaderElectionID:   "b84175a0.argoproj.skyscanner.net",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

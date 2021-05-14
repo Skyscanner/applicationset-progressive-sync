@@ -5,7 +5,7 @@ metadata:
   name: progressiverollout-viewer-role
 rules:
 - apiGroups:
-  - sync.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
   - progressivesyncs
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - sync.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
   - progressivesyncs/status
   verbs:

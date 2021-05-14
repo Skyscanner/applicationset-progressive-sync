@@ -12,12 +12,12 @@ If we enable the `auto-sync` policy, we will update all the generated Applicatio
 
 This might not be a problem if we have only one production cluster, but organizations with tens or hundreds of clusters need to avoid a global rollout. They need to release new versions of their application in a safer way.
 
-The `argocd progressive sync` controller allows operators and developers to decide _how_ they want to update their Applications.
+The `applicationset-progressive-sync` controller allows operators and developers to decide _how_ they want to update their Applications.
 
 ## Example `spec`
 
 ```yaml
-apiVersion: sync.skyscanner.net/v1alpha1
+apiVersion: argoproj.skyscanner.net/v1alpha1
 kind: ProgressiveSync
 metadata:
   name: myprogressiverollout

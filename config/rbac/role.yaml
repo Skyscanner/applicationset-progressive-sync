@@ -31,7 +31,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - sync.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
   - progressivesyncs
   verbs:
@@ -43,13 +43,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - sync.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
   - progressivesyncs/finalizers
   verbs:
   - update
 - apiGroups:
-  - sync.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
   - progressivesyncs/status
   verbs:

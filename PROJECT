@@ -1,7 +1,7 @@
-domain: sync.skyscanner.net
+domain: argoproj.skyscanner.net
 repo: github.com/Skyscanner/applicationset-progressive-sync
 resources:
-- group: sync.skyscanner.net
+- group: argoproj.skyscanner.net
   kind: ProgressiveSync
   version: v1alpha1
 version: "2"
