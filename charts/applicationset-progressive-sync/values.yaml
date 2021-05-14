@@ -1,4 +1,4 @@
-# Default values for argocd-progressive-rollout.
+# Default values for applicationset-progressive-sync.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -7,7 +7,7 @@ replicaCount: 1
 installCRDs: false
 
 image:
-  repository: maruina/argocd-progressive-rollout
+  repository: maruina/applicationset-progressive-sync
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.
   tag: ""

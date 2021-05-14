@@ -1,19 +1,19 @@
 package scheduler
 
 import (
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
-	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
+	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Scheduler returns a list of apps to sync for a given stage
-func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveRolloutStage) []argov1alpha1.Application {
+func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveSyncStage) []argov1alpha1.Application {
 
 	/*
 		The Scheduler takes:
-			- a ProgressiveRolloutStage object
+			- a ProgressiveSyncStage object
 			- the Applications selected with the clusters selector
 
 		The Scheduler splits the Applications in the following groups:

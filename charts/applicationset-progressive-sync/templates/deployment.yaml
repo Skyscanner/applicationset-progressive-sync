@@ -1,15 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "argocd-progressive-rollout.fullname" . }}
+  name: {{ include "applicationset-progressive-sync.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "argocd-progressive-rollout.labels" . | nindent 4 }}
+    {{- include "applicationset-progressive-sync.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "argocd-progressive-rollout.selectorLabels" . | nindent 6 }}
+      {{- include "applicationset-progressive-sync.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -17,25 +17,25 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "argocd-progressive-rollout.selectorLabels" . | nindent 8 }}
+        {{- include "applicationset-progressive-sync.selectorLabels" . | nindent 8 }}
     spec:
       volumes:
         {{- if .Values.configSecret.name }}
         - name: {{ .Values.configSecret.name }}
         {{- else }}
-        - name: {{ include "argocd-progressive-rollout.fullname" . }}-config
+        - name: {{ include "applicationset-progressive-sync.fullname" . }}-config
         {{- end }}
           secret:
             {{- if .Values.configSecret.name }}
             secretName: {{ .Values.configSecret.name }}
             {{- else }}
-            secretName: {{ include "argocd-progressive-rollout.fullname" . }}-config
+            secretName: {{ include "applicationset-progressive-sync.fullname" . }}-config
             {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "argocd-progressive-rollout.serviceAccountName" . }}
+      serviceAccountName: {{ include "applicationset-progressive-sync.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -61,7 +61,7 @@ spec:
               {{- if .Values.configSecret.name }}
               name: {{ .Values.configSecret.name }}
               {{- else }}
-              name: {{ include "argocd-progressive-rollout.fullname" . }}-config
+              name: {{ include "applicationset-progressive-sync.fullname" . }}-config
               {{- end }}
               readOnly: true
       {{- with .Values.nodeSelector }}

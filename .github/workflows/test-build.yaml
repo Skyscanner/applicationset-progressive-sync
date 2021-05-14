@@ -49,5 +49,5 @@ jobs:
         uses: docker/build-push-action@v2.4.0
         with:
           push: true
-          tags: maruina/argocd-progressive-rollout:main
+          tags: maruina/applicationset-progressive-sync:main
         if: github.event_name != 'pull_request'

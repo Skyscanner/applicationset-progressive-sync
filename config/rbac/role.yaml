@@ -33,7 +33,7 @@ rules:
 - apiGroups:
   - deployment.skyscanner.net
   resources:
-  - progressiverollouts
+  - progressivesyncs
   verbs:
   - create
   - delete
@@ -45,13 +45,13 @@ rules:
 - apiGroups:
   - deployment.skyscanner.net
   resources:
-  - progressiverollouts/finalizers
+  - progressivesyncs/finalizers
   verbs:
   - update
 - apiGroups:
   - deployment.skyscanner.net
   resources:
-  - progressiverollouts/status
+  - progressivesyncs/status
   verbs:
   - get
   - patch
