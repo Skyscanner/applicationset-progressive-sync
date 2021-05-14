@@ -3,7 +3,7 @@ package scheduler
 import (
 	"testing"
 
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
@@ -21,7 +21,7 @@ func TestScheduler(t *testing.T) {
 	testCases := []struct {
 		name     string
 		apps     []argov1alpha1.Application
-		stage    deploymentskyscannernetv1alpha1.ProgressiveSyncStage
+		stage    syncv1alpha1.ProgressiveSyncStage
 		expected []argov1alpha1.Application
 	}{
 		{
@@ -61,11 +61,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("3"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -154,11 +154,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("3"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -233,11 +233,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("3"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -323,11 +323,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("100%"),
 				MaxTargets:  intstr.Parse("50%"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -428,11 +428,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("1"),
 				MaxTargets:  intstr.Parse("3"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: nil,
 		},
@@ -451,11 +451,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("1"),
 				MaxTargets:  intstr.Parse("1"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -530,11 +530,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("3"),
 				MaxTargets:  intstr.Parse("3"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -598,11 +598,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("10%"),
 				MaxTargets:  intstr.Parse("10%"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -657,11 +657,11 @@ func TestScheduler(t *testing.T) {
 					},
 				},
 			},
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("2"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -692,11 +692,11 @@ func TestScheduler(t *testing.T) {
 		{
 			name: "Applications: outOfSync 0, syncedInCurrentStage 0, progressing 0, | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 0",
 			apps: nil,
-			stage: deploymentskyscannernetv1alpha1.ProgressiveSyncStage{
+			stage: syncv1alpha1.ProgressiveSyncStage{
 				Name:        StageName,
 				MaxParallel: intstr.Parse("3"),
 				MaxTargets:  intstr.Parse("3"),
-				Targets:     deploymentskyscannernetv1alpha1.ProgressiveSyncTargets{},
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: nil,
 		},

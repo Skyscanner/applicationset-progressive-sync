@@ -28,7 +28,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/controllers"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	// +kubebuilder:scaffold:imports
@@ -42,7 +42,7 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
-	_ = deploymentskyscannernetv1alpha1.AddToScheme(scheme)
+	_ = syncv1alpha1.AddToScheme(scheme)
 	_ = argov1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }

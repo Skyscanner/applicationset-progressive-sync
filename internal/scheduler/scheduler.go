@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
@@ -9,7 +9,7 @@ import (
 )
 
 // Scheduler returns a list of apps to sync for a given stage
-func Scheduler(apps []argov1alpha1.Application, stage deploymentskyscannernetv1alpha1.ProgressiveSyncStage) []argov1alpha1.Application {
+func Scheduler(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) []argov1alpha1.Application {
 
 	/*
 		The Scheduler takes:
