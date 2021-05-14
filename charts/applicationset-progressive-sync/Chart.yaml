@@ -1,6 +1,6 @@
 apiVersion: v2
 name: applicationset-progressive-sync
-description: A Helm chart to install the ArgoCD Progressive Rollout controller.
+description: A Helm chart to install the applicationset-progressive-sync controller.
 home: "https://github.com/Skyscanner/applicationset-progressive-sync"
 sources: ["https://github.com/Skyscanner/applicationset-progressive-sync"]
 
