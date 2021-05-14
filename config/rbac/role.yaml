@@ -31,9 +31,9 @@ rules:
   - list
   - watch
 - apiGroups:
-  - deployment.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
-  - progressiverollouts
+  - progressivesyncs
   verbs:
   - create
   - delete
@@ -43,15 +43,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - deployment.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
-  - progressiverollouts/finalizers
+  - progressivesyncs/finalizers
   verbs:
   - update
 - apiGroups:
-  - deployment.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
-  - progressiverollouts/status
+  - progressivesyncs/status
   verbs:
   - get
   - patch

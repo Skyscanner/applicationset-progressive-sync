@@ -1,4 +1,4 @@
-# Contributing to argocd-progressive-rollout
+# Contributing to applicationset-progressive-sync
 
 We're glad you want to make a contribution!
 
@@ -8,7 +8,7 @@ Take note of the build status of your pull request, only builds that pass will b
 
 ## License
 
-By contributing your code, you agree to license your contribution under the terms of the APLv2: <https://github.com/Skyscanner/argocd-progressive-rollout/blob/main/LICENSE>
+By contributing your code, you agree to license your contribution under the terms of the APLv2: <https://github.com/Skyscanner/applicationset-progressive-sync/blob/main/LICENSE>
 
 All files are released with the Apache 2.0 license.
 

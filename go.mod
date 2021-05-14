@@ -1,4 +1,4 @@
-module github.com/Skyscanner/argocd-progressive-rollout
+module github.com/Skyscanner/applicationset-progressive-sync
 
 go 1.15
 

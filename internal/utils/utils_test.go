@@ -108,7 +108,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					Name:      "appA",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						ProgressiveRolloutSyncedAtStageKey: stage,
+						ProgressiveSyncSyncedAtStageKey: stage,
 					}},
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
@@ -124,7 +124,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					Name:      "appA",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						ProgressiveRolloutSyncedAtStageKey: stage,
+						ProgressiveSyncSyncedAtStageKey: stage,
 					}},
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
@@ -142,7 +142,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					Name:      "appA",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						ProgressiveRolloutSyncedAtStageKey: "wrong-stage",
+						ProgressiveSyncSyncedAtStageKey: "wrong-stage",
 					}},
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
@@ -162,7 +162,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					Name:      "appA",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						ProgressiveRolloutSyncedAtStageKey: stage,
+						ProgressiveSyncSyncedAtStageKey: stage,
 					}},
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
@@ -182,7 +182,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					Name:      "appA",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						ProgressiveRolloutSyncedAtStageKey: stage,
+						ProgressiveSyncSyncedAtStageKey: stage,
 					}},
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
@@ -220,7 +220,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					Name:      "appA",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						ProgressiveRolloutSyncedAtStageKey: stage,
+						ProgressiveSyncSyncedAtStageKey: stage,
 					}},
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
@@ -250,7 +250,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					Name:      "appA",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						ProgressiveRolloutSyncedAtStageKey: stage,
+						ProgressiveSyncSyncedAtStageKey: stage,
 					}},
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{

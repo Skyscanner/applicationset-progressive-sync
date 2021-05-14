@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
-	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
+	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	"github.com/Skyscanner/applicationset-progressive-sync/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,7 +44,7 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
-var reconciler *ProgressiveRolloutReconciler
+var reconciler *ProgressiveSyncReconciler
 
 func TestController(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -72,7 +72,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = deploymentskyscannernetv1alpha1.AddToScheme(scheme.Scheme)
+	err = syncv1alpha1.AddToScheme(scheme.Scheme)
 	err = argov1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -88,7 +88,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	mockAcdClient := &mocks.ArgoCDAppClientStub{}
-	reconciler = &ProgressiveRolloutReconciler{
+	reconciler = &ProgressiveSyncReconciler{
 		Client:          k8sManager.GetClient(),
 		Log:             ctrl.Log.WithName("controllers").WithName("progressiverollout"),
 		ArgoCDAppClient: mockAcdClient,

@@ -51,7 +51,7 @@ jobs:
       - name: Install external secret for chart testing
         run: |
           kubectl create namespace argocd
-          kubectl apply -f charts/argocd-progressive-rollout/ci/external-secret.yaml
+          kubectl apply -f charts/applicationset-progressive-sync/ci/external-secret.yaml
         if: steps.list-changed.outputs.changed == 'true'
 
       - name: Run chart-testing (install)

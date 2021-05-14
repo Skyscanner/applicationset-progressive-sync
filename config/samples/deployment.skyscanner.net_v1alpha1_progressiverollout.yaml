@@ -1,5 +1,5 @@
-apiVersion: deployment.skyscanner.net/v1alpha1
-kind: ProgressiveRollout
+apiVersion: argoproj.skyscanner.net/v1alpha1
+kind: ProgressiveSync
 metadata:
   name: go-infrabin
   namespace: argocd

@@ -2,10 +2,10 @@
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: {{ template "argocd-progressive-rollout.fullname" . }}
+  name: {{ template "applicationset-progressive-sync.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "argocd-progressive-rollout.labels" . | nindent 4 }}
+    {{- include "applicationset-progressive-sync.labels" . | nindent 4 }}
   annotations:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
 spec:
@@ -31,28 +31,28 @@ spec:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: {{ template "argocd-progressive-rollout.fullname" . }}-psp
+  name: {{ template "applicationset-progressive-sync.fullname" . }}-psp
   labels:
-    {{- include "argocd-progressive-rollout.labels" . | nindent 4 }}
+    {{- include "applicationset-progressive-sync.labels" . | nindent 4 }}
 rules:
   - apiGroups: ['policy']
     resources: ['podsecuritypolicies']
     verbs:     ['use']
     resourceNames:
-      - {{ template "argocd-progressive-rollout.fullname" . }}
+      - {{ template "applicationset-progressive-sync.fullname" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ template "argocd-progressive-rollout.fullname" . }}-psp
+  name: {{ template "applicationset-progressive-sync.fullname" . }}-psp
   labels:
-    {{- include "argocd-progressive-rollout.labels" . | nindent 4 }}
+    {{- include "applicationset-progressive-sync.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ template "argocd-progressive-rollout.fullname" . }}-psp
+  name: {{ template "applicationset-progressive-sync.fullname" . }}-psp
 subjects:
   - kind: ServiceAccount
-    name: {{ template "argocd-progressive-rollout.serviceAccountName" . }}
+    name: {{ template "applicationset-progressive-sync.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}

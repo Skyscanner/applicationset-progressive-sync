@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
-	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
-	"github.com/Skyscanner/argocd-progressive-rollout/mocks"
+	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	"github.com/Skyscanner/applicationset-progressive-sync/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
 	. "github.com/onsi/ginkgo"
@@ -29,13 +29,13 @@ const (
 	interval = time.Millisecond * 10
 )
 
-var _ = Describe("ProgressiveRollout Controller", func() {
+var _ = Describe("ProgressiveSync Controller", func() {
 
 	var (
 		ctx                     context.Context
 		namespace, appSetAPIRef string
 		ns                      *corev1.Namespace
-		ownerPR, singleStagePR  *deploymentskyscannernetv1alpha1.ProgressiveRollout
+		ownerPR, singleStagePR  *syncv1alpha1.ProgressiveSync
 	)
 
 	appSetAPIRef = utils.AppSetAPIGroup
@@ -45,7 +45,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		namespace = "progressiverollout-test-" + randStringNumber(5)
+		namespace = "progressivesync-test-" + randStringNumber(5)
 
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
@@ -64,9 +64,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	Describe("requestsForApplicationChange function", func() {
 
 		JustBeforeEach(func() {
-			ownerPR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+			ownerPR = &syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
-				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
 						Kind:     utils.AppSetKind,
@@ -134,9 +134,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	Describe("requestsForSecretChange function", func() {
 
 		JustBeforeEach(func() {
-			ownerPR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+			ownerPR = &syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
-				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
 						Kind:     utils.AppSetKind,
@@ -281,20 +281,20 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			appTwo, aErr := createApplication(ctx, testPrefix, clusters[1])
 			Expect(aErr).To(BeNil())
 
-			By("creating a progressive rollout")
-			twoStagesPR := &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+			By("creating a progressive sync")
+			twoStagesPR := &syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
-				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
 						Kind:     utils.AppSetKind,
 						Name:     fmt.Sprintf("%s-appset", testPrefix),
 					},
-					Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
+					Stages: []syncv1alpha1.ProgressiveSyncStage{{
 						Name:        "stage 0",
 						MaxParallel: intstr.IntOrString{IntVal: 1},
 						MaxTargets:  intstr.IntOrString{IntVal: 1},
-						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 								"cluster.name": clusters[0].Name,
 							}},
@@ -303,7 +303,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 						Name:        "stage 1",
 						MaxParallel: intstr.IntOrString{IntVal: 1},
 						MaxTargets:  intstr.IntOrString{IntVal: 1},
-						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 								"cluster.name": clusters[1].Name,
 							}},
@@ -332,9 +332,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
-				Phase:   deploymentskyscannernetv1alpha1.PhaseProgressing,
+				Phase:   syncv1alpha1.PhaseProgressing,
 				Message: "stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
@@ -349,9 +349,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
-				Phase:   deploymentskyscannernetv1alpha1.PhaseSucceeded,
+				Phase:   syncv1alpha1.PhaseSucceeded,
 				Message: "stage completed",
 			}))
 
@@ -368,9 +368,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
-				Phase:   deploymentskyscannernetv1alpha1.PhaseProgressing,
+				Phase:   syncv1alpha1.PhaseProgressing,
 				Message: "stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(2))
@@ -385,23 +385,23 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
-				Phase:   deploymentskyscannernetv1alpha1.PhaseSucceeded,
+				Phase:   syncv1alpha1.PhaseSucceeded,
 				Message: "stage completed",
 			}))
 
-			createdPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			createdPR := syncv1alpha1.ProgressiveSync{}
 			Eventually(func() int {
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(twoStagesPR), &createdPR)
 				return len(createdPR.ObjectMeta.Finalizers)
 			}).Should(Equal(1))
-			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer))
+			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
 
-			expected := twoStagesPR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesCompleteReason, "All stages completed")
+			expected := twoStagesPR.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(twoStagesPR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
-			deletedPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			deletedPR := syncv1alpha1.ProgressiveSync{}
 			Expect(k8sClient.Delete(ctx, twoStagesPR)).To(Succeed())
 			Eventually(func() error {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(twoStagesPR), &deletedPR)
@@ -423,20 +423,20 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			_, aErr = createApplication(ctx, testPrefix, clusters[1])
 			Expect(aErr).To(BeNil())
 
-			By("creating a progressive rollout")
-			failedStagePR := &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+			By("creating a progressive sync")
+			failedStagePR := &syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
-				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
 						Kind:     utils.AppSetKind,
 						Name:     fmt.Sprintf("%s-appset", testPrefix),
 					},
-					Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
+					Stages: []syncv1alpha1.ProgressiveSyncStage{{
 						Name:        "stage 0",
 						MaxParallel: intstr.IntOrString{IntVal: 1},
 						MaxTargets:  intstr.IntOrString{IntVal: 1},
-						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 								"cluster.name": clusters[0].Name,
 							}},
@@ -445,7 +445,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 						Name:        "stage 1",
 						MaxParallel: intstr.IntOrString{IntVal: 1},
 						MaxTargets:  intstr.IntOrString{IntVal: 1},
-						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 								"cluster.name": clusters[1].Name,
 							}},
@@ -474,9 +474,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
-				Phase:   deploymentskyscannernetv1alpha1.PhaseProgressing,
+				Phase:   syncv1alpha1.PhaseProgressing,
 				Message: "stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
@@ -491,23 +491,23 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, app)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(deploymentskyscannernetv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
-				Phase:   deploymentskyscannernetv1alpha1.PhaseFailed,
+				Phase:   syncv1alpha1.PhaseFailed,
 				Message: "stage failed",
 			}))
 
-			createdPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			createdPR := syncv1alpha1.ProgressiveSync{}
 			Eventually(func() int {
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(failedStagePR), &createdPR)
 				return len(createdPR.ObjectMeta.Finalizers)
 			}).Should(Equal(1))
-			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(deploymentskyscannernetv1alpha1.ProgressiveRolloutFinalizer))
+			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
 
-			expected := failedStagePR.NewStatusCondition(deploymentskyscannernetv1alpha1.CompletedCondition, metav1.ConditionTrue, deploymentskyscannernetv1alpha1.StagesFailedReason, "stage 0 stage failed")
+			expected := failedStagePR.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesFailedReason, "stage 0 stage failed")
 			ExpectCondition(failedStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
-			deletedPR := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+			deletedPR := syncv1alpha1.ProgressiveSync{}
 			Expect(k8sClient.Delete(ctx, failedStagePR)).To(Succeed())
 			Eventually(func() error {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(failedStagePR), &deletedPR)
@@ -552,20 +552,20 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, singleStageApp)).To(Succeed())
 
-			By("creating a progressive rollout")
-			singleStagePR = &deploymentskyscannernetv1alpha1.ProgressiveRollout{
+			By("creating a progressive sync")
+			singleStagePR = &syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
-				Spec: deploymentskyscannernetv1alpha1.ProgressiveRolloutSpec{
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
 						Kind:     utils.AppSetKind,
 						Name:     "single-stage-appset",
 					},
-					Stages: []deploymentskyscannernetv1alpha1.ProgressiveRolloutStage{{
+					Stages: []syncv1alpha1.ProgressiveSyncStage{{
 						Name:        "stage 1",
 						MaxParallel: intstr.IntOrString{IntVal: 1},
 						MaxTargets:  intstr.IntOrString{IntVal: 1},
-						Targets: deploymentskyscannernetv1alpha1.ProgressiveRolloutTargets{Clusters: deploymentskyscannernetv1alpha1.Clusters{
+						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: nil},
 						}},
 					}},
@@ -657,7 +657,7 @@ func HaveStatus(status metav1.ConditionStatus, reason string, message string) go
 }
 
 // MatchStage is a gomega matcher for a stage, matching name, message and phase
-func MatchStage(expected deploymentskyscannernetv1alpha1.StageStatus) gomegatypes.GomegaMatcher {
+func MatchStage(expected syncv1alpha1.StageStatus) gomegatypes.GomegaMatcher {
 	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
 		"Name":    Equal(expected.Name),
 		"Message": Equal(expected.Message),
@@ -667,7 +667,7 @@ func MatchStage(expected deploymentskyscannernetv1alpha1.StageStatus) gomegatype
 
 // ExpectCondition take a condition type and returns its status, reason and message
 func ExpectCondition(
-	pr *deploymentskyscannernetv1alpha1.ProgressiveRollout, ct string,
+	pr *syncv1alpha1.ProgressiveSync, ct string,
 ) AsyncAssertion {
 	return Eventually(func() string {
 		_ = k8sClient.Get(
@@ -684,27 +684,27 @@ func ExpectCondition(
 	})
 }
 
-// ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a progressive rollout Object Key and a stage name
+// ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a progressive sync Object Key and a stage name
 func ExpectStageStatus(ctx context.Context, prKey client.ObjectKey, stageName string) AsyncAssertion {
-	return Eventually(func() deploymentskyscannernetv1alpha1.StageStatus {
-		pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+	return Eventually(func() syncv1alpha1.StageStatus {
+		pr := syncv1alpha1.ProgressiveSync{}
 		err := k8sClient.Get(ctx, prKey, &pr)
 		if err != nil {
-			return deploymentskyscannernetv1alpha1.StageStatus{}
+			return syncv1alpha1.StageStatus{}
 		}
-		stageStatus := deploymentskyscannernetv1alpha1.FindStageStatus(pr.Status.Stages, stageName)
+		stageStatus := syncv1alpha1.FindStageStatus(pr.Status.Stages, stageName)
 		if stageStatus != nil {
 			return *stageStatus
 		}
 
-		return deploymentskyscannernetv1alpha1.StageStatus{}
+		return syncv1alpha1.StageStatus{}
 	})
 }
 
 // ExpectStagesInStatus returns an AsyncAssertion for the length of stages with status in the Progressive Rollout object
 func ExpectStagesInStatus(ctx context.Context, prKey client.ObjectKey) AsyncAssertion {
 	return Eventually(func() int {
-		pr := deploymentskyscannernetv1alpha1.ProgressiveRollout{}
+		pr := syncv1alpha1.ProgressiveSync{}
 		err := k8sClient.Get(ctx, prKey, &pr)
 		if err != nil {
 			return -1
@@ -715,7 +715,7 @@ func ExpectStagesInStatus(ctx context.Context, prKey client.ObjectKey) AsyncAsse
 }
 
 func TestSync(t *testing.T) {
-	r := ProgressiveRolloutReconciler{
+	r := ProgressiveSyncReconciler{
 		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncOK{},
 	}
 
@@ -729,7 +729,7 @@ func TestSync(t *testing.T) {
 }
 
 func TestSyncErr(t *testing.T) {
-	r := ProgressiveRolloutReconciler{
+	r := ProgressiveSyncReconciler{
 		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncNotOK{},
 	}
 

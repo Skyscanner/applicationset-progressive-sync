@@ -1,13 +1,13 @@
-# permissions for end users to edit progressiverollouts.
+# permissions for end users to edit progressivesyncs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: progressiverollout-editor-role
 rules:
 - apiGroups:
-  - deployment.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
-  - progressiverollouts
+  - progressivesyncs
   verbs:
   - create
   - delete
@@ -17,8 +17,8 @@ rules:
   - update
   - watch
 - apiGroups:
-  - deployment.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
-  - progressiverollouts/status
+  - progressivesyncs/status
   verbs:
   - get

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,9 +38,9 @@ func TestOwns(t *testing.T) {
 	}}
 
 	ref := utils.AppSetAPIGroup
-	pr := ProgressiveRollout{
+	pr := ProgressiveSync{
 		ObjectMeta: metav1.ObjectMeta{Name: "pr", Namespace: "namespace"},
-		Spec: ProgressiveRolloutSpec{
+		Spec: ProgressiveSyncSpec{
 			SourceRef: corev1.TypedLocalObjectReference{
 				APIGroup: &ref,
 				Kind:     utils.AppSetKind,
@@ -143,9 +143,9 @@ func TestSetStageStatus(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			ref := utils.AppSetAPIGroup
-			pr := ProgressiveRollout{
+			pr := ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: "pr", Namespace: "namespace"},
-				Spec: ProgressiveRolloutSpec{
+				Spec: ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &ref,
 						Kind:     utils.AppSetKind,
@@ -153,7 +153,7 @@ func TestSetStageStatus(t *testing.T) {
 					},
 					Stages: nil,
 				},
-				Status: ProgressiveRolloutStatus{
+				Status: ProgressiveSyncStatus{
 					Stages: testCase.stageStatus,
 				},
 			}

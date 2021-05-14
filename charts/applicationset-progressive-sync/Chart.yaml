@@ -1,8 +1,8 @@
 apiVersion: v2
-name: argocd-progressive-rollout
-description: A Helm chart to install the ArgoCD Progressive Rollout controller.
-home: "https://github.com/Skyscanner/argocd-progressive-rollout"
-sources: ["https://github.com/Skyscanner/argocd-progressive-rollout"]
+name: applicationset-progressive-sync
+description: A Helm chart to install the applicationset-progressive-sync controller.
+home: "https://github.com/Skyscanner/applicationset-progressive-sync"
+sources: ["https://github.com/Skyscanner/applicationset-progressive-sync"]
 
 # A chart can be either an 'application' or a 'library' chart.
 type: application
@@ -16,7 +16,7 @@ version: 0.1.5-prealpha
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "main"
+appVersion: "v0.2.0-prealpha"
 
 keywords:
   - argoproj

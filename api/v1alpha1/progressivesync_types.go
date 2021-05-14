@@ -22,10 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const ProgressiveRolloutFinalizer = "finalizers.deployment.skyscanner.net"
+const ProgressiveSyncFinalizer = "finalizers.argoproj.skyscanner.net"
 
-// ProgressiveRolloutSpec defines the desired state of ProgressiveRollout
-type ProgressiveRolloutSpec struct {
+// ProgressiveSyncSpec defines the desired state of ProgressiveSync
+type ProgressiveSyncSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -34,11 +34,11 @@ type ProgressiveRolloutSpec struct {
 	SourceRef corev1.TypedLocalObjectReference `json:"sourceRef"`
 	// Stages defines a list of Progressive Rollout stages
 	//+kubebuilder:validation:Optional
-	Stages []ProgressiveRolloutStage `json:"stages,omitempty"`
+	Stages []ProgressiveSyncStage `json:"stages,omitempty"`
 }
 
-// ProgressiveRolloutStage defines a rollout stage
-type ProgressiveRolloutStage struct {
+// ProgressiveSyncStage defines a rollout stage
+type ProgressiveSyncStage struct {
 	// Name is a human friendly name for the stage
 	//+kubebuilder:validation:Required
 	Name string `json:"name"`
@@ -50,11 +50,11 @@ type ProgressiveRolloutStage struct {
 	MaxTargets intstr.IntOrString `json:"maxTargets"`
 	// Targets is the targets to update in the stage
 	//+kubebuilder:validation:Optional
-	Targets ProgressiveRolloutTargets `json:"targets,omitempty"`
+	Targets ProgressiveSyncTargets `json:"targets,omitempty"`
 }
 
-// ProgressiveRolloutTargets defines the target of the Progressive Rollout
-type ProgressiveRolloutTargets struct {
+// ProgressiveSyncTargets defines the target of the Progressive Rollout
+type ProgressiveSyncTargets struct {
 	// Clusters is the a cluster type of targets
 	//+kubebuilder:validation:Optional
 	Clusters Clusters `json:"clusters"`
@@ -67,8 +67,8 @@ type Clusters struct {
 	Selector metav1.LabelSelector `json:"selector"`
 }
 
-// ProgressiveRolloutStatus defines the observed state of ProgressiveRollout
-type ProgressiveRolloutStatus struct {
+// ProgressiveSyncStatus defines the observed state of ProgressiveSync
+type ProgressiveSyncStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -76,12 +76,12 @@ type ProgressiveRolloutStatus struct {
 }
 
 // GetStatusConditions returns a pointer to the Status.Conditions slice
-func (in *ProgressiveRollout) GetStatusConditions() *[]metav1.Condition {
+func (in *ProgressiveSync) GetStatusConditions() *[]metav1.Condition {
 	return &in.Status.Conditions
 }
 
 // NewStatusCondition adds a new Condition
-func (in *ProgressiveRollout) NewStatusCondition(t string, s metav1.ConditionStatus, r string, m string) metav1.Condition {
+func (in *ProgressiveSync) NewStatusCondition(t string, s metav1.ConditionStatus, r string, m string) metav1.Condition {
 	return metav1.Condition{
 		Type:               t,
 		Status:             s,
@@ -91,8 +91,8 @@ func (in *ProgressiveRollout) NewStatusCondition(t string, s metav1.ConditionSta
 	}
 }
 
-// Owns returns true if the ProgressiveRollout object has a reference to one of the owners
-func (in *ProgressiveRollout) Owns(owners []metav1.OwnerReference) bool {
+// Owns returns true if the ProgressiveSync object has a reference to one of the owners
+func (in *ProgressiveSync) Owns(owners []metav1.OwnerReference) bool {
 	for _, owner := range owners {
 		if owner.Kind == in.Spec.SourceRef.Kind && owner.APIVersion == *in.Spec.SourceRef.APIGroup && owner.Name == in.Spec.SourceRef.Name {
 			return true
@@ -104,7 +104,7 @@ func (in *ProgressiveRollout) Owns(owners []metav1.OwnerReference) bool {
 // SetStageStatus sets the corresponding StageStatus in stageStatus to newStatus
 // - If a stage doesn't exist, it will be added to StageStatus slice
 // - If a stage already exists it will be updated
-func (in *ProgressiveRollout) SetStageStatus(newStatus StageStatus, updateTime *metav1.Time) {
+func (in *ProgressiveSync) SetStageStatus(newStatus StageStatus, updateTime *metav1.Time) {
 	// If StartedAt is not set and the stage is in progress, assign StartedAt
 	if newStatus.Phase == PhaseProgressing && newStatus.StartedAt.IsZero() {
 		newStatus.StartedAt = updateTime
@@ -131,24 +131,24 @@ func (in *ProgressiveRollout) SetStageStatus(newStatus StageStatus, updateTime *
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// ProgressiveRollout is the Schema for the progressiverollouts API
-type ProgressiveRollout struct {
+// ProgressiveSync is the Schema for the progressivesyncs API
+type ProgressiveSync struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ProgressiveRolloutSpec   `json:"spec,omitempty"`
-	Status ProgressiveRolloutStatus `json:"status,omitempty"`
+	Spec   ProgressiveSyncSpec   `json:"spec,omitempty"`
+	Status ProgressiveSyncStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// ProgressiveRolloutList contains a list of ProgressiveRollout
-type ProgressiveRolloutList struct {
+// ProgressiveSyncList contains a list of ProgressiveSync
+type ProgressiveSyncList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ProgressiveRollout `json:"items"`
+	Items           []ProgressiveSync `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ProgressiveRollout{}, &ProgressiveRolloutList{})
+	SchemeBuilder.Register(&ProgressiveSync{}, &ProgressiveSyncList{})
 }

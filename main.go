@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/Skyscanner/argocd-progressive-rollout/internal/utils"
 	"os"
+
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -27,8 +28,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	deploymentskyscannernetv1alpha1 "github.com/Skyscanner/argocd-progressive-rollout/api/v1alpha1"
-	"github.com/Skyscanner/argocd-progressive-rollout/controllers"
+	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	"github.com/Skyscanner/applicationset-progressive-sync/controllers"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
@@ -41,7 +42,7 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
-	_ = deploymentskyscannernetv1alpha1.AddToScheme(scheme)
+	_ = syncv1alpha1.AddToScheme(scheme)
 	_ = argov1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
@@ -64,7 +65,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "b84175a0.deployment.skyscanner.net",
+		LeaderElectionID:   "b84175a0.argoproj.skyscanner.net",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -77,13 +78,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ProgressiveRolloutReconciler{
+	if err = (&controllers.ProgressiveSyncReconciler{
 		Client:          mgr.GetClient(),
-		Log:             ctrl.Log.WithName("controllers").WithName("ProgressiveRollout"),
+		Log:             ctrl.Log.WithName("controllers").WithName("ProgressiveSync"),
 		Scheme:          mgr.GetScheme(),
 		ArgoCDAppClient: utils.GetArgoCDAppClient(c),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveRollout")
+		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveSync")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

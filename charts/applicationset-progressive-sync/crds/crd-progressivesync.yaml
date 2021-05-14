@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
-  name: progressiverollouts.deployment.skyscanner.net
+  name: progressivesyncs.argoproj.skyscanner.net
 spec:
-  group: deployment.skyscanner.net
+  group: argoproj.skyscanner.net
   names:
-    kind: ProgressiveRollout
-    listKind: ProgressiveRolloutList
-    plural: progressiverollouts
+    kind: ProgressiveSync
+    listKind: ProgressiveSyncList
+    plural: progressivesyncs
     singular: progressiverollout
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: ProgressiveRollout is the Schema for the progressiverollouts API
+      description: ProgressiveSync is the Schema for the progressivesyncs API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -32,7 +32,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: ProgressiveRolloutSpec defines the desired state of ProgressiveRollout
+          description: ProgressiveSyncSpec defines the desired state of ProgressiveSync
           properties:
             sourceRef:
               description: SourceRef defines the resource, example an ApplicationSet,
@@ -56,7 +56,7 @@ spec:
             stages:
               description: Stages defines a list of Progressive Rollout stages
               items:
-                description: ProgressiveRolloutStage defines a rollout stage
+                description: ProgressiveSyncStage defines a rollout stage
                 properties:
                   maxParallel:
                     anyOf:
@@ -141,7 +141,7 @@ spec:
           - sourceRef
           type: object
         status:
-          description: ProgressiveRolloutStatus defines the observed state of ProgressiveRollout
+          description: ProgressiveSyncStatus defines the observed state of ProgressiveSync
           properties:
             conditions:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state

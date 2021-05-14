@@ -1,20 +1,20 @@
-# permissions for end users to view progressiverollouts.
+# permissions for end users to view progressivesyncs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: progressiverollout-viewer-role
 rules:
 - apiGroups:
-  - deployment.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
-  - progressiverollouts
+  - progressivesyncs
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - deployment.skyscanner.net
+  - argoproj.skyscanner.net
   resources:
-  - progressiverollouts/status
+  - progressivesyncs/status
   verbs:
   - get
