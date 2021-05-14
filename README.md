@@ -17,7 +17,7 @@ The `argocd progressive rollout` controller allows operators and developers to d
 ## Example `spec`
 
 ```yaml
-apiVersion: deployment.skyscanner.net/v1alpha1
+apiVersion: sync.skyscanner.net/v1alpha1
 kind: ProgressiveSync
 metadata:
   name: myprogressiverollout

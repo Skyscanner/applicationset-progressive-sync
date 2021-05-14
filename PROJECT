@@ -1,7 +1,7 @@
-domain: deployment.skyscanner.net
+domain: sync.skyscanner.net
 repo: github.com/Skyscanner/applicationset-progressive-sync
 resources:
-- group: deployment.skyscanner.net
+- group: sync.skyscanner.net
   kind: ProgressiveSync
   version: v1alpha1
 version: "2"

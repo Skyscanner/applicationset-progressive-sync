@@ -30,7 +30,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - deployment.skyscanner.net
+  - sync.skyscanner.net
   resources:
   - progressivesyncs
   verbs:
@@ -42,7 +42,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - deployment.skyscanner.net
+  - sync.skyscanner.net
   resources:
   - progressivesyncs/status
   verbs:

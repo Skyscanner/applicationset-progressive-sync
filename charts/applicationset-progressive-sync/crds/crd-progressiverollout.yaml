@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
-  name: progressivesyncs.deployment.skyscanner.net
+  name: progressivesyncs.sync.skyscanner.net
 spec:
-  group: deployment.skyscanner.net
+  group: sync.skyscanner.net
   names:
     kind: ProgressiveSync
     listKind: ProgressiveSyncList

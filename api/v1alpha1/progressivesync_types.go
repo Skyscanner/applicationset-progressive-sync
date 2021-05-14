@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const ProgressiveSyncFinalizer = "finalizers.deployment.skyscanner.net"
+const ProgressiveSyncFinalizer = "finalizers.sync.skyscanner.net"
 
 // ProgressiveSyncSpec defines the desired state of ProgressiveSync
 type ProgressiveSyncSpec struct {
