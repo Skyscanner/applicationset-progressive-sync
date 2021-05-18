@@ -83,7 +83,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 
 		It("should forward events for owned applications", func() {
 			By("creating an owned application")
-			ownedApp := &argov1alpha1.Application{
+			ownedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
 					Namespace: namespace,
@@ -99,7 +99,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 
 			var requests []reconcile.Request
 			Eventually(func() int {
-				requests = reconciler.requestsForApplicationChange(ownedApp)
+				requests = reconciler.requestsForApplicationChange(&ownedApp)
 				return len(requests)
 			}).Should(Equal(1))
 			Expect(requests[0].NamespacedName).To(Equal(types.NamespacedName{
@@ -110,7 +110,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 
 		It("should filter out events for non-owned applications", func() {
 			By("creating a non-owned application")
-			nonOwnedApp := &argov1alpha1.Application{
+			nonOwnedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "non-owned-app",
 					Namespace: namespace,
@@ -125,7 +125,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			}
 
 			Eventually(func() int {
-				requests := reconciler.requestsForApplicationChange(nonOwnedApp)
+				requests := reconciler.requestsForApplicationChange(&nonOwnedApp)
 				return len(requests)
 			}).Should(Equal(0))
 		})
@@ -154,7 +154,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 		It("should forward an event for a matching argocd secret", func() {
 			serverURL := "https://kubernetes.default.svc"
 			By("creating an application")
-			app := &argov1alpha1.Application{
+			app := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
 					Namespace: namespace,
@@ -171,34 +171,34 @@ var _ = Describe("ProgressiveSync Controller", func() {
 					Name:      "local-cluster",
 				}},
 			}
-			Expect(k8sClient.Create(ctx, app)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &app)).To(Succeed())
 
 			By("creating a cluster secret")
-			cluster := &corev1.Secret{
+			cluster := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte(serverURL)}}
 
 			Eventually(func() int {
-				requests := reconciler.requestsForSecretChange(cluster)
+				requests := reconciler.requestsForSecretChange(&cluster)
 				return len(requests)
 			}).Should(Equal(1))
 		})
 
 		It("should not forward an event for a generic secret", func() {
 			By("creating a generic secret")
-			generic := &corev1.Secret{
+			generic := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "generic", Namespace: namespace}, Data: map[string][]byte{"secret": []byte("insecure")},
 			}
 
 			Eventually(func() int {
-				requests := reconciler.requestsForSecretChange(generic)
+				requests := reconciler.requestsForSecretChange(&generic)
 				return len(requests)
 			}).Should(Equal(0))
 		})
 
 		It("should not forward an event for an argocd secret not matching any application", func() {
 			By("creating an application")
-			externalApp := &argov1alpha1.Application{
+			externalApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
 					Namespace: namespace,
@@ -215,15 +215,15 @@ var _ = Describe("ProgressiveSync Controller", func() {
 					Name:      "remote-cluster",
 				}},
 			}
-			Expect(k8sClient.Create(ctx, externalApp)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &externalApp)).To(Succeed())
 
 			By("creating a cluster secret")
-			internalCluster := &corev1.Secret{
+			internalCluster := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte("https://local-kubernetes.default.svc")}}
 
 			Eventually(func() int {
-				requests := reconciler.requestsForSecretChange(internalCluster)
+				requests := reconciler.requestsForSecretChange(&internalCluster)
 				return len(requests)
 			}).Should(Equal(0))
 		})
@@ -282,7 +282,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			Expect(aErr).To(BeNil())
 
 			By("creating a progressive sync")
-			twoStagesPR := &syncv1alpha1.ProgressiveSync{
+			twoStagesPR := syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
@@ -311,7 +311,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 					}},
 				},
 			}
-			Expect(k8sClient.Create(ctx, twoStagesPR)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &twoStagesPR)).To(Succeed())
 
 			prKey := client.ObjectKey{
 				Namespace: namespace,
@@ -319,18 +319,18 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			}
 
 			By("progressing in first application")
-			app := &argov1alpha1.Application{}
+			app := argov1alpha1.Application{}
 			Eventually(func() error {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
 					Name:      appOne.Name,
-				}, app)
+				}, &app)
 			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusProgressing,
 				Message: "progressing",
 			}
-			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
 
 			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
@@ -347,7 +347,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			app.Status.Sync = argov1alpha1.SyncStatus{
 				Status: argov1alpha1.SyncStatusCodeSynced,
 			}
-			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
 
 			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
@@ -360,13 +360,13 @@ var _ = Describe("ProgressiveSync Controller", func() {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
 					Name:      appTwo.Name,
-				}, app)
+				}, &app)
 			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusProgressing,
 				Message: "progressing",
 			}
-			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
 
 			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
@@ -383,7 +383,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			app.Status.Sync = argov1alpha1.SyncStatus{
 				Status: argov1alpha1.SyncStatusCodeSynced,
 			}
-			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
 
 			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
@@ -393,18 +393,18 @@ var _ = Describe("ProgressiveSync Controller", func() {
 
 			createdPR := syncv1alpha1.ProgressiveSync{}
 			Eventually(func() int {
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(twoStagesPR), &createdPR)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&twoStagesPR), &createdPR)
 				return len(createdPR.ObjectMeta.Finalizers)
 			}).Should(Equal(1))
 			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
 
 			expected := twoStagesPR.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-			ExpectCondition(twoStagesPR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+			ExpectCondition(&twoStagesPR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
 			deletedPR := syncv1alpha1.ProgressiveSync{}
-			Expect(k8sClient.Delete(ctx, twoStagesPR)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &twoStagesPR)).To(Succeed())
 			Eventually(func() error {
-				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(twoStagesPR), &deletedPR)
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&twoStagesPR), &deletedPR)
 				return err
 			}).Should(HaveOccurred())
 		})
@@ -424,7 +424,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			Expect(aErr).To(BeNil())
 
 			By("creating a progressive sync")
-			failedStagePR := &syncv1alpha1.ProgressiveSync{
+			failedStagePR := syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
@@ -453,7 +453,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 					}},
 				},
 			}
-			Expect(k8sClient.Create(ctx, failedStagePR)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &failedStagePR)).To(Succeed())
 
 			prKey := client.ObjectKey{
 				Namespace: namespace,
@@ -461,18 +461,18 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			}
 
 			By("progressing in first application")
-			app := &argov1alpha1.Application{}
+			app := argov1alpha1.Application{}
 			Eventually(func() error {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
 					Name:      appOne.Name,
-				}, app)
+				}, &app)
 			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusProgressing,
 				Message: "progressing",
 			}
-			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
 
 			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
@@ -489,7 +489,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			app.Status.Sync = argov1alpha1.SyncStatus{
 				Status: argov1alpha1.SyncStatusCodeSynced,
 			}
-			Expect(k8sClient.Update(ctx, app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
 
 			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
@@ -499,18 +499,18 @@ var _ = Describe("ProgressiveSync Controller", func() {
 
 			createdPR := syncv1alpha1.ProgressiveSync{}
 			Eventually(func() int {
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(failedStagePR), &createdPR)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&failedStagePR), &createdPR)
 				return len(createdPR.ObjectMeta.Finalizers)
 			}).Should(Equal(1))
 			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
 
 			expected := failedStagePR.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesFailedReason, "stage 0 stage failed")
-			ExpectCondition(failedStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+			ExpectCondition(&failedStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
 			deletedPR := syncv1alpha1.ProgressiveSync{}
-			Expect(k8sClient.Delete(ctx, failedStagePR)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &failedStagePR)).To(Succeed())
 			Eventually(func() error {
-				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(failedStagePR), &deletedPR)
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&failedStagePR), &deletedPR)
 				return err
 			}).Should(HaveOccurred())
 		})
@@ -518,21 +518,21 @@ var _ = Describe("ProgressiveSync Controller", func() {
 
 	Describe("sync application", func() {
 		It("should send a request to sync an application", func() {
-			mockedArgoCDAppClient := &mocks.MockArgoCDAppClientCalledWith{}
-			reconciler.ArgoCDAppClient = mockedArgoCDAppClient
+			mockedArgoCDAppClient := mocks.MockArgoCDAppClientCalledWith{}
+			reconciler.ArgoCDAppClient = &mockedArgoCDAppClient
 			testAppName := "single-stage-app"
 
 			By("creating an ArgoCD cluster")
-			cluster := &corev1.Secret{
+			cluster := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
 				Data: map[string][]byte{
 					"server": []byte("https://single-stage-pr.kubernetes.io"),
 				},
 			}
-			Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &cluster)).To(Succeed())
 
 			By("creating an application targeting the cluster")
-			singleStageApp := &argov1alpha1.Application{
+			singleStageApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testAppName,
 					Namespace: namespace,
@@ -550,7 +550,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 				}},
 				Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Status: argov1alpha1.SyncStatusCodeOutOfSync}},
 			}
-			Expect(k8sClient.Create(ctx, singleStageApp)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &singleStageApp)).To(Succeed())
 
 			By("creating a progressive sync")
 			singleStagePR = &syncv1alpha1.ProgressiveSync{
@@ -612,7 +612,7 @@ func createApplication(ctx context.Context, prefix string, cluster corev1.Secret
 	appSetName := fmt.Sprintf("%s-appset", prefix)
 
 	appName := fmt.Sprintf("%s-app-%s", prefix, cluster.Name)
-	app := &argov1alpha1.Application{
+	app := argov1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      appName,
 			Namespace: cluster.Namespace,
@@ -638,12 +638,12 @@ func createApplication(ctx context.Context, prefix string, cluster corev1.Secret
 		},
 	}
 
-	err := k8sClient.Create(ctx, app)
+	err := k8sClient.Create(ctx, &app)
 	if err != nil {
 		return nil, err
 	}
 
-	return app, nil
+	return &app, nil
 }
 
 // statusString returns a formatted string with a condition status, reason and message
