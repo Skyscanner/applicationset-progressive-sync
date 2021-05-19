@@ -31,6 +31,7 @@ const (
 
 var (
 	appSetAPIRef = utils.AppSetAPIGroup
+	ctx          = context.Background()
 )
 
 func createRandomNamespace() (string, *corev1.Namespace) {
@@ -39,7 +40,7 @@ func createRandomNamespace() (string, *corev1.Namespace) {
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: namespace},
 	}
-	err := k8sClient.Create(context.Background(), ns)
+	err := k8sClient.Create(ctx, ns)
 	Expect(err).To(BeNil(), "failed to create test namespace")
 	return namespace, ns
 }
@@ -63,7 +64,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
-	ctx := context.Background()
 
 	Describe("requestsForApplicationChange function", func() {
 
@@ -97,7 +97,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Name:      "owner-pr",
 			}))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			err := k8sClient.Delete(context.Background(), ns)
+			err := k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 
@@ -125,7 +125,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(0))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			err := k8sClient.Delete(context.Background(), ns)
+			err := k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 	})
@@ -168,7 +168,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(1))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			err := k8sClient.Delete(context.Background(), ns)
+			err := k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 
@@ -186,7 +186,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(0))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			err := k8sClient.Delete(context.Background(), ns)
+			err := k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 
@@ -225,7 +225,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(0))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			err := k8sClient.Delete(context.Background(), ns)
+			err := k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 	})
@@ -265,7 +265,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 			Eventually(func() int { return len(appOne.Annotations) }).Should(Equal(1))
 			Eventually(func() int { return len(appTwo.Annotations) }).Should(Equal(1))
-			err = k8sClient.Delete(context.Background(), ns)
+			err = k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 	})
@@ -412,7 +412,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&twoStagesPR), &deletedPR)
 				return err
 			}).Should(HaveOccurred())
-			err := k8sClient.Delete(context.Background(), ns)
+			err := k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 
@@ -521,7 +521,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&failedStagePR), &deletedPR)
 				return err
 			}).Should(HaveOccurred())
-			err := k8sClient.Delete(context.Background(), ns)
+			err := k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 	})
@@ -587,7 +587,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Eventually(func() []string {
 				return mockedArgoCDAppClient.GetSyncedApps()
 			}).Should(ContainElement(testAppName))
-			err := k8sClient.Delete(context.Background(), ns)
+			err := k8sClient.Delete(ctx, ns)
 			Expect(err).To(BeNil(), "failed to delete test namespace")
 		})
 	})
