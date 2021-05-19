@@ -64,12 +64,24 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
 
+	var (
+		namespace string
+		ns        *corev1.Namespace
+	)
+
+	BeforeEach(func() {
+		namespace, ns = createRandomNamespace()
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
+	})
+
 	Describe("requestsForApplicationChange function", func() {
 
 		It("should forward events for owned applications", func() {
 			By("creating an owned application")
 
-			namespace, ns := createRandomNamespace()
 			ownerPR := createOwnerPR(namespace, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
@@ -96,12 +108,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Name:      "owner-pr",
 			}))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 
 		It("should filter out events for non-owned applications", func() {
 			By("creating a non-owned application")
-			namespace, ns := createRandomNamespace()
 			ownerPR := createOwnerPR(namespace, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			nonOwnedApp := argov1alpha1.Application{
@@ -123,14 +133,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(0))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 	})
 
 	Describe("requestsForSecretChange function", func() {
 
 		It("should forward an event for a matching argocd secret", func() {
-			namespace, ns := createRandomNamespace()
 			ownerPR := createOwnerPR(namespace, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			serverURL := "https://kubernetes.default.svc"
@@ -165,11 +173,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(1))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 
 		It("should not forward an event for a generic secret", func() {
-			namespace, ns := createRandomNamespace()
 			ownerPR := createOwnerPR(namespace, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			By("creating a generic secret")
@@ -182,11 +188,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(0))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 
 		It("should not forward an event for an argocd secret not matching any application", func() {
-			namespace, ns := createRandomNamespace()
 			ownerPR := createOwnerPR(namespace, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 
@@ -220,14 +224,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(0))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 	})
 
 	Describe("removeAnnotationFromApps function", func() {
 		It("should remove the target annotation from the given apps", func() {
 			By("creating two applications with two annotations")
-			namespace, ns := createRandomNamespace()
 			appOne := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app-one",
@@ -259,13 +261,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 			Eventually(func() int { return len(appOne.Annotations) }).Should(Equal(1))
 			Eventually(func() int { return len(appTwo.Annotations) }).Should(Equal(1))
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 	})
 
 	Describe("reconciliation loop", func() {
 		It("should reconcile two stages", func() {
-			namespace, ns := createRandomNamespace()
 			testPrefix := "two-stages"
 
 			By("creating 2 ArgoCD cluster")
@@ -405,11 +405,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&twoStagesPR), &deletedPR)
 				return err
 			}).Should(HaveOccurred())
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 
 		It("should fail if unable to sync application", func() {
-			namespace, ns := createRandomNamespace()
 			testPrefix := "failed-stages"
 
 			By("creating 2 ArgoCD cluster")
@@ -513,13 +511,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&failedStagePR), &deletedPR)
 				return err
 			}).Should(HaveOccurred())
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 	})
 
 	Describe("sync application", func() {
 		It("should send a request to sync an application", func() {
-			namespace, ns := createRandomNamespace()
 			mockedArgoCDAppClient := &mocks.MockArgoCDAppClientCalledWith{}
 			reconciler.ArgoCDAppClient = mockedArgoCDAppClient
 			testAppName := "single-stage-app"
@@ -578,7 +574,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Eventually(func() []string {
 				return mockedArgoCDAppClient.GetSyncedApps()
 			}).Should(ContainElement(testAppName))
-			Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 		})
 	})
 })
