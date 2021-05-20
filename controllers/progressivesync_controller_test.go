@@ -516,8 +516,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	Describe("sync application", func() {
 		It("should send a request to sync an application", func() {
-			mockedArgoCDAppClient := &mocks.MockArgoCDAppClientCalledWith{}
-			reconciler.ArgoCDAppClient = mockedArgoCDAppClient
+			mockedArgoCDAppClient := mocks.MockArgoCDAppClientCalledWith{}
+			reconciler.ArgoCDAppClient = &mockedArgoCDAppClient
 			testAppName := "single-stage-app"
 
 			By("creating an ArgoCD cluster")
