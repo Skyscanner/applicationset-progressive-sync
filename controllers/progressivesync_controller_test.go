@@ -29,60 +29,61 @@ const (
 	interval = time.Millisecond * 10
 )
 
-var _ = Describe("ProgressiveSync Controller", func() {
+var (
+	appSetAPIRef = utils.AppSetAPIGroup
+	ctx          = context.Background()
+)
 
-	var (
-		ctx                     context.Context
-		namespace, appSetAPIRef string
-		ns                      *corev1.Namespace
-		ownerPR, singleStagePR  *syncv1alpha1.ProgressiveSync
-	)
+func createRandomNamespace() (string, *corev1.Namespace) {
+	namespace := "progressiverollout-test-" + randStringNumber(5)
+
+	ns := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: namespace},
+	}
+	Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
+	return namespace, &ns
+}
+
+func createOwnerPR(ns string, owner string) *syncv1alpha1.ProgressiveSync {
+	return &syncv1alpha1.ProgressiveSync{
+		ObjectMeta: metav1.ObjectMeta{Name: owner, Namespace: ns},
+		Spec: syncv1alpha1.ProgressiveSyncSpec{
+			SourceRef: corev1.TypedLocalObjectReference{
+				APIGroup: &appSetAPIRef,
+				Kind:     utils.AppSetKind,
+				Name:     "owner-app-set",
+			},
+			Stages: nil,
+		}}
+}
+
+var _ = Describe("ProgressiveRollout Controller", func() {
 
 	appSetAPIRef = utils.AppSetAPIGroup
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
 
+	var (
+		namespace string
+		ns        *corev1.Namespace
+	)
+
 	BeforeEach(func() {
-		ctx = context.Background()
-		namespace = "progressivesync-test-" + randStringNumber(5)
-
-		ns = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: namespace},
-		}
-		err := k8sClient.Create(context.Background(), ns)
-		Expect(err).To(BeNil(), "failed to create test namespace")
-
-		reconciler.ArgoCDAppClient = &mocks.ArgoCDAppClientStub{}
+		namespace, ns = createRandomNamespace()
 	})
 
 	AfterEach(func() {
-		err := k8sClient.Delete(context.Background(), ns)
-		Expect(err).To(BeNil(), "failed to delete test namespace")
+		Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 	})
 
 	Describe("requestsForApplicationChange function", func() {
 
-		JustBeforeEach(func() {
-			ownerPR = &syncv1alpha1.ProgressiveSync{
-				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
-				Spec: syncv1alpha1.ProgressiveSyncSpec{
-					SourceRef: corev1.TypedLocalObjectReference{
-						APIGroup: &appSetAPIRef,
-						Kind:     utils.AppSetKind,
-						Name:     "owner-app-set",
-					},
-					Stages: nil,
-				}}
-			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
-		})
-
-		AfterEach(func() {
-			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-		})
-
 		It("should forward events for owned applications", func() {
 			By("creating an owned application")
+
+			ownerPR := createOwnerPR(namespace, "owner-pr")
+			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
@@ -106,10 +107,13 @@ var _ = Describe("ProgressiveSync Controller", func() {
 				Namespace: namespace,
 				Name:      "owner-pr",
 			}))
+			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
 		})
 
 		It("should filter out events for non-owned applications", func() {
 			By("creating a non-owned application")
+			ownerPR := createOwnerPR(namespace, "owner-pr")
+			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			nonOwnedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "non-owned-app",
@@ -128,31 +132,17 @@ var _ = Describe("ProgressiveSync Controller", func() {
 				requests := reconciler.requestsForApplicationChange(&nonOwnedApp)
 				return len(requests)
 			}).Should(Equal(0))
+			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
 		})
 	})
 
 	Describe("requestsForSecretChange function", func() {
 
-		JustBeforeEach(func() {
-			ownerPR = &syncv1alpha1.ProgressiveSync{
-				ObjectMeta: metav1.ObjectMeta{Name: "owner-pr", Namespace: namespace},
-				Spec: syncv1alpha1.ProgressiveSyncSpec{
-					SourceRef: corev1.TypedLocalObjectReference{
-						APIGroup: &appSetAPIRef,
-						Kind:     utils.AppSetKind,
-						Name:     "owner-app-set",
-					},
-					Stages: nil,
-				}}
-			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
-		})
-
-		AfterEach(func() {
-			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
-		})
-
 		It("should forward an event for a matching argocd secret", func() {
+			ownerPR := createOwnerPR(namespace, "owner-pr")
+			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			serverURL := "https://kubernetes.default.svc"
+
 			By("creating an application")
 			app := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
@@ -182,9 +172,12 @@ var _ = Describe("ProgressiveSync Controller", func() {
 				requests := reconciler.requestsForSecretChange(&cluster)
 				return len(requests)
 			}).Should(Equal(1))
+			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
 		})
 
 		It("should not forward an event for a generic secret", func() {
+			ownerPR := createOwnerPR(namespace, "owner-pr")
+			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			By("creating a generic secret")
 			generic := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "generic", Namespace: namespace}, Data: map[string][]byte{"secret": []byte("insecure")},
@@ -194,9 +187,13 @@ var _ = Describe("ProgressiveSync Controller", func() {
 				requests := reconciler.requestsForSecretChange(&generic)
 				return len(requests)
 			}).Should(Equal(0))
+			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
 		})
 
 		It("should not forward an event for an argocd secret not matching any application", func() {
+			ownerPR := createOwnerPR(namespace, "owner-pr")
+			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
+
 			By("creating an application")
 			externalApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
@@ -226,6 +223,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 				requests := reconciler.requestsForSecretChange(&internalCluster)
 				return len(requests)
 			}).Should(Equal(0))
+			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
 		})
 	})
 
@@ -553,7 +551,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 			Expect(k8sClient.Create(ctx, &singleStageApp)).To(Succeed())
 
 			By("creating a progressive sync")
-			singleStagePR = &syncv1alpha1.ProgressiveSync{
+			singleStagePR := syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
@@ -571,7 +569,7 @@ var _ = Describe("ProgressiveSync Controller", func() {
 					}},
 				},
 			}
-			Expect(k8sClient.Create(ctx, singleStagePR)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &singleStagePR)).To(Succeed())
 
 			Eventually(func() []string {
 				return mockedArgoCDAppClient.GetSyncedApps()
