@@ -257,7 +257,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, &appTwo)).To(Succeed())
 
 			apps := []argov1alpha1.Application{appOne, appTwo}
-			err := reconciler.removeAnnotationFromApps(apps, "key")
+			err := reconciler.removeAnnotationFromApps(ctx, apps, "key")
 			Expect(err).To(BeNil())
 			Eventually(func() int { return len(appOne.Annotations) }).Should(Equal(1))
 			Eventually(func() int { return len(appTwo.Annotations) }).Should(Equal(1))
@@ -719,7 +719,7 @@ func TestSync(t *testing.T) {
 
 	testAppName := "foo-bar"
 
-	application, error := r.syncApp(testAppName)
+	application, error := r.syncApp(ctx, testAppName)
 
 	g := NewWithT(t)
 	g.Expect(error).To(BeNil())
@@ -733,7 +733,7 @@ func TestSyncErr(t *testing.T) {
 
 	testAppName := "foo-bar"
 
-	application, error := r.syncApp(testAppName)
+	application, error := r.syncApp(ctx, testAppName)
 
 	g := NewWithT(t)
 	g.Expect(application).To(BeNil())

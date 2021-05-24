@@ -101,7 +101,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log = r.Log.WithValues("stage", stage.Name)
 
 		// Get the clusters to update
-		clusters, err := r.getClustersFromSelector(stage.Targets.Clusters.Selector)
+		clusters, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
 		if err != nil {
 			message := "unable to fetch clusters"
 			log.Error(err, message)
@@ -113,7 +113,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.Log.V(1).Info("clusters selected", "clusters", utils.GetClustersName(clusters.Items))
 
 		// Get only the Applications owned by the ProgressiveSync targeting the selected clusters
-		apps, err := r.getOwnedAppsFromClusters(clusters, &pr)
+		apps, err := r.getOwnedAppsFromClusters(ctx, clusters, &pr)
 		if err != nil {
 			message := "unable to fetch apps"
 			log.Error(err, message)
@@ -127,7 +127,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 		// This action allows the Scheduler to keep track at which stage an Application has been synced.
 		outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-		if err := r.removeAnnotationFromApps(outOfSyncApps, utils.ProgressiveSyncSyncedAtStageKey); err != nil {
+		if err := r.removeAnnotationFromApps(ctx, outOfSyncApps, utils.ProgressiveSyncSyncedAtStageKey); err != nil {
 			message := "unable to remove out-of-sync annotation"
 			log.Error(err, message)
 			if err := r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseUnknown, &pr); err != nil {
@@ -145,7 +145,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		for _, s := range scheduledApps {
 			r.Log.Info("syncing app", "app", s)
 
-			_, err := r.syncApp(s.Name)
+			_, err := r.syncApp(ctx, s.Name)
 
 			if err != nil {
 				if !strings.Contains(err.Error(), "another operation is already in progress") {
@@ -335,9 +335,8 @@ func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []r
 }
 
 // getClustersFromSelector returns a list of ArgoCD clusters matching the provided label selector
-func (r *ProgressiveSyncReconciler) getClustersFromSelector(selector metav1.LabelSelector) (corev1.SecretList, error) {
+func (r *ProgressiveSyncReconciler) getClustersFromSelector(ctx context.Context, selector metav1.LabelSelector) (corev1.SecretList, error) {
 	secrets := corev1.SecretList{}
-	ctx := context.Background()
 
 	argoSelector := metav1.AddLabelToSelector(&selector, utils.ArgoCDSecretTypeLabel, utils.ArgoCDSecretTypeCluster)
 	labels, err := metav1.LabelSelectorAsSelector(argoSelector)
@@ -358,10 +357,9 @@ func (r *ProgressiveSyncReconciler) getClustersFromSelector(selector metav1.Labe
 }
 
 // getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveSync
-func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(clusters corev1.SecretList, pr *syncv1alpha1.ProgressiveSync) ([]argov1alpha1.Application, error) {
+func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context, clusters corev1.SecretList, pr *syncv1alpha1.ProgressiveSync) ([]argov1alpha1.Application, error) {
 	var apps []argov1alpha1.Application
 	appList := argov1alpha1.ApplicationList{}
-	ctx := context.Background()
 
 	if err := r.List(ctx, &appList); err != nil {
 		r.Log.Error(err, "failed to list Application")
@@ -382,9 +380,7 @@ func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(clusters corev1.Sec
 }
 
 // removeAnnotationFromApps remove an annotation from the given Applications
-func (r *ProgressiveSyncReconciler) removeAnnotationFromApps(apps []argov1alpha1.Application, annotation string) error {
-	ctx := context.Background()
-
+func (r *ProgressiveSyncReconciler) removeAnnotationFromApps(ctx context.Context, apps []argov1alpha1.Application, annotation string) error {
 	for _, app := range apps {
 		if _, ok := app.Annotations[annotation]; ok {
 			delete(app.Annotations, annotation)
@@ -414,9 +410,7 @@ func (r *ProgressiveSyncReconciler) updateStageStatus(ctx context.Context, name,
 }
 
 // syncApp sends a sync request for the target app
-func (r *ProgressiveSyncReconciler) syncApp(appName string) (*argov1alpha1.Application, error) {
-	ctx := context.Background()
-
+func (r *ProgressiveSyncReconciler) syncApp(ctx context.Context, appName string) (*argov1alpha1.Application, error) {
 	syncReq := applicationpkg.ApplicationSyncRequest{
 		Name: &appName,
 	}
