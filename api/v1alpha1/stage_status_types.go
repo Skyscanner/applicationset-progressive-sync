@@ -18,7 +18,7 @@ const (
 // StageStatus defines the observed stage status
 type StageStatus struct {
 	Name       string           `json:"name"`
-	Phase      StageStatusPhase `json:"stage,omitempty"`
+	Phase      StageStatusPhase `json:"phase,omitempty"`
 	Message    string           `json:"message,omitempty"`
 	StartedAt  *metav1.Time     `json:"startedAt,omitempty"`
 	FinishedAt *metav1.Time     `json:"finishedAt,omitempty"`
