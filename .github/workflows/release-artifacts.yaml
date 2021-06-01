@@ -22,7 +22,7 @@ jobs:
       run: make tools
 
     - name: Get tag
-      uses: olegtarasov/get-tag@v2
+      uses: olegtarasov/get-tag@v2.1
       id: tagName
 
     - name: Login to GitHub Packages Docker Registry
