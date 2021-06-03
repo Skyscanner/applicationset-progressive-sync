@@ -2,6 +2,8 @@ name: CodeQL
 
 on:
   pull_request:
+  schedule:
+    - cron: '20 17 * * 1'
 
 jobs:
   codeql:
