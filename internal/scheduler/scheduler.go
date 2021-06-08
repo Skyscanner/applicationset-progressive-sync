@@ -61,15 +61,7 @@ func Scheduler(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSy
 		return scheduledApps
 	}
 
-	// It may be that at point when apps were observed, no apps were progressing yet
-	// so maxParallel-len(progressingApps) might actually be greater than len(outOfSyncApps)
-	// causing the runtime to panic
-	p := maxParallel-len(progressingApps)
-	if p > len(outOfSyncApps){
-		p = len(outOfSyncApps)
-	}
-	
-	for i := 0; i < p; i++ {
+	for i := 0; i < maxParallel-len(progressingApps); i++ {
 		scheduledApps = append(scheduledApps, outOfSyncApps[i])
 	}
 	return scheduledApps
