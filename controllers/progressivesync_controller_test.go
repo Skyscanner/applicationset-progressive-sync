@@ -333,7 +333,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
 				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: "stage in progress",
+				Message: "stage 0 stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
 
@@ -350,7 +350,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
 				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: "stage completed",
+				Message: "stage 0 stage completed",
 			}))
 
 			By("progressing in second application")
@@ -369,7 +369,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
 				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: "stage in progress",
+				Message: "stage 1 stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(2))
 
@@ -386,7 +386,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
 				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: "stage completed",
+				Message: "stage 1 stage completed",
 			}))
 
 			createdPR := syncv1alpha1.ProgressiveSync{}
@@ -475,7 +475,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
 				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: "stage in progress",
+				Message: "stage 0 stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
 
@@ -492,7 +492,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
 				Phase:   syncv1alpha1.PhaseFailed,
-				Message: "stage failed",
+				Message: "stage 0 stage failed",
 			}))
 
 			createdPR := syncv1alpha1.ProgressiveSync{}
