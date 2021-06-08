@@ -70,7 +70,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if err := r.initializeStatus(ctx, &pr); err != nil {
+	if err := r.resetStatus(ctx, &pr); err != nil {
 		log.Error(err, "unable to initialize status")
 		return ctrl.Result{}, err
 	}
@@ -481,8 +481,8 @@ func (r *ProgressiveSyncReconciler) submitStatus(ctx context.Context, pr *syncv1
 	return retryErr
 }
 
-// initializeStatus initializes the progressive sync object status to prevent conflicts when updating status later on
-func (r *ProgressiveSyncReconciler) initializeStatus(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) error {
+// resetStatus initializes the progressive sync object status to prevent conflicts when updating status later on
+func (r *ProgressiveSyncReconciler) resetStatus(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) error {
 
 	key := client.ObjectKeyFromObject(pr)
 	latest := syncv1alpha1.ProgressiveSync{}
@@ -491,7 +491,7 @@ func (r *ProgressiveSyncReconciler) initializeStatus(ctx context.Context, pr *sy
 	}
 	latest.Status = syncv1alpha1.ProgressiveSyncStatus{}
 	condition := latest.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesInitializedReason, "Stages initialized")
-	apimeta.SetStatusCondition(pr.GetStatusConditions(), condition)
+	apimeta.SetStatusCondition(latest.GetStatusConditions(), condition)
 
 	pr = &latest
 	return nil
