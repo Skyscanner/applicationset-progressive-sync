@@ -19,5 +19,4 @@ kubectl create ns infrabin || echo "infrabin already exists"
 kubectl config use-context kind-prc-cluster-2
 kubectl create ns infrabin || echo "infrabin already exists"
 
-
 kubectl config use-context "$prevcontext"
