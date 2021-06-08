@@ -3,7 +3,7 @@ set -e
 
 root=$(dirname "${BASH_SOURCE[0]}")
 
-# shellcheck source=.env.local
+# shellcheck disable=SC1091
 source .env.local
 
 
