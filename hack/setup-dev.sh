@@ -44,9 +44,14 @@ kubectl apply -f "$root"/dev/rbac.yml
 # Register in-cluster in argo secrets
 kubectl apply -f "$root"/dev/control-plane.yml
 
+label_argocd_cluster "cluster-kubernetes.default" "region=eu-central-1"
+
 # Create additional clusters to server as deployment targets
 register_argocd_cluster "prc-cluster-1" true
 register_argocd_cluster "prc-cluster-2" true
+
+label_argocd_cluster "prc-cluster-1" "region=eu-west-1"
+label_argocd_cluster "prc-cluster-2" "region=ap-northeast-1"
 
 local_address=$(local_argocd_login)
 

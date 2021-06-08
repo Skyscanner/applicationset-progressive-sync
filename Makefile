@@ -33,6 +33,10 @@ manager: generate fmt vet
 run: generate fmt vet manifests
 	go run ./main.go --zap-devel=true
 
+debug: fmt vet
+	./hack/kill-debug.sh
+	./hack/debug.sh
+
 # Install CRDs into a cluster
 install: manifests
 	kustomize build config/crd | kubectl apply -f -
