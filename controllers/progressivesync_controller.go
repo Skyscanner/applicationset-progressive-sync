@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +68,11 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := r.Get(ctx, req.NamespacedName, &pr); err != nil {
 		log.Error(err, "unable to fetch ProgressiveSync")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if err := r.initializeStatus(ctx, &pr); err != nil {
+		log.Error(err, "unable to clear status")
+		return ctrl.Result{}, err
 	}
 
 	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
@@ -143,7 +149,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// TODO: status status - update targets
 
 		for _, s := range scheduledApps {
-			r.Log.Info("syncing app", "app", s)
+			log.Info("syncing app", "app", s)
 
 			_, err := r.syncApp(ctx, s.Name)
 
@@ -164,7 +170,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		if scheduler.IsStageFailed(apps) {
 			message := "stage failed"
-			r.Log.Info(message)
+			log.Info(message)
 			if err := r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &pr); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -176,14 +182,14 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				r.Log.Error(err, "failed to update object status")
 				return ctrl.Result{}, err
 			}
-			r.Log.Info("rollout failed")
+			log.Info("rollout failed")
 			// We can set Requeue: true once we have a timeout in place
 			return ctrl.Result{}, nil
 		}
 
 		if scheduler.IsStageInProgress(apps) {
 			message := "stage in progress"
-			r.Log.Info(message)
+			log.Info(message)
 			if err := r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseProgressing, &pr); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -193,13 +199,13 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		if scheduler.IsStageComplete(apps) {
 			message := "stage completed"
-			r.Log.Info(message)
+			log.Info(message)
 			if err := r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseSucceeded, &pr); err != nil {
 				return ctrl.Result{}, err
 			}
 		} else {
 			message := "stage is unknown"
-			r.Log.Info(message)
+			log.Info(message)
 			if err := r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseUnknown, &pr); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -224,7 +230,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager adds the reconciler to the manager, so that it gets started when the manager is started.
 func (r *ProgressiveSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&syncv1alpha1.ProgressiveSync{}).
+		For(&syncv1alpha1.ProgressiveSync{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(
 			&source.Kind{Type: &argov1alpha1.Application{}},
 			handler.EnqueueRequestsFromMapFunc(r.requestsForApplicationChange)).
@@ -252,6 +258,7 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 		r.Log.Error(err, "failed to convert object to application")
 		return nil
 	}
+	// r.Log.Info("received app event", "name", app.ObjectMeta.Name, "reconciledAt", app.Status.ReconciledAt.String())
 
 	if err := r.List(ctx, &list); err != nil {
 		r.Log.Error(err, "failed to list ProgressiveSync")
@@ -420,10 +427,51 @@ func (r *ProgressiveSyncReconciler) syncApp(ctx context.Context, appName string)
 
 // patchStatus patches the progressive sync object status
 func (r *ProgressiveSyncReconciler) patchStatus(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) error {
-	key := client.ObjectKeyFromObject(pr)
-	latest := syncv1alpha1.ProgressiveSync{}
-	if err := r.Client.Get(ctx, key, &latest); err != nil {
-		return err
-	}
-	return r.Client.Status().Patch(ctx, pr, client.MergeFrom(&latest))
+	// key := client.ObjectKeyFromObject(pr)
+	// latest := syncv1alpha1.ProgressiveSync{}
+	// if err := r.Client.Get(ctx, key, &latest); err != nil {
+	// 	return err
+	// }
+	// return r.Client.Status().Patch(ctx, pr, client.MergeFrom(&latest))
+
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+
+		key := client.ObjectKeyFromObject(pr)
+		latest := syncv1alpha1.ProgressiveSync{}
+		if err := r.Client.Get(ctx, key, &latest); err != nil {
+			return err
+		}
+		latest.Status = pr.Status
+		if err := r.Client.Status().Update(ctx, &latest); err != nil {
+			return err
+		}
+		pr = &latest
+		return nil
+
+	})
+	return retryErr
+}
+
+// initializeStatus initializes the progressive sync object status to prevent patching stale status
+func (r *ProgressiveSyncReconciler) initializeStatus(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) error {
+
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+
+		key := client.ObjectKeyFromObject(pr)
+		latest := syncv1alpha1.ProgressiveSync{}
+		if err := r.Client.Get(ctx, key, &latest); err != nil {
+			return err
+		}
+		latest.Status = syncv1alpha1.ProgressiveSyncStatus{}
+		condition := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesInitializedReason, "Stages initialized")
+		apimeta.SetStatusCondition(pr.GetStatusConditions(), condition)
+
+		// if err := r.Client.Status().Update(ctx, &latest); err != nil {
+		// 	return err
+		// }
+		pr = &latest
+		return nil
+
+	})
+	return retryErr
 }

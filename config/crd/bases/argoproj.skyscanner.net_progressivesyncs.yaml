@@ -228,7 +228,7 @@ spec:
                     type: string
                   name:
                     type: string
-                  stage:
+                  phase:
                     description: StageStatusPhase defines the observed stage phase
                     enum:
                     - Progressing

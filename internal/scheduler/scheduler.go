@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"math"
+
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
@@ -61,7 +63,11 @@ func Scheduler(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSy
 		return scheduledApps
 	}
 
-	for i := 0; i < maxParallel-len(progressingApps); i++ {
+	// It may be that at point when apps were observed, no apps were progressing yet
+	// so maxParallel-len(progressingApps) might actually be greater than len(outOfSyncApps)
+	// causing the runtime to panic
+	p := (int)(math.Min((float64)(maxParallel-len(progressingApps)), (float64)(len(outOfSyncApps))))
+	for i := 0; i < p; i++ {
 		scheduledApps = append(scheduledApps, outOfSyncApps[i])
 	}
 	return scheduledApps

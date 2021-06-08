@@ -25,6 +25,10 @@ const (
 	// the progressive sync stages have been completed
 	StagesCompleteReason string = "StagesCompleted"
 
+	// StagesCompleteReason represent the fact that all
+	// the progressive sync stages have been completed
+	StagesInitializedReason string = "StagesInitialized"
+
 	// StagesFailedReason represent the fact that a
 	// progressive sync stage has failed
 	StagesFailedReason string = "StagesFailed"
