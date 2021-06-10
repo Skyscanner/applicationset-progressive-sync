@@ -502,7 +502,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(Equal(1))
 			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
 
-			expected := failedStagePR.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesFailedReason, "stage 0 stage failed")
+			expected := failedStagePR.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, "stage 0 stage failed")
 			ExpectCondition(&failedStagePR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
 			deletedPR := syncv1alpha1.ProgressiveSync{}
