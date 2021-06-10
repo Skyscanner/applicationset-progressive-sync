@@ -70,11 +70,6 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if err := r.resetStatus(ctx, &pr); err != nil {
-		log.Error(err, "unable to initialize status")
-		return ctrl.Result{}, err
-	}
-
 	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
 
 	if pr.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -478,19 +473,4 @@ func (r *ProgressiveSyncReconciler) submitStatus(ctx context.Context, pr *syncv1
 
 	})
 	return retryErr
-}
-
-// resetStatus initializes the progressive sync object status to prevent conflicts when updating status later on
-func (r *ProgressiveSyncReconciler) resetStatus(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) error {
-
-	key := client.ObjectKeyFromObject(pr)
-	latest := syncv1alpha1.ProgressiveSync{}
-	if err := r.Client.Get(ctx, key, &latest); err != nil {
-		return err
-	}
-	latest.Status = syncv1alpha1.ProgressiveSyncStatus{}
-	condition := latest.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesInitializedReason, "Stages initialized")
-	apimeta.SetStatusCondition(latest.GetStatusConditions(), condition)
-	return nil
-
 }
