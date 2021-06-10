@@ -66,36 +66,32 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Get the ProgressiveSync object
 	pr := syncv1alpha1.ProgressiveSync{}
 	if err := r.Get(ctx, req.NamespacedName, &pr); err != nil {
-		log.Error(err, "unable to fetch ProgressiveSync")
+		log.Error(err, "unable to fetch progressivesync object")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
 
-	if pr.ObjectMeta.DeletionTimestamp.IsZero() {
-		// The object is not being deleted, so if it does not have our finalizer,
-		// then lets add the finalizer and update the object
-		if !controllerutil.ContainsFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer) {
-			controllerutil.AddFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer)
-			if err := r.Update(ctx, &pr); err != nil {
-				log.Error(err, "failed to update object")
-				return ctrl.Result{}, err
-			}
-			// Requeue after adding the finalizer
-			return ctrl.Result{Requeue: true}, nil
-		}
-	} else {
-		// The object is being deleted
-		if controllerutil.ContainsFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer) {
-			// Remove our finalizer from the list and update it
-			controllerutil.RemoveFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer)
-			if err := r.Update(ctx, &pr); err != nil {
-				log.Error(err, "failed to update object")
-				return ctrl.Result{}, err
-			}
+	// If the object is being deleted, remove finalizer and don't requeue it
+	if !pr.ObjectMeta.DeletionTimestamp.IsZero() {
+		controllerutil.RemoveFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer)
+		if err := r.Update(ctx, &pr); err != nil {
+			log.Error(err, "failed to update object when removing finalizer")
+			return ctrl.Result{}, err
 		}
 		// Stop reconciliation as the item is being deleted
 		return ctrl.Result{}, nil
+	}
+
+	// Add finalizer if it doesn't exist
+	if !controllerutil.ContainsFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer) {
+		controllerutil.AddFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer)
+		if err := r.Update(ctx, &pr); err != nil {
+			log.Error(err, "failed to update object when adding finalizer")
+			return ctrl.Result{}, err
+		}
+		// Requeue after adding the finalizer
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	for _, stage := range pr.Spec.Stages {
