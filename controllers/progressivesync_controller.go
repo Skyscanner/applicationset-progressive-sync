@@ -111,7 +111,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 			return ctrl.Result{}, err
 		}
-		log.V(1).Info("clusters selected", "clusters", utils.GetClustersName(clusters.Items))
+		log.Info("clusters selected", "clusters", utils.GetClustersName(clusters.Items))
 
 		// Get only the Applications owned by the ProgressiveSync targeting the selected clusters
 		apps, err := r.getOwnedAppsFromClusters(ctx, clusters, &pr)
@@ -127,7 +127,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 			return ctrl.Result{}, err
 		}
-		log.V(1).Info("apps selected", "apps", utils.GetAppsName(apps))
+		log.Info("apps selected", "apps", utils.GetAppsName(apps))
 
 		// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 		// This action allows the Scheduler to keep track at which stage an Application has been synced.
