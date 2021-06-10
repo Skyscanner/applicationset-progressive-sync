@@ -61,7 +61,7 @@ type ProgressiveSyncReconciler struct {
 
 // Reconcile performs the reconciling for a single named ProgressiveSync object
 func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("ProgressiveSync", req.NamespacedName)
+	log := r.Log.WithValues("progressivesync", req.NamespacedName)
 
 	// Get the ProgressiveSync object
 	pr := syncv1alpha1.ProgressiveSync{}
@@ -104,7 +104,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			log.Error(err, message)
 			r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseUnknown, &pr)
 
-			if err := r.submitStatus(ctx, &pr); err != nil {
+			if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 				log.Error(err, "failed to update object status")
 				return ctrl.Result{}, err
 			}
@@ -120,7 +120,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			log.Error(err, message)
 			r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseUnknown, &pr)
 
-			if err := r.submitStatus(ctx, &pr); err != nil {
+			if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 				log.Error(err, "failed to update object status")
 				return ctrl.Result{}, err
 			}
@@ -138,7 +138,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 			r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseUnknown, &pr)
 
-			if err := r.submitStatus(ctx, &pr); err != nil {
+			if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 				log.Error(err, "failed to update object status")
 				return ctrl.Result{}, err
 			}
@@ -166,7 +166,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 					// TODO: Should this be reflected in the general condition?
 					// failed := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesFailedReason, message)
 					// apimeta.SetStatusCondition(pr.GetStatusConditions(), failed)
-					if err := r.submitStatus(ctx, &pr); err != nil {
+					if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 						log.Error(err, "failed to update object status")
 						return ctrl.Result{}, err
 					}
@@ -186,7 +186,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 			failed := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesFailedReason, failedMessage)
 			apimeta.SetStatusCondition(pr.GetStatusConditions(), failed)
-			if err := r.submitStatus(ctx, &pr); err != nil {
+			if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 				log.Error(err, "failed to update object status")
 				return ctrl.Result{}, err
 			}
@@ -204,7 +204,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			progress := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			apimeta.SetStatusCondition(pr.GetStatusConditions(), progress)
 
-			if err := r.submitStatus(ctx, &pr); err != nil {
+			if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 				log.Error(err, "failed to update object status")
 				return ctrl.Result{}, err
 			}
@@ -222,7 +222,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			progress := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			apimeta.SetStatusCondition(pr.GetStatusConditions(), progress)
 
-			if err := r.submitStatus(ctx, &pr); err != nil {
+			if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 				log.Error(err, "failed to update object status")
 				return ctrl.Result{}, err
 			}
@@ -236,7 +236,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			progress := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			apimeta.SetStatusCondition(pr.GetStatusConditions(), progress)
 
-			if err := r.submitStatus(ctx, &pr); err != nil {
+			if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 				log.Error(err, "failed to update object status")
 				return ctrl.Result{}, err
 			}
@@ -251,7 +251,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Progressive rollout completed
 	completed := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
-	if err := r.submitStatus(ctx, &pr); err != nil {
+	if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 		log.Error(err, "failed to update object status")
 		return ctrl.Result{}, err
 	}
@@ -451,8 +451,8 @@ func (r *ProgressiveSyncReconciler) syncApp(ctx context.Context, appName string)
 	return r.ArgoCDAppClient.Sync(ctx, &syncReq)
 }
 
-// submitStatus updates the progressive sync object status with backoff
-func (r *ProgressiveSyncReconciler) submitStatus(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) error {
+// updateStatusWithRetry updates the progressive sync object status with backoff
+func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) error {
 
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 
