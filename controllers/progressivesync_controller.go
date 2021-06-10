@@ -474,7 +474,6 @@ func (r *ProgressiveSyncReconciler) submitStatus(ctx context.Context, pr *syncv1
 		if err := r.Client.Status().Update(ctx, &latest); err != nil {
 			return err
 		}
-		pr = &latest
 		return nil
 
 	})
@@ -492,8 +491,6 @@ func (r *ProgressiveSyncReconciler) resetStatus(ctx context.Context, pr *syncv1a
 	latest.Status = syncv1alpha1.ProgressiveSyncStatus{}
 	condition := latest.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesInitializedReason, "Stages initialized")
 	apimeta.SetStatusCondition(latest.GetStatusConditions(), condition)
-
-	pr = &latest
 	return nil
 
 }
