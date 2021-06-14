@@ -61,7 +61,14 @@ func Scheduler(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSy
 		return scheduledApps
 	}
 
-	for i := 0; i < maxParallel-len(progressingApps); i++ {
+	// Because of eventual consistency, there might be a time where
+	// maxParallel-len(progressingApps) might actually be greater than len(outOfSyncApps)
+	// causing the runtime to panic
+	p := maxParallel - len(progressingApps)
+	if p > len(outOfSyncApps) {
+		p = len(outOfSyncApps)
+	}
+	for i := 0; i < p; i++ {
 		scheduledApps = append(scheduledApps, outOfSyncApps[i])
 	}
 	return scheduledApps
