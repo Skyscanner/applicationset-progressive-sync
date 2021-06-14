@@ -3,36 +3,35 @@ name: Release Artifacts
 on:
   push:
     tags:
-      - '*'
+      - 'v*'
 
 jobs:
   release:
-    name: release
+    name: release-artifacts
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      with:
-        go-version: ^1.15
+      - uses: actions/checkout@v2.3.4
 
-    - name: Check out code
-      uses: actions/checkout@v2.3.4
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            maruina/applicationset-progressive-sync
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=ref,event=tag
+            type=sha
 
-    - name: Get tools
-      run: make tools
+      - name: Docker Login
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Get tag
-      uses: olegtarasov/get-tag@v2.1
-      id: tagName
-
-    - name: Login to GitHub Packages Docker Registry
-      uses: docker/login-action@v1.9.0
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Build and publish a tagged docker image
-      uses: docker/build-push-action@v2.5.0
-      with:
-        push: true
-        tags: maruina/applicationset-progressive-sync:${{ steps.tagName.outputs.tag }}
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
