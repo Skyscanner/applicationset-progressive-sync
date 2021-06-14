@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  build:
+  release:
     name: release-artifacts
     runs-on: ubuntu-latest
     steps:
