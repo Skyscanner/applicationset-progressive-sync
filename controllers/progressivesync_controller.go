@@ -97,12 +97,12 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)
 
-		pr, result, err, requeue := r.reconcileStage(ctx, pr, stage)
+		pr, result, err := r.reconcileStage(ctx, pr, stage)
 		if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		if requeue {
+		if result.Requeue {
 			log.Info("requeuing stage")
 			return result, err
 		}
@@ -333,7 +333,7 @@ func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, p
 }
 
 // reconcileStage reconcile a ProgressiveSyncStage
-func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error, bool) {
+func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {
 	log := r.Log.WithValues("stage", stage.Name)
 
 	// Get the clusters to update
@@ -348,7 +348,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
-		return ps, ctrl.Result{}, err, false
+		return ps, ctrl.Result{}, err
 	}
 	log.Info("clusters selected", "clusters", utils.GetClustersName(clusters.Items))
 
@@ -361,7 +361,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-		return ps, ctrl.Result{}, err, false
+		return ps, ctrl.Result{}, err
 	}
 	log.Info("apps selected", "apps", utils.GetAppsName(apps))
 
@@ -377,7 +377,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
-		return ps, ctrl.Result{}, err, false
+		return ps, ctrl.Result{}, err
 	}
 
 	// Get the Applications to update
@@ -397,7 +397,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 				// Set ProgressiveSync status
 				failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 				apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-				return ps, ctrl.Result{}, err, false
+				return ps, ctrl.Result{}, err
 			}
 		}
 	}
@@ -413,7 +413,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 		log.Info("sync failed")
 		// We can set Requeue: true once we have a timeout in place
-		return ps, ctrl.Result{}, nil, false
+		return ps, ctrl.Result{}, nil
 	}
 
 	if scheduler.IsStageInProgress(apps) {
@@ -426,7 +426,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), progress)
 
 		// Stage in progress, we reconcile again until the stage is completed or failed
-		return ps, ctrl.Result{Requeue: true}, nil, true
+		return ps, ctrl.Result{Requeue: true}, nil
 	}
 
 	if scheduler.IsStageComplete(apps) {
@@ -438,9 +438,9 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		progress := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), progress)
 
-		return ps, ctrl.Result{}, nil, false
+		return ps, ctrl.Result{}, nil
 
 	}
 
-	return ps, ctrl.Result{}, nil, false
+	return ps, ctrl.Result{}, nil
 }
