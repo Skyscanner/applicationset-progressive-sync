@@ -274,7 +274,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	})
 
 	Describe("reconciliation loop", func() {
-		It("should reconcile", func() {
+		It("should reconcile a multi-stage progressive sync", func() {
 			testPrefix := "default-ps"
 			appSet := fmt.Sprintf("%s-appset", testPrefix)
 
@@ -348,36 +348,53 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 
 			By("creating a progressive sync")
-			twoStagesPR := syncv1alpha1.ProgressiveSync{
-				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
+			ps := syncv1alpha1.ProgressiveSync{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-ps", testPrefix),
+					Namespace: namespace,
+				},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
 						Kind:     utils.AppSetKind,
-						Name:     fmt.Sprintf("%s-appset", testPrefix),
+						Name:     appSet,
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
-						Name:        "stage 0",
+						Name:        "one cluster as canary in eu-west-1",
 						MaxParallel: intstr.IntOrString{IntVal: 1},
 						MaxTargets:  intstr.IntOrString{IntVal: 1},
-						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
-							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-								"cluster.name": clusters[0].Name,
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+									"region": "eu-west-1",
+								}},
 							}},
-						}},
 					}, {
-						Name:        "stage 1",
-						MaxParallel: intstr.IntOrString{IntVal: 1},
-						MaxTargets:  intstr.IntOrString{IntVal: 1},
-						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
-							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-								"cluster.name": clusters[1].Name,
+						Name:        "one cluster as canary in every other region",
+						MaxParallel: intstr.IntOrString{IntVal: 3},
+						MaxTargets:  intstr.IntOrString{IntVal: 3},
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      "region",
+										Operator: metav1.LabelSelectorOpNotIn,
+										Values:   []string{"eu-west-1"},
+									}},
+								},
 							}},
-						}},
+					}, {
+						Name:        "rollout to remaining clusters",
+						MaxParallel: intstr.IntOrString{StrVal: "25%"},
+						MaxTargets:  intstr.IntOrString{StrVal: "100%"},
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{},
+							}},
 					}},
 				},
 			}
-			Expect(k8sClient.Create(ctx, &twoStagesPR)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
 
 			prKey := client.ObjectKey{
 				Namespace: namespace,
@@ -459,18 +476,18 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			createdPR := syncv1alpha1.ProgressiveSync{}
 			Eventually(func() int {
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&twoStagesPR), &createdPR)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &createdPR)
 				return len(createdPR.ObjectMeta.Finalizers)
 			}).Should(Equal(1))
 			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
 
-			expected := twoStagesPR.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-			ExpectCondition(&twoStagesPR, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
 			deletedPR := syncv1alpha1.ProgressiveSync{}
-			Expect(k8sClient.Delete(ctx, &twoStagesPR)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &ps)).To(Succeed())
 			Eventually(func() error {
-				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&twoStagesPR), &deletedPR)
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &deletedPR)
 				return err
 			}).Should(HaveOccurred())
 		})
