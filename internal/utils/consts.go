@@ -9,5 +9,5 @@ const (
 	ArgoCDInsecureKey               = "ARGOCD_INSECURE"
 	ArgoCDServerAddrKey             = "ARGOCD_SERVER_ADDR"
 	ConfigDirectory                 = "/etc/prcconfig/"
-	ProgressiveSyncSyncedAtStageKey = "apr.skyscanner.net/syncedAtStage"
+	ProgressiveSyncSyncedAtStageKey = "argoproj.skyscanner.net/syncedAtStage"
 )

@@ -88,6 +88,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
 					Namespace: localNS,
+					Annotations: map[string]string{
+						"foo": "bar",
+						"key": "value",
+					},
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -118,6 +122,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "non-owned-app",
 					Namespace: namespace,
+					Annotations: map[string]string{
+						"foo": "bar",
+						"key": "value",
+					},
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -148,6 +156,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
 					Namespace: namespace,
+					Annotations: map[string]string{
+						"foo": "bar",
+						"key": "value",
+					},
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -199,6 +211,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
 					Namespace: namespace,
+					Annotations: map[string]string{
+						"foo": "bar",
+						"key": "value",
+					},
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -534,6 +550,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testAppName,
 					Namespace: namespace,
+					Annotations: map[string]string{
+						"foo": "bar",
+						"key": "value",
+					},
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -614,6 +634,10 @@ func createApplication(ctx context.Context, prefix string, cluster corev1.Secret
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      appName,
 			Namespace: cluster.Namespace,
+			Annotations: map[string]string{
+				"foo": "bar",
+				"key": "value",
+			},
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: utils.AppSetAPIGroup,
 				Kind:       utils.AppSetKind,
