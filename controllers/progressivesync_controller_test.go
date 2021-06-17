@@ -34,6 +34,15 @@ var (
 	ctx          = context.Background()
 )
 
+type Target struct {
+	Name           string
+	Namespace      string
+	ApplicationSet string
+	Area           string
+	Region         string
+	AZ             string
+}
+
 func createRandomNamespace() (string, *corev1.Namespace) {
 	namespace := "progressiverollout-test-" + randStringNumber(5)
 
@@ -265,19 +274,78 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	})
 
 	Describe("reconciliation loop", func() {
-		It("should reconcile two stages", func() {
-			testPrefix := "two-stages"
+		It("should reconcile", func() {
+			testPrefix := "default-ps"
+			appSet := fmt.Sprintf("%s-appset", testPrefix)
 
-			By("creating 2 ArgoCD cluster")
-			clusters, cErr := createClusters(ctx, namespace, testPrefix, 2)
+			By("creating eight argocd clusters")
+			targets := []Target{
+				{
+					Name:           "account1-eu-west-1a-1-app",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1a",
+				}, {
+					Name:           "account1-eu-west-1a-2",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1a",
+				}, {
+					Name:           "account2-eu-central-1a-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-central-1",
+					AZ:             "eu-central-1a",
+				}, {
+					Name:           "account2-eu-central-1b-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-central-1",
+					AZ:             "eu-central-1b",
+				}, {
+					Name:           "account3-ap-southeast-1a-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "apac",
+					Region:         "ap-southeast-1",
+					AZ:             "ap-southeast-1a",
+				}, {
+					Name:           "account3-ap-southeast-1c-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "apac",
+					Region:         "ap-southeast-1",
+					AZ:             "ap-southeast-1c",
+				}, {
+					Name:           "account4-ap-northeast-1a-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "apac",
+					Region:         "ap-northeast-1",
+					AZ:             "ap-northeast-1a",
+				}, {
+					Name:           "account4-ap-northeast-1a-2",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "apac",
+					Region:         "ap-northeast-1",
+					AZ:             "ap-northeast-1a",
+				},
+			}
+			clusters, err := createClusters(ctx, targets)
 			Expect(clusters).To(Not(BeNil()))
-			Expect(cErr).To(BeNil())
+			Expect(err).To(BeNil())
 
 			By("creating one application targeting each cluster")
-			appOne, aErr := createApplication(ctx, testPrefix, clusters[0])
-			Expect(aErr).To(BeNil())
-			appTwo, aErr := createApplication(ctx, testPrefix, clusters[1])
-			Expect(aErr).To(BeNil())
+			apps, err := createApplications(ctx, targets, clusters)
+			Expect(apps).To(Not(BeNil()))
+			Expect(err).To(BeNil())
 
 			By("creating a progressive sync")
 			twoStagesPR := syncv1alpha1.ProgressiveSync{
@@ -321,7 +389,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Eventually(func() error {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
-					Name:      appOne.Name,
+					Name:      "placeholder",
 				}, &app)
 			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
@@ -357,7 +425,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Eventually(func() error {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
-					Name:      appTwo.Name,
+					Name:      "placeholder",
 				}, &app)
 			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
@@ -409,17 +477,34 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 		It("should fail if unable to sync application", func() {
 			testPrefix := "failed-stages"
+			appSet := fmt.Sprintf("%s-appset", testPrefix)
 
-			By("creating 2 ArgoCD cluster")
-			clusters, cErr := createClusters(ctx, namespace, testPrefix, 2)
+			By("creating two ArgoCD cluster")
+			targets := []Target{
+				{
+					Name:           "account1-eu-west-1a-1-app",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1a",
+				}, {
+					Name:           "account1-eu-west-1a-2",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1a",
+				},
+			}
+			clusters, err := createClusters(ctx, targets)
 			Expect(clusters).To(Not(BeNil()))
-			Expect(cErr).To(BeNil())
+			Expect(err).To(BeNil())
 
 			By("creating one application targeting each cluster")
-			appOne, aErr := createApplication(ctx, testPrefix, clusters[0])
-			Expect(aErr).To(BeNil())
-			_, aErr = createApplication(ctx, testPrefix, clusters[1])
-			Expect(aErr).To(BeNil())
+			apps, err := createApplications(ctx, targets, clusters)
+			Expect(err).To(BeNil())
+			Expect(apps).To(BeNil())
 
 			By("creating a progressive sync")
 			failedStagePR := syncv1alpha1.ProgressiveSync{
@@ -463,7 +548,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Eventually(func() error {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
-					Name:      appOne.Name,
+					Name:      "placeholder",
 				}, &app)
 			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
@@ -579,18 +664,23 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 })
 
 // createClusters is a helper function that creates N clusters in a given namespace with a common name prefix
-func createClusters(ctx context.Context, namespace string, prefix string, number int) ([]corev1.Secret, error) {
+func createClusters(ctx context.Context, targets []Target) ([]corev1.Secret, error) {
 	var clusters []corev1.Secret
 
-	for i := 0; i < number; i++ {
-		clusterName := fmt.Sprintf("%s-cluster-%d", prefix, i)
+	for _, t := range targets {
 		cluster := corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: namespace, Labels: map[string]string{
-				utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster,
-				"cluster.name":              clusterName,
-			}},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      t.Name,
+				Namespace: t.Namespace,
+				Labels: map[string]string{
+					utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster,
+					"area":                      t.Area,
+					"region":                    t.Region,
+					"az":                        t.AZ,
+					"cluster":                   t.Name,
+				}},
 			Data: map[string][]byte{
-				"server": []byte(fmt.Sprintf("https://%s.kubernetes.io", clusterName)),
+				"server": []byte(fmt.Sprintf("https://%s.kubernetes.io", t.Name)),
 			},
 		}
 
@@ -606,42 +696,47 @@ func createClusters(ctx context.Context, namespace string, prefix string, number
 }
 
 // createApplication is a helper function that creates an ArgoCD application given a prefix and a cluster
-func createApplication(ctx context.Context, prefix string, cluster corev1.Secret) (*argov1alpha1.Application, error) {
-	appSetName := fmt.Sprintf("%s-appset", prefix)
+func createApplications(ctx context.Context, targets []Target, clusters []corev1.Secret) ([]argov1alpha1.Application, error) {
+	var apps []argov1alpha1.Application
 
-	appName := fmt.Sprintf("%s-app-%s", prefix, cluster.Name)
-	app := argov1alpha1.Application{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      appName,
-			Namespace: cluster.Namespace,
-			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion: utils.AppSetAPIGroup,
-				Kind:       utils.AppSetKind,
-				Name:       appSetName,
-				UID:        uuid.NewUUID(),
-			}},
-		},
-		Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
-			Server:    string(cluster.Data["server"]),
-			Namespace: cluster.Namespace,
-			Name:      cluster.Name,
-		}},
-		Status: argov1alpha1.ApplicationStatus{
-			Sync: argov1alpha1.SyncStatus{
-				Status: argov1alpha1.SyncStatusCodeOutOfSync,
+	for _, t := range targets {
+
+		app := argov1alpha1.Application{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      t.Name,
+				Namespace: t.Namespace,
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: utils.AppSetAPIGroup,
+					Kind:       utils.AppSetKind,
+					Name:       t.ApplicationSet,
+					UID:        uuid.NewUUID(),
+				}},
 			},
-			Health: argov1alpha1.HealthStatus{
-				Status: health.HealthStatusHealthy,
+			Spec: argov1alpha1.ApplicationSpec{
+				Destination: argov1alpha1.ApplicationDestination{
+					Server:    fmt.Sprintf("https://%s.kubernetes.io", t.Name),
+					Namespace: t.Namespace,
+					Name:      t.Name,
+				}},
+			Status: argov1alpha1.ApplicationStatus{
+				Sync: argov1alpha1.SyncStatus{
+					Status: argov1alpha1.SyncStatusCodeOutOfSync,
+				},
+				Health: argov1alpha1.HealthStatus{
+					Status: health.HealthStatusHealthy,
+				},
 			},
-		},
+		}
+
+		err := k8sClient.Create(ctx, &app)
+		if err != nil {
+			return nil, err
+		}
+
+		apps = append(apps, app)
 	}
 
-	err := k8sClient.Create(ctx, &app)
-	if err != nil {
-		return nil, err
-	}
-
-	return &app, nil
+	return apps, nil
 }
 
 // statusString returns a formatted string with a condition status, reason and message
