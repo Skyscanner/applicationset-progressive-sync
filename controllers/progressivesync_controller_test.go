@@ -553,11 +553,16 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, &account4ApNortheast1a1)).To(Succeed())
 
+			message = "one cluster as canary in every other region stage completed"
 			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "one cluster as canary in every other region",
 				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: "one cluster as canary in every other region stage completed",
+				Message: message,
 			}))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			//	expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			//	ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
