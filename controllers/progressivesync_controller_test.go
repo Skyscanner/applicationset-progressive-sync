@@ -453,11 +453,16 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
 
+			message := "one cluster as canary in eu-west-1 stage completed"
 			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "one cluster as canary in eu-west-1",
 				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: "one cluster as canary in eu-west-1 stage completed",
+				Message: message,
 			}))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			// account2-eu-central-1a-1, account3-ap-southeast-1a-1 and account4-ap-northeast-1a-1
 			By("progressing the second stage applications")
@@ -554,15 +559,16 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: "one cluster as canary in every other region stage completed",
 			}))
 
-			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+			//	expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+			//	ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+			//
+			//	deletedPR := syncv1alpha1.ProgressiveSync{}
+			//	Expect(k8sClient.Delete(ctx, &ps)).To(Succeed())
+			//	Eventually(func() error {
+			//		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &deletedPR)
+			//		return err
+			//	}).Should(HaveOccurred())
 
-			deletedPR := syncv1alpha1.ProgressiveSync{}
-			Expect(k8sClient.Delete(ctx, &ps)).To(Succeed())
-			Eventually(func() error {
-				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &deletedPR)
-				return err
-			}).Should(HaveOccurred())
 		})
 
 		It("should fail if unable to sync application", func() {
