@@ -275,13 +275,13 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 	Describe("reconciliation loop", func() {
 		It("should reconcile a multi-stage progressive sync", func() {
-			testPrefix := "default-ps"
+			testPrefix := "multi"
 			appSet := fmt.Sprintf("%s-appset", testPrefix)
 
 			By("creating eight argocd clusters")
 			targets := []Target{
 				{
-					Name:           "account1-eu-west-1a-1-app",
+					Name:           "account1-eu-west-1a-1",
 					Namespace:      namespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
@@ -396,46 +396,48 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
 
-			prKey := client.ObjectKey{
+			psKey := client.ObjectKey{
 				Namespace: namespace,
 				Name:      fmt.Sprintf("%s-pr", testPrefix),
 			}
 
-			By("progressing in first application")
-			app := argov1alpha1.Application{}
+			// We need to progress account1-eu-west-1a-1 because the selector returns
+			// a sorted-by-name list, so account1-eu-west-1a-1 will be the first one
+			By("progressing account1-eu-west-1a-1")
+			account1EuWest1a1 := argov1alpha1.Application{}
 			Eventually(func() error {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
-					Name:      "placeholder",
-				}, &app)
+					Name:      "account1-eu-west-1a-1",
+				}, &account1EuWest1a1)
 			}).Should(Succeed())
-			app.Status.Health = argov1alpha1.HealthStatus{
+			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusProgressing,
 				Message: "progressing",
 			}
-			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "stage 0",
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
 				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: "stage 0 stage in progress",
+				Message: "one cluster as canary in eu-west-1 stage in progress",
 			}))
-			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
 
-			By("finishing first application")
-			app.Status.Health = argov1alpha1.HealthStatus{
+			By("completing account1-eu-west-1a-1 sync")
+			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusHealthy,
 				Message: "healthy",
 			}
-			app.Status.Sync = argov1alpha1.SyncStatus{
+			account1EuWest1a1.Status.Sync = argov1alpha1.SyncStatus{
 				Status: argov1alpha1.SyncStatusCodeSynced,
 			}
-			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "stage 0",
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
 				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: "stage 0 stage completed",
+				Message: "one cluster as canary in eu-west-1 stage completed",
 			}))
 
 			By("progressing in second application")
@@ -443,32 +445,32 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
 					Name:      "placeholder",
-				}, &app)
+				}, &account1EuWest1a1)
 			}).Should(Succeed())
-			app.Status.Health = argov1alpha1.HealthStatus{
+			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusProgressing,
 				Message: "progressing",
 			}
-			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, psKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
 				Phase:   syncv1alpha1.PhaseProgressing,
 				Message: "stage 1 stage in progress",
 			}))
-			ExpectStagesInStatus(ctx, prKey).Should(Equal(2))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
 
 			By("finishing second application")
-			app.Status.Health = argov1alpha1.HealthStatus{
+			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusHealthy,
 				Message: "healthy",
 			}
-			app.Status.Sync = argov1alpha1.SyncStatus{
+			account1EuWest1a1.Status.Sync = argov1alpha1.SyncStatus{
 				Status: argov1alpha1.SyncStatusCodeSynced,
 			}
-			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, psKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
 				Phase:   syncv1alpha1.PhaseSucceeded,
 				Message: "stage 1 stage completed",
@@ -794,15 +796,15 @@ func ExpectCondition(
 	})
 }
 
-// ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a progressive sync Object Key and a stage name
-func ExpectStageStatus(ctx context.Context, prKey client.ObjectKey, stageName string) AsyncAssertion {
+// ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a ProgressiveSync object key and a stage name
+func ExpectStageStatus(ctx context.Context, key client.ObjectKey, stageName string) AsyncAssertion {
 	return Eventually(func() syncv1alpha1.StageStatus {
-		pr := syncv1alpha1.ProgressiveSync{}
-		err := k8sClient.Get(ctx, prKey, &pr)
+		ps := syncv1alpha1.ProgressiveSync{}
+		err := k8sClient.Get(ctx, key, &ps)
 		if err != nil {
 			return syncv1alpha1.StageStatus{}
 		}
-		stageStatus := syncv1alpha1.FindStageStatus(pr.Status.Stages, stageName)
+		stageStatus := syncv1alpha1.FindStageStatus(ps.Status.Stages, stageName)
 		if stageStatus != nil {
 			return *stageStatus
 		}
@@ -812,15 +814,15 @@ func ExpectStageStatus(ctx context.Context, prKey client.ObjectKey, stageName st
 }
 
 // ExpectStagesInStatus returns an AsyncAssertion for the length of stages with status in the Progressive Rollout object
-func ExpectStagesInStatus(ctx context.Context, prKey client.ObjectKey) AsyncAssertion {
+func ExpectStagesInStatus(ctx context.Context, key client.ObjectKey) AsyncAssertion {
 	return Eventually(func() int {
-		pr := syncv1alpha1.ProgressiveSync{}
-		err := k8sClient.Get(ctx, prKey, &pr)
+		ps := syncv1alpha1.ProgressiveSync{}
+		err := k8sClient.Get(ctx, key, &ps)
 		if err != nil {
 			return -1
 		}
 
-		return len(pr.Status.Stages)
+		return len(ps.Status.Stages)
 	})
 }
 
