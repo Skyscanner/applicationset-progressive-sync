@@ -482,11 +482,22 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, &account4ApNortheast1a1)).To(Succeed())
 
-			ExpectStageStatus(ctx, psKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "stage 1",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: "stage 1 stage in progress",
+			// Make sure the previous stage is still completed
+			// TODO: we probably need to check that startedAt and finishedAt didn't change
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in eu-west-1 stage completed",
 			}))
+
+			// Make sure the current stage is progressing
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: "one cluster as canary in every other region stage in progress",
+			}))
+
+			// Make sure there are only two stages in status.stages
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
 
 			By("finishing second application")
