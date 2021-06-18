@@ -412,19 +412,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// We need to progress account1-eu-west-1a-1 because the selector returns
 			// a sorted-by-name list, so account1-eu-west-1a-1 will be the first one
 			By("progressing account1-eu-west-1a-1")
-			account1EuWest1a1 := argov1alpha1.Application{}
-			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{
-					Namespace: namespace,
-					Name:      "account1-eu-west-1a-1",
-				}, &account1EuWest1a1)
-			}).Should(Succeed())
-			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusProgressing,
-				Message: "progressing",
-			}
-			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
 
+			// Progress account1-eu-west-1a-1
+			Expect(setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
+
+			// Make sure the stage is progressing
 			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "one cluster as canary in eu-west-1",
 				Phase:   syncv1alpha1.PhaseProgressing,
@@ -433,26 +425,19 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
 
 			// Make sure the annotation is added
-			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{
-					Namespace: namespace,
-					Name:      "account1-eu-west-1a-1",
-				}, &account1EuWest1a1)
-			}).Should(Succeed())
-			ok, val := account1EuWest1a1.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
-			Expect(ok).To(BeTrue())
-			Expect(val).To(Equal("one cluster as canary in eu-west-1"))
+			Expect(hasAnnotation(
+				"account1-eu-west-1a-1",
+				namespace,
+				utils.ProgressiveSyncSyncedAtStageKey,
+				"one cluster as canary in eu-west-1"),
+			).To(BeTrue())
 
 			By("completing account1-eu-west-1a-1 sync")
-			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusHealthy,
-				Message: "healthy",
-			}
-			account1EuWest1a1.Status.Sync = argov1alpha1.SyncStatus{
-				Status: argov1alpha1.SyncStatusCodeSynced,
-			}
-			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
 
+			// Completed account1-eu-west-1a-1
+			Expect(setAppStatusCompleted(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
+
+			// Make sure the stage is completed
 			message := "one cluster as canary in eu-west-1 stage completed"
 			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "one cluster as canary in eu-west-1",
@@ -460,7 +445,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: message,
 			}))
 
-			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			// Make sure the ProgressiveSync status is still progressing because the sync is not completed yet
 			progress := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
@@ -468,6 +453,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// account2-eu-central-1a-1, account2-eu-central-1b-1
 			// and account3-ap-southeast-1a-1
 			By("progressing the second stage applications")
+
+			Expect(setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
 
 			account2EuCentral1a1 := argov1alpha1.Application{}
 			Eventually(func() error {
@@ -570,6 +557,24 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
 			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			// The sort-by-name function will return
+			// account1-eu-west-1a-2, account3-ap-southeast-1c-1
+			// account4-ap-northeast-1a-1 and account4-ap-northeast-1a-2
+			By("progressing the third stage applications")
+
+			account1EuWest1a2 := argov1alpha1.Application{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      "account2-eu-central-1a-1",
+				}, &account1EuWest1a2)
+			}).Should(Succeed())
+			account1EuWest1a2.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusProgressing,
+				Message: "progressing",
+			}
+			Expect(k8sClient.Update(ctx, &account1EuWest1a2)).To(Succeed())
 
 			//	expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			//	ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
@@ -845,6 +850,69 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 	}
 
 	return apps, nil
+}
+
+// setAppStatusProgressing set the application health status to progressing given an application name and its namespace
+func setAppStatusProgressing(ctx context.Context, appName string, namespace string) error {
+
+	app := argov1alpha1.Application{}
+	Eventually(func() error {
+		return k8sClient.Get(ctx, client.ObjectKey{
+			Namespace: namespace,
+			Name:      appName,
+		}, &app)
+	}).Should(Succeed())
+
+	app.Status.Health = argov1alpha1.HealthStatus{
+		Status:  health.HealthStatusProgressing,
+		Message: "progressing",
+	}
+
+	return k8sClient.Update(ctx, &app)
+}
+
+// setAppHealthStatuscompleted set the application health status to completed given an application name and its namespace
+func setAppStatusCompleted(ctx context.Context, appName string, namespace string) error {
+
+	app := argov1alpha1.Application{}
+	Eventually(func() error {
+		return k8sClient.Get(ctx, client.ObjectKey{
+			Namespace: namespace,
+			Name:      appName,
+		}, &app)
+	}).Should(Succeed())
+
+	app.Status.Health = argov1alpha1.HealthStatus{
+		Status:  health.HealthStatusHealthy,
+		Message: "healthy",
+	}
+	app.Status.Sync = argov1alpha1.SyncStatus{
+		Status: argov1alpha1.SyncStatusCodeSynced,
+	}
+
+	return k8sClient.Update(ctx, &app)
+}
+
+// hasAnnotation returns true if the application has an annotation with the given key and value
+func hasAnnotation(appName, namespace, key, value string) bool {
+
+	app := argov1alpha1.Application{}
+	Eventually(func() error {
+		return k8sClient.Get(ctx, client.ObjectKey{
+			Namespace: namespace,
+			Name:      appName,
+		}, &app)
+	}).Should(Succeed())
+
+	val, ok := app.Annotations[key]
+	if !ok {
+		return false
+	}
+	if val != value {
+		return false
+	}
+	return true
+
 }
 
 // statusString returns a formatted string with a condition status, reason and message
