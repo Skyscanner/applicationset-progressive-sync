@@ -396,6 +396,14 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
 
+			// Make sure the finalizer is added
+			createdPS := syncv1alpha1.ProgressiveSync{}
+			Eventually(func() int {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &createdPS)
+				return len(createdPS.ObjectMeta.Finalizers)
+			}).Should(Equal(1))
+			Expect(createdPS.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
+
 			psKey := client.ObjectKey{
 				Namespace: namespace,
 				Name:      fmt.Sprintf("%s-pr", testPrefix),
@@ -423,6 +431,17 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: "one cluster as canary in eu-west-1 stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
+
+			// Make sure the annotation is added
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      "account1-eu-west-1a-1",
+				}, &account1EuWest1a1)
+			}).Should(Succeed())
+			ok, val := account1EuWest1a1.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
+			Expect(ok).To(BeTrue())
+			Expect(val).To(Equal("one cluster as canary in eu-west-1"))
 
 			By("completing account1-eu-west-1a-1 sync")
 			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
@@ -498,30 +517,42 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}))
 
 			// Make sure there are only two stages in status.stages
+			// TODO: should we change ExpectStagesInStatus to take the stages name and return a bool?
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
 
-			By("finishing second application")
-			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
+			By("completing the second stage applications sync")
+			account2EuCentral1a1.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusHealthy,
 				Message: "healthy",
 			}
-			account1EuWest1a1.Status.Sync = argov1alpha1.SyncStatus{
+			account2EuCentral1a1.Status.Sync = argov1alpha1.SyncStatus{
 				Status: argov1alpha1.SyncStatusCodeSynced,
 			}
-			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &account2EuCentral1a1)).To(Succeed())
 
-			ExpectStageStatus(ctx, psKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "stage 1",
+			account3ApSoutheast1a1.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusHealthy,
+				Message: "healthy",
+			}
+			account3ApSoutheast1a1.Status.Sync = argov1alpha1.SyncStatus{
+				Status: argov1alpha1.SyncStatusCodeSynced,
+			}
+			Expect(k8sClient.Update(ctx, &account3ApSoutheast1a1)).To(Succeed())
+
+			account4ApNortheast1a1.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusHealthy,
+				Message: "healthy",
+			}
+			account4ApNortheast1a1.Status.Sync = argov1alpha1.SyncStatus{
+				Status: argov1alpha1.SyncStatusCodeSynced,
+			}
+			Expect(k8sClient.Update(ctx, &account4ApNortheast1a1)).To(Succeed())
+
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
 				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: "stage 1 stage completed",
+				Message: "one cluster as canary in every other region stage completed",
 			}))
-
-			createdPR := syncv1alpha1.ProgressiveSync{}
-			Eventually(func() int {
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &createdPR)
-				return len(createdPR.ObjectMeta.Finalizers)
-			}).Should(Equal(1))
-			Expect(createdPR.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
 
 			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
