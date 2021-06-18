@@ -339,9 +339,12 @@ func (r *ProgressiveSyncReconciler) addSyncedAtAnnotation(ctx context.Context, a
 		if err := r.Client.Get(ctx, key, &latest); err != nil {
 			return err
 		}
-		latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
-		if err := r.Client.Status().Update(ctx, &latest); err != nil {
-			return err
+		val, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
+		if !ok || val != stageName {
+			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
+			if err := r.Client.Update(ctx, &latest); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
