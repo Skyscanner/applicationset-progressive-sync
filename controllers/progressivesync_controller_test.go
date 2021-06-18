@@ -343,7 +343,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 
 			By("creating one application targeting each cluster")
-			apps, err := createApplications(ctx, targets, clusters)
+			apps, err := createApplications(ctx, targets)
 			Expect(apps).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 
@@ -440,18 +440,47 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: "one cluster as canary in eu-west-1 stage completed",
 			}))
 
-			By("progressing in second application")
+			// account2-eu-central-1a-1, account3-ap-southeast-1a-1 and account4-ap-northeast-1a-1
+			By("progressing the second stage applications")
+
+			account2EuCentral1a1 := argov1alpha1.Application{}
 			Eventually(func() error {
 				return k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: namespace,
-					Name:      "placeholder",
-				}, &account1EuWest1a1)
+					Name:      "account2-eu-central-1a-1",
+				}, &account2EuCentral1a1)
 			}).Should(Succeed())
-			account1EuWest1a1.Status.Health = argov1alpha1.HealthStatus{
+			account2EuCentral1a1.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusProgressing,
 				Message: "progressing",
 			}
-			Expect(k8sClient.Update(ctx, &account1EuWest1a1)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &account2EuCentral1a1)).To(Succeed())
+
+			account3ApSoutheast1a1 := argov1alpha1.Application{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      "account3-ap-southeast-1a-1",
+				}, &account3ApSoutheast1a1)
+			}).Should(Succeed())
+			account3ApSoutheast1a1.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusProgressing,
+				Message: "progressing",
+			}
+			Expect(k8sClient.Update(ctx, &account3ApSoutheast1a1)).To(Succeed())
+
+			account4ApNortheast1a1 := argov1alpha1.Application{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      "account4-ap-northeast-1a-1",
+				}, &account4ApNortheast1a1)
+			}).Should(Succeed())
+			account4ApNortheast1a1.Status.Health = argov1alpha1.HealthStatus{
+				Status:  health.HealthStatusProgressing,
+				Message: "progressing",
+			}
+			Expect(k8sClient.Update(ctx, &account4ApNortheast1a1)).To(Succeed())
 
 			ExpectStageStatus(ctx, psKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
@@ -521,7 +550,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 
 			By("creating one application targeting each cluster")
-			apps, err := createApplications(ctx, targets, clusters)
+			apps, err := createApplications(ctx, targets)
 			Expect(err).To(BeNil())
 			Expect(apps).To(BeNil())
 
@@ -715,7 +744,7 @@ func createClusters(ctx context.Context, targets []Target) ([]corev1.Secret, err
 }
 
 // createApplication is a helper function that creates an ArgoCD application given a prefix and a cluster
-func createApplications(ctx context.Context, targets []Target, clusters []corev1.Secret) ([]argov1alpha1.Application, error) {
+func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.Application, error) {
 	var apps []argov1alpha1.Application
 
 	for _, t := range targets {
