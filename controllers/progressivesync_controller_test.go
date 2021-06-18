@@ -454,46 +454,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// and account3-ap-southeast-1a-1
 			By("progressing the second stage applications")
 
-			Expect(setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
-
-			account2EuCentral1a1 := argov1alpha1.Application{}
-			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{
-					Namespace: namespace,
-					Name:      "account2-eu-central-1a-1",
-				}, &account2EuCentral1a1)
-			}).Should(Succeed())
-			account2EuCentral1a1.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusProgressing,
-				Message: "progressing",
-			}
-			Expect(k8sClient.Update(ctx, &account2EuCentral1a1)).To(Succeed())
-
-			account2EuCentral1b1 := argov1alpha1.Application{}
-			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{
-					Namespace: namespace,
-					Name:      "account2-eu-central-1b-1",
-				}, &account2EuCentral1b1)
-			}).Should(Succeed())
-			account2EuCentral1b1.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusProgressing,
-				Message: "progressing",
-			}
-			Expect(k8sClient.Update(ctx, &account2EuCentral1b1)).To(Succeed())
-
-			account3ApSoutheast1a1 := argov1alpha1.Application{}
-			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{
-					Namespace: namespace,
-					Name:      "account3-ap-southeast-1a-1",
-				}, &account3ApSoutheast1a1)
-			}).Should(Succeed())
-			account3ApSoutheast1a1.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusProgressing,
-				Message: "progressing",
-			}
-			Expect(k8sClient.Update(ctx, &account3ApSoutheast1a1)).To(Succeed())
+			// Progress the applications
+			Expect(setAppStatusProgressing(ctx, "account2-eu-central-1a-1", namespace)).To(Succeed())
+			Expect(setAppStatusProgressing(ctx, "account2-eu-central-1b-1", namespace)).To(Succeed())
+			Expect(setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", namespace)).To(Succeed())
 
 			// Make sure the previous stage is still completed
 			// TODO: we probably need to check that startedAt and finishedAt didn't change
@@ -520,33 +484,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("completing the second stage applications sync")
-			account2EuCentral1a1.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusHealthy,
-				Message: "healthy",
-			}
-			account2EuCentral1a1.Status.Sync = argov1alpha1.SyncStatus{
-				Status: argov1alpha1.SyncStatusCodeSynced,
-			}
-			Expect(k8sClient.Update(ctx, &account2EuCentral1a1)).To(Succeed())
 
-			account2EuCentral1b1.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusHealthy,
-				Message: "healthy",
-			}
-			account2EuCentral1b1.Status.Sync = argov1alpha1.SyncStatus{
-				Status: argov1alpha1.SyncStatusCodeSynced,
-			}
-			Expect(k8sClient.Update(ctx, &account2EuCentral1b1)).To(Succeed())
+			Expect(setAppStatusCompleted(ctx, "account2-eu-central-1a-1", namespace)).To(Succeed())
+			Expect(setAppStatusCompleted(ctx, "account2-eu-central-1b-1", namespace)).To(Succeed())
+			Expect(setAppStatusCompleted(ctx, "account3-ap-southeast-1a-1", namespace)).To(Succeed())
 
-			account3ApSoutheast1a1.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusHealthy,
-				Message: "healthy",
-			}
-			account3ApSoutheast1a1.Status.Sync = argov1alpha1.SyncStatus{
-				Status: argov1alpha1.SyncStatusCodeSynced,
-			}
-			Expect(k8sClient.Update(ctx, &account3ApSoutheast1a1)).To(Succeed())
-
+			// Make sure the current stage is completed
 			message = "one cluster as canary in every other region stage completed"
 			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "one cluster as canary in every other region",
@@ -554,7 +497,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: message,
 			}))
 
-			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			// Make sure the ProgressiveSync status is still progressing because the sync is not completed yet
 			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
