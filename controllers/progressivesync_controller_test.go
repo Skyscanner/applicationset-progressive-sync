@@ -81,13 +81,13 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 		It("should forward events for owned applications", func() {
 			By("creating an owned application")
-
-			ownerPR := createOwnerPR(namespace, "owner-pr")
+			localNS := namespace
+			ownerPR := createOwnerPR(localNS, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "app",
-					Namespace: namespace,
+					Namespace: localNS,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -104,7 +104,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return len(requests)
 			}).Should(Equal(1))
 			Expect(requests[0].NamespacedName).To(Equal(types.NamespacedName{
-				Namespace: namespace,
+				Namespace: localNS,
 				Name:      "owner-pr",
 			}))
 			Expect(k8sClient.Delete(ctx, ownerPR)).To(Succeed())
