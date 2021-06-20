@@ -504,31 +504,129 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// The sort-by-name function will return
 			// account1-eu-west-1a-2, account3-ap-southeast-1c-1
 			// account4-ap-northeast-1a-1 and account4-ap-northeast-1a-2
-			By("progressing the third stage applications")
+			By("progressing 25% of the third stage applications")
 
-			account1EuWest1a2 := argov1alpha1.Application{}
-			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{
-					Namespace: namespace,
-					Name:      "account2-eu-central-1a-1",
-				}, &account1EuWest1a2)
-			}).Should(Succeed())
-			account1EuWest1a2.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusProgressing,
-				Message: "progressing",
-			}
-			Expect(k8sClient.Update(ctx, &account1EuWest1a2)).To(Succeed())
+			Expect(setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)).To(Succeed())
 
-			//	expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-			//	ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
-			//
-			//	deletedPR := syncv1alpha1.ProgressiveSync{}
-			//	Expect(k8sClient.Delete(ctx, &ps)).To(Succeed())
-			//	Eventually(func() error {
-			//		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &deletedPR)
-			//		return err
-			//	}).Should(HaveOccurred())
+			// Make sure the current stage is progressing
+			message = "rollout to remaining clusters stage in progress"
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
 
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("completing 25% of the third stage applications")
+			Expect(setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)).To(Succeed())
+
+			// Make sure the current stage is still in progress
+			// because we still have 75% of clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("progressing 50% of the third stage applications")
+
+			Expect(setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)).To(Succeed())
+
+			// Make sure the current stage is progressing
+			message = "rollout to remaining clusters stage in progress"
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("completing 50% of the third stage applications")
+			Expect(setAppStatusCompleted(ctx, "account3-ap-southeast-1c-1", namespace)).To(Succeed())
+
+			// Make sure the current stage is still in progress
+			// because we still have 75% of clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("progressing 75% of the third stage applications")
+
+			Expect(setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)).To(Succeed())
+
+			// Make sure the current stage is progressing
+			message = "rollout to remaining clusters stage in progress"
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("completing 75% of the third stage applications")
+			Expect(setAppStatusCompleted(ctx, "account4-ap-northeast-1a-1", namespace)).To(Succeed())
+
+			// Make sure the current stage is still in progress
+			// because we still have 75% of clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("progressing 100% of the third stage applications")
+
+			Expect(setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)).To(Succeed())
+
+			// Make sure the current stage is progressing
+			message = "rollout to remaining clusters stage in progress"
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("completing 100% of the third stage applications")
+			Expect(setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)).To(Succeed())
+
+			// Make sure the current stage is completed
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync is completed
+			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 		})
 
 		It("should fail if unable to sync application", func() {
@@ -538,7 +636,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating two ArgoCD cluster")
 			targets := []Target{
 				{
-					Name:           "account1-eu-west-1a-1-app",
+					Name:           "account1-eu-west-1a-1",
 					Namespace:      namespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
@@ -564,12 +662,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a progressive sync")
 			failedStagePR := syncv1alpha1.ProgressiveSync{
-				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-pr", testPrefix), Namespace: namespace},
+				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-ps", testPrefix), Namespace: namespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
 						Kind:     utils.AppSetKind,
-						Name:     fmt.Sprintf("%s-appset", testPrefix),
+						Name:     appSet,
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
 						Name:        "stage 0",
