@@ -632,12 +632,9 @@ func createApplication(ctx context.Context, prefix string, cluster corev1.Secret
 	appName := fmt.Sprintf("%s-app-%s", prefix, cluster.Name)
 	app := argov1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      appName,
-			Namespace: cluster.Namespace,
-			Annotations: map[string]string{
-				"foo": "bar",
-				"key": "value",
-			},
+			Name:        appName,
+			Namespace:   cluster.Namespace,
+			Annotations: make(map[string]string),
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: utils.AppSetAPIGroup,
 				Kind:       utils.AppSetKind,

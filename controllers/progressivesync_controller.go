@@ -281,8 +281,8 @@ func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context
 // removeAnnotationFromApps remove an annotation from the given Applications
 func (r *ProgressiveSyncReconciler) removeAnnotationFromApps(ctx context.Context, apps []argov1alpha1.Application, annotation string) error {
 	for _, app := range apps {
-		if _, ok := app.Annotations[annotation]; ok {
-			delete(app.Annotations, annotation)
+		if _, ok := app.ObjectMeta.Annotations[annotation]; ok {
+			delete(app.ObjectMeta.Annotations, annotation)
 			if err := r.Client.Update(ctx, &app); err != nil {
 				r.Log.Error(err, "failed to update Application", "app", app.Name)
 				return err
@@ -332,16 +332,16 @@ func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, p
 	return retryErr
 }
 
-func (r *ProgressiveSyncReconciler) addSyncedAtAnnotation(ctx context.Context, app *argov1alpha1.Application, stageName string) error {
+func (r *ProgressiveSyncReconciler) addSyncedAtAnnotation(ctx context.Context, app argov1alpha1.Application, stageName string) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		key := client.ObjectKeyFromObject(app)
+		key := client.ObjectKeyFromObject(&app)
 		latest := argov1alpha1.Application{}
 		if err := r.Client.Get(ctx, key, &latest); err != nil {
 			return err
 		}
-		val, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
+		val, ok := app.ObjectMeta.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
 		if !ok || val != stageName {
-			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
+			latest.ObjectMeta.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
 			if err := r.Client.Update(ctx, &latest); err != nil {
 				return err
 			}
@@ -420,7 +420,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			}
 		}
 
-		err = r.addSyncedAtAnnotation(ctx, &s, stage.Name)
+		err = r.addSyncedAtAnnotation(ctx, s, stage.Name)
 		if err != nil {
 			message := "failed to syncedAt annotation"
 			log.Error(err, message, "message", err.Error())
