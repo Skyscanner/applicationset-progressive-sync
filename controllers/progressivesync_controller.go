@@ -348,6 +348,7 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 			latest.Annotations = make(map[string]string)
 		}
 		if val != stageName {
+			r.Log.Info("Setting the annotation for the currently progressing stage")
 			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
 			if err := r.Client.Update(ctx, &latest); err != nil {
 				return err
