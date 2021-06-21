@@ -281,8 +281,8 @@ func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context
 // removeAnnotationFromApps remove an annotation from the given Applications
 func (r *ProgressiveSyncReconciler) removeAnnotationFromApps(ctx context.Context, apps []argov1alpha1.Application, annotation string) error {
 	for _, app := range apps {
-		if _, ok := app.ObjectMeta.Annotations[annotation]; ok {
-			delete(app.ObjectMeta.Annotations, annotation)
+		if _, ok := app.Annotations[annotation]; ok {
+			delete(app.Annotations, annotation)
 			if err := r.Client.Update(ctx, &app); err != nil {
 				r.Log.Error(err, "failed to update Application", "app", app.Name)
 				return err
@@ -339,9 +339,12 @@ func (r *ProgressiveSyncReconciler) addSyncedAtAnnotation(ctx context.Context, a
 		if err := r.Client.Get(ctx, key, &latest); err != nil {
 			return err
 		}
-		val, ok := app.ObjectMeta.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
-		if !ok || val != stageName {
-			latest.ObjectMeta.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
+		val, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
+		if !ok {
+			latest.Annotations = make(map[string]string)
+		}
+		if val != stageName {
+			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
 			if err := r.Client.Update(ctx, &latest); err != nil {
 				return err
 			}
@@ -425,11 +428,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			message := "failed to syncedAt annotation"
 			log.Error(err, message, "message", err.Error())
 
-			// Maybe we don't want to actually set the status to failed
-			r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
-			// Set ProgressiveSync status
-			failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
-			apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 			return ps, ctrl.Result{}, err
 		}
 	}

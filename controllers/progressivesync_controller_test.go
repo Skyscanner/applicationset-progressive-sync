@@ -86,12 +86,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app",
-					Namespace: localNS,
-					Annotations: map[string]string{
-						"foo": "bar",
-						"key": "value",
-					},
+					Name:        "app",
+					Namespace:   localNS,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -120,12 +117,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			nonOwnedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "non-owned-app",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"foo": "bar",
-						"key": "value",
-					},
+					Name:        "non-owned-app",
+					Namespace:   namespace,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -154,12 +148,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			app := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"foo": "bar",
-						"key": "value",
-					},
+					Name:        "app",
+					Namespace:   namespace,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -209,12 +200,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			externalApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"foo": "bar",
-						"key": "value",
-					},
+					Name:        "app",
+					Namespace:   namespace,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -354,6 +342,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
 
 			By("finishing first application")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      appOne.Name,
+				}, &app)
+			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusHealthy,
 				Message: "healthy",
@@ -390,6 +384,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(2))
 
 			By("finishing second application")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      appTwo.Name,
+				}, &app)
+			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusHealthy,
 				Message: "healthy",
@@ -496,6 +496,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
 
 			By("failed syncing first application")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      appOne.Name,
+				}, &app)
+			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusDegraded,
 				Message: "healthy",
@@ -548,12 +554,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application targeting the cluster")
 			singleStageApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      testAppName,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"foo": "bar",
-						"key": "value",
-					},
+					Name:        testAppName,
+					Namespace:   namespace,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
