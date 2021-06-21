@@ -374,7 +374,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Status:  health.HealthStatusProgressing,
 				Message: "progressing",
 			}
-			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
+			Eventually(func() error {
+				return k8sClient.Update(ctx, &app)
+			}).Should(Succeed())
 
 			ExpectStageStatus(ctx, prKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
