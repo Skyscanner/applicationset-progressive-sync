@@ -637,7 +637,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			testPrefix := "failed-stages"
 			appSet := fmt.Sprintf("%s-appset", testPrefix)
 
-			By("creating two ArgoCD cluster")
+			By("creating two ArgoCD clusters")
 			targets := []Target{
 				{
 					Name:           "account1-eu-west-1a-1",
@@ -656,13 +656,13 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 			}
 			clusters, err := createClusters(ctx, targets)
-			Expect(clusters).To(Not(BeNil()))
 			Expect(err).To(BeNil())
+			Expect(clusters).To(Not(BeNil()))
 
 			By("creating one application targeting each cluster")
 			apps, err := createApplications(ctx, targets)
 			Expect(err).To(BeNil())
-			Expect(apps).To(BeNil())
+			Expect(apps).To(Not(BeNil()))
 
 			By("creating a progressive sync")
 			failedStagePR := syncv1alpha1.ProgressiveSync{
@@ -679,7 +679,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 						MaxTargets:  intstr.IntOrString{IntVal: 1},
 						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-								"cluster.name": clusters[0].Name,
+								"cluster": clusters[0].Name,
 							}},
 						}},
 					}, {
@@ -688,7 +688,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 						MaxTargets:  intstr.IntOrString{IntVal: 1},
 						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-								"cluster.name": clusters[1].Name,
+								"cluster": clusters[1].Name,
 							}},
 						}},
 					}},
@@ -696,53 +696,30 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &failedStagePR)).To(Succeed())
 
-			prKey := client.ObjectKey{
+			psKey := client.ObjectKey{
 				Namespace: namespace,
-				Name:      fmt.Sprintf("%s-pr", testPrefix),
+				Name:      fmt.Sprintf("%s-ps", testPrefix),
 			}
 
 			By("progressing in first application")
-			app := argov1alpha1.Application{}
-			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{
-					Namespace: namespace,
-					Name:      "placeholder",
-				}, &app)
-			}).Should(Succeed())
-			app.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusProgressing,
-				Message: "progressing",
-			}
-			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
+			Expect(setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
 				Phase:   syncv1alpha1.PhaseProgressing,
 				Message: "stage 0 stage in progress",
 			}))
-			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
 
 			By("failed syncing first application")
-			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{
-					Namespace: namespace,
-					Name:      appOne.Name,
-				}, &app)
-			}).Should(Succeed())
-			app.Status.Health = argov1alpha1.HealthStatus{
-				Status:  health.HealthStatusDegraded,
-				Message: "healthy",
-			}
-			app.Status.Sync = argov1alpha1.SyncStatus{
-				Status: argov1alpha1.SyncStatusCodeSynced,
-			}
-			Expect(k8sClient.Update(ctx, &app)).To(Succeed())
+			Expect(setAppStatusFailed(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
 
-			ExpectStageStatus(ctx, prKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
+			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
 				Phase:   syncv1alpha1.PhaseFailed,
 				Message: "stage 0 stage failed",
 			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
 
 			createdPR := syncv1alpha1.ProgressiveSync{}
 			Eventually(func() int {
@@ -907,7 +884,6 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 
 // setAppStatusProgressing set the application health status to progressing given an application name and its namespace
 func setAppStatusProgressing(ctx context.Context, appName string, namespace string) error {
-
 	app := argov1alpha1.Application{}
 	Eventually(func() error {
 		return k8sClient.Get(ctx, client.ObjectKey{
@@ -926,7 +902,6 @@ func setAppStatusProgressing(ctx context.Context, appName string, namespace stri
 
 // setAppHealthStatuscompleted set the application health status to completed given an application name and its namespace
 func setAppStatusCompleted(ctx context.Context, appName string, namespace string) error {
-
 	app := argov1alpha1.Application{}
 	Eventually(func() error {
 		return k8sClient.Get(ctx, client.ObjectKey{
@@ -938,6 +913,27 @@ func setAppStatusCompleted(ctx context.Context, appName string, namespace string
 	app.Status.Health = argov1alpha1.HealthStatus{
 		Status:  health.HealthStatusHealthy,
 		Message: "healthy",
+	}
+	app.Status.Sync = argov1alpha1.SyncStatus{
+		Status: argov1alpha1.SyncStatusCodeSynced,
+	}
+
+	return k8sClient.Update(ctx, &app)
+}
+
+// setAppStatusFailed set the application health status to failed given an application name and its namespace
+func setAppStatusFailed(ctx context.Context, appName string, namespace string) error {
+	app := argov1alpha1.Application{}
+	Eventually(func() error {
+		return k8sClient.Get(ctx, client.ObjectKey{
+			Namespace: namespace,
+			Name:      appName,
+		}, &app)
+	}).Should(Succeed())
+
+	app.Status.Health = argov1alpha1.HealthStatus{
+		Status:  health.HealthStatusDegraded,
+		Message: "degraded",
 	}
 	app.Status.Sync = argov1alpha1.SyncStatus{
 		Status: argov1alpha1.SyncStatusCodeSynced,
