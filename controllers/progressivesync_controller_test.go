@@ -95,8 +95,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app",
-					Namespace: localNS,
+					Name:        "app",
+					Namespace:   localNS,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -125,8 +126,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			nonOwnedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "non-owned-app",
-					Namespace: namespace,
+					Name:        "non-owned-app",
+					Namespace:   namespace,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -155,8 +157,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			app := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app",
-					Namespace: namespace,
+					Name:        "app",
+					Namespace:   namespace,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -206,8 +209,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			externalApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app",
-					Namespace: namespace,
+					Name:        "app",
+					Namespace:   namespace,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -719,6 +723,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, prKey).Should(Equal(1))
 
 			By("failed syncing first application")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: namespace,
+					Name:      appOne.Name,
+				}, &app)
+			}).Should(Succeed())
 			app.Status.Health = argov1alpha1.HealthStatus{
 				Status:  health.HealthStatusDegraded,
 				Message: "healthy",
@@ -771,8 +781,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application targeting the cluster")
 			singleStageApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      testAppName,
-					Namespace: namespace,
+					Name:        testAppName,
+					Namespace:   namespace,
+					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: utils.AppSetAPIGroup,
 						Kind:       utils.AppSetKind,
@@ -857,8 +868,9 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 
 		app := argov1alpha1.Application{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      t.Name,
-				Namespace: t.Namespace,
+				Name:        t.Name,
+				Namespace:   t.Namespace,
+				Annotations: make(map[string]string),
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion: utils.AppSetAPIGroup,
 					Kind:       utils.AppSetKind,
