@@ -427,7 +427,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("progressing account1-eu-west-1a-1")
 
 			// Progress account1-eu-west-1a-1
-			Expect(setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
 
 			// Make sure the stage is progressing
 			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -440,7 +442,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("completing account1-eu-west-1a-1 sync")
 
 			// Completed account1-eu-west-1a-1
-			Expect(setAppStatusCompleted(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
 
 			// Make sure the stage is completed
 			message := "one cluster as canary in eu-west-1 stage completed"
@@ -460,9 +464,15 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("progressing the second stage applications")
 
 			// Progress the applications
-			Expect(setAppStatusProgressing(ctx, "account2-eu-central-1a-1", namespace)).To(Succeed())
-			Expect(setAppStatusProgressing(ctx, "account2-eu-central-1b-1", namespace)).To(Succeed())
-			Expect(setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account2-eu-central-1a-1", namespace)
+			}).Should(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account2-eu-central-1b-1", namespace)
+			}).Should(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", namespace)
+			}).Should(Succeed())
 
 			// Make sure the previous stage is still completed
 			// TODO: we probably need to check that startedAt and finishedAt didn't change
@@ -490,9 +500,15 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("completing the second stage applications sync")
 
-			Expect(setAppStatusCompleted(ctx, "account2-eu-central-1a-1", namespace)).To(Succeed())
-			Expect(setAppStatusCompleted(ctx, "account2-eu-central-1b-1", namespace)).To(Succeed())
-			Expect(setAppStatusCompleted(ctx, "account3-ap-southeast-1a-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account2-eu-central-1a-1", namespace)
+			}).Should(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account2-eu-central-1b-1", namespace)
+			}).Should(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account3-ap-southeast-1a-1", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is completed
 			message = "one cluster as canary in every other region stage completed"
@@ -511,7 +527,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// account4-ap-northeast-1a-1 and account4-ap-northeast-1a-2
 			By("progressing 25% of the third stage applications")
 
-			Expect(setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is progressing
 			message = "rollout to remaining clusters stage in progress"
@@ -527,7 +545,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("completing 25% of the third stage applications")
-			Expect(setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is still in progress
 			// because we still have 75% of clusters to sync
@@ -542,7 +562,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("progressing 50% of the third stage applications")
 
-			Expect(setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is progressing
 			message = "rollout to remaining clusters stage in progress"
@@ -558,7 +580,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("completing 50% of the third stage applications")
-			Expect(setAppStatusCompleted(ctx, "account3-ap-southeast-1c-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account3-ap-southeast-1c-1", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is still in progress
 			// because we still have 75% of clusters to sync
@@ -573,7 +597,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("progressing 75% of the third stage applications")
 
-			Expect(setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is progressing
 			message = "rollout to remaining clusters stage in progress"
@@ -589,7 +615,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("completing 75% of the third stage applications")
-			Expect(setAppStatusCompleted(ctx, "account4-ap-northeast-1a-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-1", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is still in progress
 			// because we still have 75% of clusters to sync
@@ -604,7 +632,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("progressing 100% of the third stage applications")
 
-			Expect(setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is progressing
 			message = "rollout to remaining clusters stage in progress"
@@ -620,7 +650,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("completing 100% of the third stage applications")
-			Expect(setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)
+			}).Should(Succeed())
 
 			// Make sure the current stage is completed
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -703,7 +735,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 
 			By("progressing in first application")
-			Expect(setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
 
 			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
@@ -713,7 +747,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
 
 			By("failed syncing first application")
-			Expect(setAppStatusFailed(ctx, "account1-eu-west-1a-1", namespace)).To(Succeed())
+			Eventually(func() error {
+				return setAppStatusFailed(ctx, "account1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
 
 			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
@@ -886,12 +922,14 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 // setAppStatusProgressing set the application health status to progressing given an application name and its namespace
 func setAppStatusProgressing(ctx context.Context, appName string, namespace string) error {
 	app := argov1alpha1.Application{}
-	Eventually(func() error {
-		return k8sClient.Get(ctx, client.ObjectKey{
-			Namespace: namespace,
-			Name:      appName,
-		}, &app)
-	}).Should(Succeed())
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      appName,
+	}, &app)
+
+	if err != nil {
+		return err
+	}
 
 	app.Status.Health = argov1alpha1.HealthStatus{
 		Status:  health.HealthStatusProgressing,
@@ -904,12 +942,14 @@ func setAppStatusProgressing(ctx context.Context, appName string, namespace stri
 // setAppHealthStatuscompleted set the application health status to completed given an application name and its namespace
 func setAppStatusCompleted(ctx context.Context, appName string, namespace string) error {
 	app := argov1alpha1.Application{}
-	Eventually(func() error {
-		return k8sClient.Get(ctx, client.ObjectKey{
-			Namespace: namespace,
-			Name:      appName,
-		}, &app)
-	}).Should(Succeed())
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      appName,
+	}, &app)
+
+	if err != nil {
+		return err
+	}
 
 	app.Status.Health = argov1alpha1.HealthStatus{
 		Status:  health.HealthStatusHealthy,
@@ -925,12 +965,14 @@ func setAppStatusCompleted(ctx context.Context, appName string, namespace string
 // setAppStatusFailed set the application health status to failed given an application name and its namespace
 func setAppStatusFailed(ctx context.Context, appName string, namespace string) error {
 	app := argov1alpha1.Application{}
-	Eventually(func() error {
-		return k8sClient.Get(ctx, client.ObjectKey{
-			Namespace: namespace,
-			Name:      appName,
-		}, &app)
-	}).Should(Succeed())
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      appName,
+	}, &app)
+
+	if err != nil {
+		return err
+	}
 
 	app.Status.Health = argov1alpha1.HealthStatus{
 		Status:  health.HealthStatusDegraded,
