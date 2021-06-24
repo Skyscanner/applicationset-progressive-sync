@@ -97,16 +97,15 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	for _, stage := range pr.Spec.Stages {
 		log = r.Log.WithValues("stage", stage.Name)
 
-		pr, result, err := r.reconcileStage(ctx, pr, stage)
+		pr, result, reconcileErr := r.reconcileStage(ctx, pr, stage)
 		if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		if result.Requeue {
+		if result.Requeue || reconcileErr != nil {
 			log.Info("requeuing stage")
-			return result, err
+			return result, reconcileErr
 		}
-
 	}
 
 	// Progressive rollout completed
@@ -477,5 +476,5 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	}
 
-	return ps, ctrl.Result{}, nil
+	return ps, ctrl.Result{Requeue: true}, nil
 }

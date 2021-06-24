@@ -413,6 +413,15 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Name:      fmt.Sprintf("%s-ps", testPrefix),
 			}
 
+			// Make sure the annotation is added
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account1-eu-west-1a-1",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"one cluster as canary in eu-west-1")
+			}).Should(BeTrue())
+
 			// We need to progress account1-eu-west-1a-1 because the selector returns
 			// a sorted-by-name list, so account1-eu-west-1a-1 will be the first one
 			By("progressing account1-eu-west-1a-1")
@@ -427,14 +436,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: "one cluster as canary in eu-west-1 stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
-
-			// Make sure the annotation is added
-			Expect(hasAnnotation(
-				"account1-eu-west-1a-1",
-				namespace,
-				utils.ProgressiveSyncSyncedAtStageKey,
-				"one cluster as canary in eu-west-1"),
-			).To(BeTrue())
 
 			By("completing account1-eu-west-1a-1 sync")
 
@@ -946,12 +947,15 @@ func setAppStatusFailed(ctx context.Context, appName string, namespace string) e
 func hasAnnotation(appName, namespace, key, value string) bool {
 
 	app := argov1alpha1.Application{}
-	Eventually(func() error {
-		return k8sClient.Get(ctx, client.ObjectKey{
-			Namespace: namespace,
-			Name:      appName,
-		}, &app)
-	}).Should(Succeed())
+
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      appName,
+	}, &app)
+
+	if err != nil {
+		return false
+	}
 
 	val, ok := app.Annotations[key]
 	if !ok {
