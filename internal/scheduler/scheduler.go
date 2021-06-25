@@ -93,11 +93,17 @@ func IsStageInProgress(apps []argov1alpha1.Application) bool {
 }
 
 // IsStageComplete returns true if all applications are Synced and Healthy
-func IsStageComplete(apps []argov1alpha1.Application) bool {
+func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
 	// An app is complete if:
 	// - its Health Status Code is Healthy
 	// - its Sync Status Code is Synced
 	completeApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
 	completeSyncedApps := utils.GetAppsBySyncStatusCode(completeApps, argov1alpha1.SyncStatusCodeSynced)
-	return len(completeSyncedApps) == len(apps)
+
+	appsToCompleteStage := len(apps)
+	if stage.MaxTargets.IntValue() < appsToCompleteStage {
+		appsToCompleteStage = stage.MaxTargets.IntValue()
+	}
+
+	return len(completeSyncedApps) == appsToCompleteStage
 }
