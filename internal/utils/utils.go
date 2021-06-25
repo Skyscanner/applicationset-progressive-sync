@@ -39,6 +39,22 @@ func GetAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alpha1.
 	return result
 }
 
+// GetAppsBySyncAtAnnotation returns the Applications having the specified annotation
+func GetAppsBySyncAtAnnotation(apps []argov1alpha1.Application, annotation string, stageName string) []argov1alpha1.Application {
+	var result []argov1alpha1.Application
+
+	for _, app := range apps {
+
+		value, ok := app.Annotations[annotation]
+
+		if ok && value == stageName {
+			result = append(result, app)
+		}
+	}
+
+	return result
+}
+
 // GetAppsByHealthStatusCode returns the Applications matching the specified health status code
 func GetAppsByHealthStatusCode(apps []argov1alpha1.Application, code health.HealthStatusCode) []argov1alpha1.Application {
 	var result []argov1alpha1.Application

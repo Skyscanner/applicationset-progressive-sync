@@ -37,7 +37,7 @@ func Scheduler(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSy
 	syncedInCurrentStage := utils.GetSyncedAppsByStage(apps, stage.Name)
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
 
-	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(outOfSyncApps), false)
+	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
 	if err != nil {
 		return scheduledApps
 	}
@@ -85,11 +85,12 @@ func IsStageFailed(apps []argov1alpha1.Application) bool {
 }
 
 // IsStageInProgress returns true if at least one app is is in progress
-func IsStageInProgress(apps []argov1alpha1.Application) bool {
+func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
 	// An app is in progress if:
 	// - its Health Status Code is Progressing
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
-	return len(progressingApps) > 0
+	annotatedApps := utils.GetAppsBySyncAtAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
+	return len(annotatedApps) > 0
 }
 
 // IsStageComplete returns true if all applications are Synced and Healthy
@@ -100,10 +101,15 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 	completeApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
 	completeSyncedApps := utils.GetAppsBySyncStatusCode(completeApps, argov1alpha1.SyncStatusCodeSynced)
 
-	appsToCompleteStage := len(apps)
-	if stage.MaxTargets.IntValue() < appsToCompleteStage {
-		appsToCompleteStage = stage.MaxTargets.IntValue()
+	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
+	if err != nil {
+		return false
 	}
 
-	return len(completeSyncedApps) == appsToCompleteStage
+	appsToCompleteStage := len(apps)
+	if maxTargets < appsToCompleteStage {
+		appsToCompleteStage = maxTargets
+	}
+
+	return len(completeSyncedApps) >= appsToCompleteStage
 }

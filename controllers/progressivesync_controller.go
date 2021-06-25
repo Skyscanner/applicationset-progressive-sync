@@ -450,7 +450,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return ps, ctrl.Result{}, nil
 	}
 
-	if scheduler.IsStageInProgress(apps) {
+	if scheduler.IsStageInProgress(apps, stage) {
 		message := fmt.Sprintf("%s stage in progress", stage.Name)
 		log.Info(message)
 
