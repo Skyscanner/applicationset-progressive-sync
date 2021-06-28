@@ -539,7 +539,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}))
 
 			// Make sure the ProgressiveSync is still in progress
-			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("progressing 50% of the third stage applications")
@@ -548,7 +547,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(Succeed())
 
 			// Make sure the current stage is progressing
-			message = "rollout to remaining clusters stage in progress"
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "rollout to remaining clusters",
 				Phase:   syncv1alpha1.PhaseProgressing,
@@ -557,7 +555,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
 
 			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
-			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("completing 50% of the third stage applications")
@@ -583,7 +580,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(Succeed())
 
 			// Make sure the current stage is progressing
-			message = "rollout to remaining clusters stage in progress"
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "rollout to remaining clusters",
 				Phase:   syncv1alpha1.PhaseProgressing,
@@ -592,7 +588,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
 
 			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
-			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("completing 75% of the third stage applications")
@@ -618,7 +613,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(Succeed())
 
 			// Make sure the current stage is progressing
-			message = "rollout to remaining clusters stage in progress"
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "rollout to remaining clusters",
 				Phase:   syncv1alpha1.PhaseProgressing,
@@ -627,7 +621,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
 
 			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
-			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("completing 100% of the third stage applications")
@@ -636,6 +629,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(Succeed())
 
 			// Make sure the current stage is completed
+			message = "rollout to remaining clusters stage completed"
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "rollout to remaining clusters",
 				Phase:   syncv1alpha1.PhaseSucceeded,
