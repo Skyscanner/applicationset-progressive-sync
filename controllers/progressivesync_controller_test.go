@@ -44,16 +44,6 @@ type Target struct {
 	AZ             string
 }
 
-func createRandomNamespace() (string, *corev1.Namespace) {
-	namespace := "progressiverollout-test-" + randStringNumber(5)
-
-	ns := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: namespace},
-	}
-	Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
-	return namespace, &ns
-}
-
 func createOwnerPR(ns string, owner string) *syncv1alpha1.ProgressiveSync {
 	return &syncv1alpha1.ProgressiveSync{
 		ObjectMeta: metav1.ObjectMeta{Name: owner, Namespace: ns},
@@ -75,19 +65,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	SetDefaultEventuallyPollingInterval(interval)
 	format.TruncatedDiff = false
 
-	var (
-		namespace string
-		ns        *corev1.Namespace
-	)
-
-	BeforeEach(func() {
-		namespace, ns = createRandomNamespace()
-	})
-
-	AfterEach(func() {
-		Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
-	})
-
 	Describe("requestsForApplicationChange function", func() {
 
 		It("should forward events for owned applications", func() {
@@ -97,7 +74,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "app",
+					Name:        "owned-app",
 					Namespace:   localNS,
 					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
@@ -152,14 +129,14 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	Describe("requestsForSecretChange function", func() {
 
 		It("should forward an event for a matching argocd secret", func() {
-			ownerPR := createOwnerPR(namespace, "owner-pr")
+			ownerPR := createOwnerPR(namespace, "secret-owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			serverURL := "https://kubernetes.default.svc"
 
 			By("creating an application")
 			app := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "app",
+					Name:        "matching-app",
 					Namespace:   namespace,
 					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
@@ -190,7 +167,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 
 		It("should not forward an event for a generic secret", func() {
-			ownerPR := createOwnerPR(namespace, "owner-pr")
+			ownerPR := createOwnerPR(namespace, "generic-owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			By("creating a generic secret")
 			generic := corev1.Secret{
@@ -211,7 +188,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			externalApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "app",
+					Name:        "non-matching-app",
 					Namespace:   namespace,
 					Annotations: make(map[string]string),
 					OwnerReferences: []metav1.OwnerReference{{
@@ -677,14 +654,14 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating two ArgoCD clusters")
 			targets := []Target{
 				{
-					Name:           "account1-eu-west-1a-1",
+					Name:           "account7-eu-west-1a-1",
 					Namespace:      namespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-west-1",
 					AZ:             "eu-west-1a",
 				}, {
-					Name:           "account1-eu-west-1a-2",
+					Name:           "account7-eu-west-1a-2",
 					Namespace:      namespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
@@ -740,7 +717,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("progressing in first application")
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)
+				return setAppStatusProgressing(ctx, "account7-eu-west-1a-1", namespace)
 			}).Should(Succeed())
 
 			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -752,7 +729,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("failed syncing first application")
 			Eventually(func() error {
-				return setAppStatusFailed(ctx, "account1-eu-west-1a-1", namespace)
+				return setAppStatusFailed(ctx, "account7-eu-west-1a-1", namespace)
 			}).Should(Succeed())
 
 			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
