@@ -13,6 +13,7 @@ import (
 	"github.com/argoproj/gitops-engine/pkg/health"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
@@ -72,6 +73,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
+	format.TruncatedDiff = false
 
 	var (
 		namespace string
@@ -388,9 +390,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 								},
 							}},
 					}, {
-						Name:        "rollout to remaining clusters",
-						MaxParallel: intstr.IntOrString{StrVal: "25%"},
-						MaxTargets:  intstr.IntOrString{StrVal: "100%"},
+						Name: "rollout to remaining clusters",
+						// MaxParallel: intstr.Parse("25%"),
+						// MaxTargets:  intstr.Parse("100%"),
+						MaxParallel: intstr.Parse("1"),
+						MaxTargets:  intstr.Parse("4"),
 						Targets: syncv1alpha1.ProgressiveSyncTargets{
 							Clusters: syncv1alpha1.Clusters{
 								Selector: metav1.LabelSelector{},
@@ -558,10 +562,10 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}))
 
 			// Make sure the ProgressiveSync is still in progress
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
 			By("progressing 50% of the third stage applications")
-
 			Eventually(func() error {
 				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)
 			}).Should(Succeed())
@@ -651,7 +655,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("completing 100% of the third stage applications")
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-2", namespace)
+				return setAppStatusCompleted(ctx, "account1-ap-northeast-1a-2", namespace)
 			}).Should(Succeed())
 
 			// Make sure the current stage is completed
@@ -1031,15 +1035,15 @@ func MatchStage(expected syncv1alpha1.StageStatus) gomegatypes.GomegaMatcher {
 
 // ExpectCondition take a condition type and returns its status, reason and message
 func ExpectCondition(
-	pr *syncv1alpha1.ProgressiveSync, ct string,
+	ps *syncv1alpha1.ProgressiveSync, ct string,
 ) AsyncAssertion {
 	return Eventually(func() string {
 		_ = k8sClient.Get(
 			context.Background(),
-			types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace},
-			pr,
+			types.NamespacedName{Name: ps.Name, Namespace: ps.Namespace},
+			ps,
 		)
-		for _, c := range pr.Status.Conditions {
+		for _, c := range ps.Status.Conditions {
 			if c.Type == ct {
 				return statusString(c.Status, c.Reason, c.Message)
 			}

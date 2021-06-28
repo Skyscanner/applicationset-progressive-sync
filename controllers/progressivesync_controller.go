@@ -393,18 +393,18 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
 	// This action allows the Scheduler to keep track at which stage an Application has been synced.
-	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-	if err := r.removeAnnotationFromApps(ctx, outOfSyncApps, utils.ProgressiveSyncSyncedAtStageKey); err != nil {
-		message := "failed to remove out-of-sync annotation from apps"
-		log.Error(err, message)
+	// outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
+	// if err := r.removeAnnotationFromApps(ctx, outOfSyncApps, utils.ProgressiveSyncSyncedAtStageKey); err != nil {
+	// 	message := "failed to remove out-of-sync annotation from apps"
+	// 	log.Error(err, message)
 
-		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
-		// Set ProgressiveSync status
-		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
-		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
+	// 	r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
+	// 	// Set ProgressiveSync status
+	// 	failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
+	// 	apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
-		return ps, ctrl.Result{}, err
-	}
+	// 	return ps, ctrl.Result{}, err
+	// }
 
 	// Get the Applications to update
 	scheduledApps := scheduler.Scheduler(apps, stage)
