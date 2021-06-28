@@ -6,7 +6,7 @@ root=$(dirname "${BASH_SOURCE[0]}")
 prevcontext=$(kubectl config current-context)
 kubectl config use-context kind-argocd-control-plane
 
-kubectl get applications -n argocd --no-headers | cut -d' ' -f1 | xargs kubectl -n argocd delete application
+kubectl delete --all applications -n argocd
 kubectl delete applicationset -n argocd appset-goinfra || echo "Not found"
 kubectl apply -f "$root"/dev/test-appset.yml
 
