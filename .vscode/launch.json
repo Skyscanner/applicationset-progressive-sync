@@ -18,11 +18,25 @@
             "showLog": true
         },
         {
-            "name": "Test",
+            "name": "Integration tests - controller",
             "type": "go",
             "request": "launch",
             "mode": "test",
-            "program": "./controllers",
-        }     
+            "program": "${workspaceFolder}/controllers",
+        },
+        {
+            "name": "Unit tests - scheduler",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/internal/scheduler",
+        }
+        {
+            "name": "Unit tests - utils",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/internal/utils",
+        }   
     ]
 }
