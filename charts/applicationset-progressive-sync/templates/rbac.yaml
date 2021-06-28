@@ -21,6 +21,8 @@ rules:
   - get
   - list
   - watch
+  - update
+  - patch
 - apiGroups:
   - argoproj.io
   resources:
