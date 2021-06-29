@@ -43,6 +43,18 @@ function register_argocd_cluster() {
 	kubectl config use-context "$prevcontext"
 }
 
+function label_argocd_cluster() {
+
+	clustername=$1
+	labels=$2
+
+	prevcontext=$(kubectl config current-context)
+	kubectl config use-context kind-argocd-control-plane
+	clustersecret=$(kubectl get secrets -n argocd -l "argocd.argoproj.io/secret-type=cluster" -o json | jq -r ".items[] | select(.metadata.name | test(\"$clustername\")).metadata.name")
+	kubectl -n argocd label secret "$clustersecret" "$labels" --overwrite
+	kubectl config use-context "$prevcontext"
+}
+
 function local_argocd_login() {
 
 	prevcontext=$(kubectl config current-context)

@@ -8,6 +8,7 @@ source "$root"/dev-functions.sh
 
 clustername=$1
 recreate=$2
+labels=$3
 
 if [[ -z "$clustername" ]]; then
 	echo "Please provide a cluster name"
@@ -15,3 +16,4 @@ if [[ -z "$clustername" ]]; then
 fi
 
 register_argocd_cluster "$clustername" "$recreate"
+label_argocd_cluster "$clustername" "$labels"

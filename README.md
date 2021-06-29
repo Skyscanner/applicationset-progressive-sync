@@ -174,19 +174,44 @@ After running the script, you will have 3 kind clusters created locally:
 
  If you want to create additional clusters, you can do so by running
  ```shell
- bash hack/add-cluster <cluster-name> <recreate>
+ bash hack/add-cluster <cluster-name> <recreate> <labels>
  ```
  This will spin up another kind cluster and register it against ArgoCD running in `kind-argocd-control-plane`
 
- #### Deploying a test appset
+ #### Deploying local test resources
 
-You can deploy a test appset to the default 3 clusters by running the following:
+You can deploy a test appset and a progressive sync object to your kind environment via:
 
 ```shell
-bash hack/deploy-test-appset.sh
+bash hack/redeploy-dev-resources.sh
 ```
 Feel free to extend the cluster generation section of the appset spec if you want to deploy it clusters that you have manually created.
 
+### Debugging
+
+```shell
+make debug
+```
+
+Invoking the command above should spin up a Delve debugger server in headless mode. You can then use your IDE specific functionality or the delve client itself to attach to the remote process and debug it.
+
+**NOTE**: On MacOSX, delve is currently unkillable in headless mode with `^C` or any other control signals that can be sent from the same terminal session. Instead, you'd need to run
+
+``` shell
+bash ./hack/kill-debug.sh
+``` 
+
+or
+
+``` shell
+make debug
+```
+
+from another terminal session to kill the debugger.
+
+### Debugging tests
+
+Delve can be used to debug tests as well. See `Test` launch configuration in `.vscode/launch.json`. Something similar should be achievable in your IDE of choice as well.
 #### Update ArgoCD Application API package
 
 Because of [https://github.com/argoproj/argo-cd/issues/4055](https://github.com/argoproj/argo-cd/issues/4055) we can't just run `go get github.com/argoproj/argo-cd`.

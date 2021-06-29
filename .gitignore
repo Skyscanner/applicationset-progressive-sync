@@ -165,3 +165,4 @@ hack/.hack.*
 
 # Ignore .env files
 .env.local
+__debug_bin

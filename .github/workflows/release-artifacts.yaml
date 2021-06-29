@@ -2,8 +2,7 @@ name: Release Artifacts
 
 on:
   release:
-    types:
-      - published
+    types: [published]
 
 jobs:
   release:
@@ -33,5 +32,6 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          tags: ${{ steps.meta.outputs.tags }}
+          push: true
+          tags: ${{ github.event.release.tag_name }}
           labels: ${{ steps.meta.outputs.labels }}
