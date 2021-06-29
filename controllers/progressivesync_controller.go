@@ -360,7 +360,7 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 
 // reconcileStage reconcile a ProgressiveSyncStage
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {
-	log := r.Log.WithValues("stage", stage.Name)
+	log := r.Log.WithValues("stage", stage.Name).WithValues("progressivesync", ps.Name)
 
 	// Get the clusters to update
 	clusters, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
