@@ -44,6 +44,16 @@ type Target struct {
 	AZ             string
 }
 
+func createRandomNamespace() (string, *corev1.Namespace) {
+	namespace := "progressiverollout-test-" + randStringNumber(5)
+
+	ns := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: namespace},
+	}
+	Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
+	return namespace, &ns
+}
+
 func createOwnerPR(ns string, owner string) *syncv1alpha1.ProgressiveSync {
 	return &syncv1alpha1.ProgressiveSync{
 		ObjectMeta: metav1.ObjectMeta{Name: owner, Namespace: ns},
@@ -64,6 +74,19 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
 	format.TruncatedDiff = false
+
+	var (
+		namespace string
+		ns        *corev1.Namespace
+	)
+
+	BeforeEach(func() {
+		namespace, ns = createRandomNamespace()
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
+	})
 
 	Describe("requestsForApplicationChange function", func() {
 

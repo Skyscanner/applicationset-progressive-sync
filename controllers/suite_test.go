@@ -17,8 +17,6 @@
 package controllers
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math/rand"
 	"path/filepath"
 	"testing"
@@ -47,8 +45,6 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var reconciler *ProgressiveSyncReconciler
-
-const namespace = "progressive-sync-tests"
 
 func TestController(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -86,11 +82,6 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	ns := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: namespace},
-	}
-	Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
-
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
 	})
@@ -122,4 +113,14 @@ var _ = AfterSuite(func() {
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+}
+
+var numbers = []rune("1234567890")
+
+func randStringNumber(n int) string {
+	s := make([]rune, n)
+	for i := range s {
+		s[i] = numbers[rand.Intn(len(numbers))]
+	}
+	return string(s)
 }
