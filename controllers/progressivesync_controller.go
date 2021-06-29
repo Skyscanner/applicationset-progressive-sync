@@ -98,7 +98,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	for _, stage := range ps.Spec.Stages {
 		log = log.WithValues("stage", stage.Name)
 
-		ps, result, reconcileErr := r.reconcileStage(ctx, ps, stage)
+		ps, result, reconcileErr, exitReconcile := r.reconcileStage(ctx, ps, stage)
 		if err := r.updateStatusWithRetry(ctx, &ps); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -106,6 +106,11 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if result.Requeue || reconcileErr != nil {
 			log.Info("requeuing stage")
 			return result, reconcileErr
+		}
+
+		// If there is an error and we don't want to move to the next stage
+		if exitReconcile {
+			return result, nil
 		}
 	}
 
@@ -360,8 +365,9 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 }
 
 // reconcileStage reconcile a ProgressiveSyncStage
-func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {
+func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error, bool) {
 	log := r.Log.WithValues("progressivesync", fmt.Sprintf("%s/%s", ps.Name, ps.Namespace), "applicationset", ps.Spec.SourceRef.Name, "stage", stage.Name)
+	exitReconcile := false
 
 	// Get the clusters to update
 	clusters, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
@@ -375,7 +381,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
-		return ps, ctrl.Result{}, err
+		return ps, ctrl.Result{}, err, exitReconcile
 	}
 	log.Info("fetched clusters using label selector", "clusters", utils.GetClustersName(clusters.Items))
 
@@ -388,7 +394,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-		return ps, ctrl.Result{}, err
+		return ps, ctrl.Result{}, err, exitReconcile
 	}
 	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
 
@@ -424,7 +430,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 				// Set ProgressiveSync status
 				failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 				apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-				return ps, ctrl.Result{}, err
+				return ps, ctrl.Result{}, err, exitReconcile
 			}
 		}
 
@@ -433,7 +439,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			message := "failed to add syncedAt annotation"
 			log.Error(err, message, "message", err.Error())
 
-			return ps, ctrl.Result{}, err
+			return ps, ctrl.Result{}, err, exitReconcile
 		}
 	}
 
@@ -448,7 +454,8 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 		log.Info("sync failed")
 		// We can set Requeue: true once we have a timeout in place
-		return ps, ctrl.Result{}, nil
+		exitReconcile = true
+		return ps, ctrl.Result{}, nil, exitReconcile
 	}
 
 	if scheduler.IsStageInProgress(apps, stage) {
@@ -461,7 +468,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), progress)
 
 		// Stage in progress, we reconcile again until the stage is completed or failed
-		return ps, ctrl.Result{Requeue: true}, nil
+		return ps, ctrl.Result{Requeue: true}, nil, exitReconcile
 	}
 
 	if scheduler.IsStageComplete(apps, stage) {
@@ -473,9 +480,9 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		progress := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), progress)
 
-		return ps, ctrl.Result{}, nil
+		return ps, ctrl.Result{}, nil, exitReconcile
 
 	}
 
-	return ps, ctrl.Result{Requeue: true}, nil
+	return ps, ctrl.Result{Requeue: true}, nil, exitReconcile
 }
