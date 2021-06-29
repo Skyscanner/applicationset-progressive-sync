@@ -82,7 +82,7 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 	return result
 }
 
-// GetClustersName returns a string containing a comma-separated list of names of the given apps
+// GetAppsName returns a string containing a comma-separated list of names of the given apps
 func GetAppsName(apps []argov1alpha1.Application) string {
 	var names []string
 	for _, a := range apps {
