@@ -625,7 +625,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("completing 100% of the third stage applications")
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account1-ap-northeast-1a-2", namespace)
+				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-2", namespace)
 			}).Should(Succeed())
 
 			// Make sure the current stage is completed

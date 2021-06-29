@@ -86,11 +86,19 @@ func IsStageFailed(apps []argov1alpha1.Application) bool {
 
 // IsStageInProgress returns true if at least one app is is in progress
 func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
-	// An app is in progress if:
-	// - its Health Status Code is Progressing
+	// An stage is in progress if:
+	// - there is at least one app with Health Status Code == Progressing
+	// - the number of apps synced so far is less than the apps to sync
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
 	annotatedApps := utils.GetAppsBySyncAtAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
-	return len(annotatedApps) > 0
+
+	syncedApps := utils.GetSyncedAppsByStage(apps, stage.Name)
+	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
+	if err != nil {
+		return false
+	}
+
+	return len(annotatedApps) > 0 || len(syncedApps) < maxTargets
 }
 
 // IsStageComplete returns true if all applications are Synced and Healthy
