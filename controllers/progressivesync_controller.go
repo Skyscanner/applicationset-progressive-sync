@@ -62,20 +62,21 @@ type ProgressiveSyncReconciler struct {
 // Reconcile performs the reconciling for a single named ProgressiveSync object
 func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("progressivesync", req.NamespacedName)
+	log.Info("Starting reconciliation loop")
 
 	// Get the ProgressiveSync object
-	var pr syncv1alpha1.ProgressiveSync
-	if err := r.Get(ctx, req.NamespacedName, &pr); err != nil {
+	var ps syncv1alpha1.ProgressiveSync
+	if err := r.Get(ctx, req.NamespacedName, &ps); err != nil {
 		log.Error(err, "unable to fetch progressivesync object")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
+	log = log.WithValues("applicationset", ps.Spec.SourceRef.Name)
 
 	// If the object is being deleted, remove finalizer and don't requeue it
-	if !pr.ObjectMeta.DeletionTimestamp.IsZero() {
-		controllerutil.RemoveFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer)
-		if err := r.Update(ctx, &pr); err != nil {
+	if !ps.ObjectMeta.DeletionTimestamp.IsZero() {
+		controllerutil.RemoveFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer)
+		if err := r.Update(ctx, &ps); err != nil {
 			log.Error(err, "failed to update object when removing finalizer")
 			return ctrl.Result{}, err
 		}
@@ -84,9 +85,9 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Add finalizer if it doesn't exist
-	if !controllerutil.ContainsFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer) {
-		controllerutil.AddFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer)
-		if err := r.Update(ctx, &pr); err != nil {
+	if !controllerutil.ContainsFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer) {
+		controllerutil.AddFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer)
+		if err := r.Update(ctx, &ps); err != nil {
 			log.Error(err, "failed to update object when adding finalizer")
 			return ctrl.Result{}, err
 		}
@@ -94,11 +95,11 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	for _, stage := range pr.Spec.Stages {
-		log = r.Log.WithValues("stage", stage.Name)
+	for _, stage := range ps.Spec.Stages {
+		log = log.WithValues("stage", stage.Name)
 
-		pr, result, reconcileErr := r.reconcileStage(ctx, pr, stage)
-		if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
+		ps, result, reconcileErr := r.reconcileStage(ctx, ps, stage)
+		if err := r.updateStatusWithRetry(ctx, &ps); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -109,9 +110,9 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Progressive rollout completed
-	completed := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
-	if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
+	completed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+	apimeta.SetStatusCondition(ps.GetStatusConditions(), completed)
+	if err := r.updateStatusWithRetry(ctx, &ps); err != nil {
 		log.Error(err, "failed to update object status")
 		return ctrl.Result{}, err
 	}
@@ -360,7 +361,7 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 
 // reconcileStage reconcile a ProgressiveSyncStage
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {
-	log := r.Log.WithValues("stage", stage.Name).WithValues("progressivesync", ps.Name)
+	log := logr.FromContext(ctx)
 
 	// Get the clusters to update
 	clusters, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
