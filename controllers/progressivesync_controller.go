@@ -349,26 +349,18 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 
 		log = log.WithValues("app", fmt.Sprintf("%s/%s", app.Namespace, app.Name))
 
-		val, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
-
-		// Required due to the use of `omitempty` in serialisation.
-		// `omitempty` converts the empty map into nil.
-		if !ok {
-			if latest.Annotations == nil {
-				log.Info("create empty annotations object")
-				latest.Annotations = make(map[string]string)
-			} else {
-				log.Info("set syncedAt annotation because key was missing")
-				latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
+		if latest.Annotations == nil {
+			latest.Annotations = map[string]string{
+				utils.ProgressiveSyncSyncedAtStageKey: stageName,
 			}
-		}
-		if val != stageName {
-			log.Info("set syncedAt annotation because of wrong value")
+		} else {
 			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
 		}
+
 		if err := r.Client.Update(ctx, &latest); err != nil {
 			return err
 		}
+		log.Info("app annotated")
 		return nil
 	})
 	return retryErr
