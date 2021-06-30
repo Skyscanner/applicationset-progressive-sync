@@ -45,7 +45,7 @@ type Target struct {
 }
 
 func createRandomNamespace() (string, *corev1.Namespace) {
-	namespace := "progressiverollout-test-" + randStringNumber(5)
+	namespace := "progressivesync-test-" + randStringNumber(5)
 
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: namespace},

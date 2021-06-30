@@ -62,7 +62,7 @@ type ProgressiveSyncReconciler struct {
 // Reconcile performs the reconciling for a single named ProgressiveSync object
 func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("progressivesync", req.NamespacedName)
-	log.Info("Starting reconciliation loop")
+	log.Info("reconciliation loop started")
 
 	// Get the ProgressiveSync object
 	var ps syncv1alpha1.ProgressiveSync
@@ -362,7 +362,7 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 
 // reconcileStage reconcile a ProgressiveSyncStage
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {
-	log := r.Log.WithValues("progressivesync", fmt.Sprintf("%s/%s", ps.Name, ps.Namespace), "applicationset", ps.Spec.SourceRef.Name, "stage", stage.Name)
+	log := r.Log.WithValues("progressivesync", fmt.Sprintf("%s/%s", ps.Namespace, ps.Name), "applicationset", ps.Spec.SourceRef.Name, "stage", stage.Name)
 	requeueDelayOnError := time.Minute * 5
 
 	// Get the clusters to update
@@ -455,6 +455,10 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	if scheduler.IsStageInProgress(apps, stage) {
 		message := fmt.Sprintf("%s stage in progress", stage.Name)
 		log.Info(message)
+
+		for _, app := range apps {
+			log.Info("application details", "app", app.Name, "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
+		}
 
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseProgressing, &ps)
 
