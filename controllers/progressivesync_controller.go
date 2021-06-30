@@ -371,7 +371,6 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 		}
 		return nil
 	})
-	log.Info("failed to add syncedAt annotation because of a retryErr")
 	return retryErr
 }
 
