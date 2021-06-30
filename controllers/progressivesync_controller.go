@@ -342,9 +342,11 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		key := client.ObjectKeyFromObject(&app)
 		latest := argov1alpha1.Application{}
+
 		if err := r.Client.Get(ctx, key, &latest); err != nil {
 			return err
 		}
+
 		val, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
 		// Required due to the use of `omitempty` in serialisation.
 		// `omitempty` converts the empty map into nil.
@@ -421,7 +423,15 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	for _, s := range scheduledApps {
 		log.Info("syncing app", "app", s.Name, "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
 
-		_, err := r.syncApp(ctx, s.Name)
+		err := r.setSyncedAtAnnotation(ctx, s, stage.Name)
+		if err != nil {
+			message := "failed to add syncedAt annotation"
+			log.Error(err, message, "message", err.Error())
+
+			return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
+		}
+
+		_, err = r.syncApp(ctx, s.Name)
 
 		if err != nil {
 			if !strings.Contains(err.Error(), "another operation is already in progress") {
@@ -436,13 +446,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			}
 		}
 
-		err = r.setSyncedAtAnnotation(ctx, s, stage.Name)
-		if err != nil {
-			message := "failed to add syncedAt annotation"
-			log.Error(err, message, "message", err.Error())
-
-			return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
-		}
 	}
 
 	if scheduler.IsStageFailed(apps) {
