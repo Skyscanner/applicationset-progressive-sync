@@ -478,6 +478,31 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", namespace)
 			}).Should(Succeed())
 
+			// Make sure the annotation is added
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account2-eu-central-1a-1",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"one cluster as canary in every other region")
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account2-eu-central-1b-1",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"one cluster as canary in every other region")
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account3-ap-southeast-1a-1",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"one cluster as canary in every other region")
+			}).Should(BeTrue())
+
 			// Make sure the previous stage is still completed
 			// TODO: we probably need to check that startedAt and finishedAt didn't change
 			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -535,6 +560,15 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
 			}).Should(Succeed())
 
+			// Make sure the annotation is added
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account1-eu-west-1a-2",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"rollout to remaining clusters")
+			}).Should(BeTrue())
+
 			// Make sure the current stage is progressing
 			message = "rollout to remaining clusters stage in progress"
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -569,6 +603,15 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)
 			}).Should(Succeed())
 
+			// Make sure the annotation is added
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account3-ap-southeast-1c-1",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"rollout to remaining clusters")
+			}).Should(BeTrue())
+
 			// Make sure the current stage is progressing
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "rollout to remaining clusters",
@@ -602,6 +645,15 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)
 			}).Should(Succeed())
 
+			// Make sure the annotation is added
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account4-ap-northeast-1a-1",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"rollout to remaining clusters")
+			}).Should(BeTrue())
+
 			// Make sure the current stage is progressing
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "rollout to remaining clusters",
@@ -634,6 +686,15 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Eventually(func() error {
 				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)
 			}).Should(Succeed())
+
+			// Make sure the annotation is added
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account4-ap-northeast-1a-2",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"rollout to remaining clusters")
+			}).Should(BeTrue())
 
 			// Make sure the current stage is progressing
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
