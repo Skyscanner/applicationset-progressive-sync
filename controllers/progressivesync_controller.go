@@ -344,8 +344,11 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 		latest := argov1alpha1.Application{}
 
 		if err := r.Client.Get(ctx, key, &latest); err != nil {
+			log.Info("failed to get app when adding syncedAt annotation")
 			return err
 		}
+
+		log = log.WithValues("app", app.Name)
 
 		val, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
 		// Required due to the use of `omitempty` in serialisation.
@@ -363,6 +366,7 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 		}
 		return nil
 	})
+	log.Info("failed to add syncedAt annotation because of a retryErr")
 	return retryErr
 }
 
@@ -423,14 +427,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	for _, s := range scheduledApps {
 		log.Info("syncing app", "app", s.Name, "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
 
-		err := r.setSyncedAtAnnotation(ctx, s, stage.Name)
-		if err != nil {
-			message := "failed to add syncedAt annotation"
-			log.Error(err, message, "message", err.Error())
-
-			return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
-		}
-
 		_, err = r.syncApp(ctx, s.Name)
 
 		if err != nil {
@@ -444,6 +440,15 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 				apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 				return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
 			}
+			log.Info("failed to sync app because it is already syncing")
+		}
+
+		err := r.setSyncedAtAnnotation(ctx, s, stage.Name)
+		if err != nil {
+			message := "failed to add syncedAt annotation"
+			log.Error(err, message, "message", err.Error())
+
+			return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
 		}
 
 	}

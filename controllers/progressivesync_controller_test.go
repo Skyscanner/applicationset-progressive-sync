@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 300
+	timeout  = time.Second * 90
 	interval = time.Millisecond * 10
 )
 
