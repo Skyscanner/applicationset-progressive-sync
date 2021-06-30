@@ -335,6 +335,9 @@ func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, p
 
 // setSyncedAtAnnotation sets the SyncedAt annotation for the currently progressing stage of the app
 func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, app argov1alpha1.Application, stageName string) error {
+
+	log := r.Log.WithValues("stage", stageName)
+
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		key := client.ObjectKeyFromObject(&app)
 		latest := argov1alpha1.Application{}
@@ -345,11 +348,11 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 		// Required due to the use of `omitempty` in serialisation.
 		// `omitempty` converts the empty map into nil.
 		if !ok {
-			r.Log.Info("Initialising empty map for Annotations")
+			log.Info("empty annotations object created")
 			latest.Annotations = make(map[string]string)
 		}
 		if val != stageName {
-			r.Log.Info("Setting the annotation for the currently progressing stage")
+			log.Info("syncedAt annotation set")
 			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
 			if err := r.Client.Update(ctx, &latest); err != nil {
 				return err
@@ -457,7 +460,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		log.Info(message)
 
 		for _, app := range apps {
-			log.Info("application details", "app", app.Name, "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
+			log.Info("application details", "app", app.Name, "annotations", app.GetAnnotations(), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
 		}
 
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseProgressing, &ps)
