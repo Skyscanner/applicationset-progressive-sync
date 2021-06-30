@@ -348,21 +348,27 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 			return err
 		}
 
-		log = log.WithValues("app", app.Name)
+		log = log.WithValues("app", fmt.Sprintf("%s/%s", app.Namespace, app.Name))
 
 		val, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
+
 		// Required due to the use of `omitempty` in serialisation.
 		// `omitempty` converts the empty map into nil.
 		if !ok {
-			log.Info("empty annotations object created")
-			latest.Annotations = make(map[string]string)
+			if latest.Annotations == nil {
+				log.Info("create empty annotations object")
+				latest.Annotations = make(map[string]string)
+			} else {
+				log.Info("set syncedAt annotation because key was missing")
+				latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
+			}
 		}
 		if val != stageName {
-			log.Info("syncedAt annotation set")
+			log.Info("set syncedAt annotation because of wrong value")
 			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
-			if err := r.Client.Update(ctx, &latest); err != nil {
-				return err
-			}
+		}
+		if err := r.Client.Update(ctx, &latest); err != nil {
+			return err
 		}
 		return nil
 	})
@@ -425,7 +431,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	scheduledApps := scheduler.Scheduler(apps, stage)
 
 	for _, s := range scheduledApps {
-		log.Info("syncing app", "app", s.Name, "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
+		log.Info("syncing app", "app", fmt.Sprintf("%s/%s", s.Namespace, s.Name), "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
 
 		_, err = r.syncApp(ctx, s.Name)
 
@@ -445,7 +451,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 		err := r.setSyncedAtAnnotation(ctx, s, stage.Name)
 		if err != nil {
-			message := "failed to add syncedAt annotation"
+			message := "failed at setSyncedAtAnnotation"
 			log.Error(err, message, "message", err.Error())
 
 			return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
@@ -471,7 +477,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		log.Info(message)
 
 		for _, app := range apps {
-			log.Info("application details", "app", app.Name, "annotations", app.GetAnnotations(), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
+			log.Info("application details", "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name), "annotations", app.GetAnnotations(), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
 		}
 
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseProgressing, &ps)
