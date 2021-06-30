@@ -723,6 +723,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// Make sure the ProgressiveSync is completed
 			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+
+			Expect(k8sClient.Delete(ctx, &ps)).To(Succeed())
 		})
 
 		//It("should fail if unable to sync an application", func() {
