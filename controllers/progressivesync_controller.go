@@ -188,6 +188,8 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 				}
 			}
 
+			r.Log.Info("removed syncedAt annotation", "app", app.Name, "status.sync", app.Status.Sync.Status, "status.health", app.Status.Health.Status)
+
 			return nil
 
 		})
