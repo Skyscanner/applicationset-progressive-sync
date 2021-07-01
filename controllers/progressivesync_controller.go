@@ -418,7 +418,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	//}
 
 	// Get the Applications to update
-	scheduledApps := scheduler.Scheduler(apps, stage)
+	scheduledApps := scheduler.Scheduler(log, apps, stage)
 
 	for _, s := range scheduledApps {
 		log.Info("syncing app", "app", fmt.Sprintf("%s/%s", s.Namespace, s.Name), "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)

@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"github.com/go-logr/logr"
 	"testing"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
@@ -703,9 +704,10 @@ func TestScheduler(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
+		log := logr.Discard()
 		t.Run(testCase.name, func(t *testing.T) {
 			utils.SortAppsByName(testCase.apps)
-			got := Scheduler(testCase.apps, testCase.stage)
+			got := Scheduler(log, testCase.apps, testCase.stage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})

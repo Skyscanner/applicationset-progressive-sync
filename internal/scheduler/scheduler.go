@@ -5,11 +5,12 @@ import (
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Scheduler returns a list of apps to sync for a given stage
-func Scheduler(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) []argov1alpha1.Application {
+func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) []argov1alpha1.Application {
 
 	/*
 		The Scheduler takes:
@@ -27,6 +28,8 @@ func Scheduler(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSy
 		Without the annotation, it would be impossible for the scheduler to know if the Application synced at this stage - and so we have only 2 Applications left to sync.
 	*/
 
+	log = log.WithName("scheduler")
+
 	var scheduledApps []argov1alpha1.Application
 	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
 	// If there are no OutOfSync Applications, return
@@ -34,8 +37,13 @@ func Scheduler(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSy
 		return scheduledApps
 	}
 
+	log.Info("fetched out-of-sync apps", "apps", utils.GetAppsName(outOfSyncApps))
+
 	syncedInCurrentStage := utils.GetSyncedAppsByStage(apps, stage.Name)
+	log.Info("fetched synced-in-current-stage apps", "apps", utils.GetAppsName(syncedInCurrentStage))
+
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
+	log.Info("fetched progressing apps", "apps", utils.GetAppsName(progressingApps))
 
 	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
 	if err != nil {
