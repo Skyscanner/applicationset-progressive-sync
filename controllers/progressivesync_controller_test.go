@@ -242,43 +242,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 	})
 
-	Describe("removeAnnotationFromApps function", func() {
-		It("should remove the target annotation from the given apps", func() {
-			By("creating two applications with two annotations")
-			appOne := argov1alpha1.Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app-one",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"foo": "bar",
-						"key": "value",
-					},
-				},
-				Spec: argov1alpha1.ApplicationSpec{},
-			}
-			Expect(k8sClient.Create(ctx, &appOne)).To(Succeed())
-
-			appTwo := argov1alpha1.Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app-two",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"bob": "alice",
-						"key": "value",
-					},
-				},
-				Spec: argov1alpha1.ApplicationSpec{},
-			}
-			Expect(k8sClient.Create(ctx, &appTwo)).To(Succeed())
-
-			apps := []argov1alpha1.Application{appOne, appTwo}
-			err := reconciler.removeAnnotationFromApps(ctx, apps, "key")
-			Expect(err).To(BeNil())
-			Eventually(func() int { return len(appOne.Annotations) }).Should(Equal(1))
-			Eventually(func() int { return len(appTwo.Annotations) }).Should(Equal(1))
-		})
-	})
-
 	Describe("reconciliation loop", func() {
 		It("should reconcile a multi-stage progressive sync", func() {
 			testPrefix := "multi"

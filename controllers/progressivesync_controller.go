@@ -308,20 +308,6 @@ func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context
 	return apps, nil
 }
 
-// removeAnnotationFromApps remove an annotation from the given Applications
-func (r *ProgressiveSyncReconciler) removeAnnotationFromApps(ctx context.Context, apps []argov1alpha1.Application, annotation string) error {
-	for _, app := range apps {
-		if _, ok := app.Annotations[annotation]; ok {
-			delete(app.Annotations, annotation)
-			if err := r.Client.Update(ctx, &app); err != nil {
-				r.Log.Error(err, "failed to update Application", "app", app.Name)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // updateStageStatus updates the target stage given a stage name, message and phase
 func (r *ProgressiveSyncReconciler) updateStageStatus(ctx context.Context, name, message string, phase syncv1alpha1.StageStatusPhase, pr *syncv1alpha1.ProgressiveSync) {
 	stageStatus := syncv1alpha1.NewStageStatus(
