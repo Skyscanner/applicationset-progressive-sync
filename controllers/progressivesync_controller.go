@@ -176,7 +176,7 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 
 			key := client.ObjectKeyFromObject(app)
-			latest := syncv1alpha1.ProgressiveSync{}
+			latest := argov1alpha1.Application{}
 			if err := r.Client.Get(ctx, key, &latest); err != nil {
 				return err
 			}

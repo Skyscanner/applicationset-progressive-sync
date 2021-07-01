@@ -27,7 +27,7 @@ import (
 
 const (
 	timeout  = time.Second * 360
-	interval = time.Millisecond * 500
+	interval = time.Millisecond * 10
 )
 
 var (
