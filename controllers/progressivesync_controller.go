@@ -447,7 +447,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	}
 
-	if scheduler.IsStageFailed(apps) {
+	if scheduler.IsStageFailed(apps, stage) {
 		message := fmt.Sprintf("%s stage failed", stage.Name)
 		log.Info(message)
 

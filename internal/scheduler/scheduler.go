@@ -39,7 +39,8 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 
 	log.Info("fetched out-of-sync apps", "apps", utils.GetAppsName(outOfSyncApps))
 
-	syncedInCurrentStage := utils.GetSyncedAppsByStage(apps, stage.Name)
+	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
+	syncedInCurrentStage := utils.GetSyncedAppsByStage(healthyApps, stage.Name)
 	log.Info("fetched synced-in-current-stage apps", "apps", utils.GetAppsName(syncedInCurrentStage))
 
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
@@ -97,14 +98,15 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 	return scheduledApps
 }
 
-// IsStageFailed returns true if at least one app is failed
-func IsStageFailed(apps []argov1alpha1.Application) bool {
-	// An app is failed if:
+// IsStageFailed returns true if at least one app is failed in the given stage
+func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
+	// An stage is failed if any of the application that synced at that stage has:
 	// - its Health Status Code is Degraded
 	// - its Sync Status Code is Synced
 	degradedApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusDegraded)
-	degradedSyncedApps := utils.GetAppsBySyncStatusCode(degradedApps, argov1alpha1.SyncStatusCodeSynced)
-	return len(degradedSyncedApps) > 0
+	syncedApps := utils.GetAppsBySyncStatusCode(degradedApps, argov1alpha1.SyncStatusCodeSynced)
+	annotatedApps := utils.GetSyncedAppsByStage(syncedApps, stage.Name)
+	return len(annotatedApps) > 0
 }
 
 // IsStageInProgress returns true if at least one app is is in progress
