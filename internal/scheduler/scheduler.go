@@ -76,6 +76,20 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 	if p > len(outOfSyncApps) {
 		p = len(outOfSyncApps)
 	}
+
+	// Consider the following scenario
+	//
+	// maxTargets = 3
+	// maxParallel = 3
+	// outOfSyncApps = 4
+	// syncedInCurrentStage = 2
+	// progressingApps = 1
+	//
+	// Without the following logic we have p=2, so we would end up with a total of 4 applications synced in the stage
+	if p+len(syncedInCurrentStage) > maxTargets {
+		p = maxTargets - len(syncedInCurrentStage)
+	}
+
 	for i := 0; i < p; i++ {
 		scheduledApps = append(scheduledApps, outOfSyncApps[i])
 	}
