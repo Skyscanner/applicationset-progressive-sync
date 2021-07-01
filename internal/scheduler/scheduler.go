@@ -84,6 +84,7 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 	// outOfSyncApps = 4
 	// syncedInCurrentStage = 2
 	// progressingApps = 1
+	// p = 2
 	//
 	// Without the following logic we have p=2, so we would end up with a total of 4 applications synced in the stage
 	if p+len(syncedInCurrentStage) > maxTargets {

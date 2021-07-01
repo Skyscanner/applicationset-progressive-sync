@@ -619,7 +619,6 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name: "Applications: outOfSync 2, syncedInCurrentStage 0, progressing 0, syncedInPreviousStage 1 | Stage: maxTargets 2, maxParallel 2 | Expected: scheduled 2",
 			apps: []argov1alpha1.Application{
@@ -689,7 +688,6 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name: "Applications: outOfSync 0, syncedInCurrentStage 0, progressing 0, | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 0",
 			apps: nil,
@@ -700,6 +698,131 @@ func TestScheduler(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: nil,
+		},
+		{
+			name: "Applications: outOfSync 4, syncedInCurrentStage 2, progressing 1, syncedInPreviousStage 2 | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 1",
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "app-one",
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveSyncSyncedAtStageKey: StageName},
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "app-two",
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveSyncSyncedAtStageKey: StageName},
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusProgressing,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-six",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "app-seven",
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveSyncSyncedAtStageKey: "previous-stage"},
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "app-eight",
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveSyncSyncedAtStageKey: "previous-stage"},
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("3"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+			},
 		},
 	}
 
