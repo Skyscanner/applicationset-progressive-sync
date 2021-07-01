@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/argoproj/gitops-engine/pkg/health"
 	"strings"
 	"time"
 
@@ -164,6 +165,34 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 				Namespace: pr.Namespace,
 				Name:      pr.Name,
 			}})
+		}
+	}
+
+	// Remove the annotation from the Healthy and OutOfSync Apps before passing them to the Scheduler.
+	// Healthy and OutOfSync apps are applications that have not been synced at this run of the Progressive Sync.
+	// This action allows the Scheduler to keep track at which stage an Application has been synced.
+
+	if app.Status.Sync.Status == argov1alpha1.SyncStatusCodeOutOfSync && app.Status.Health.Status != health.HealthStatusProgressing {
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+
+			key := client.ObjectKeyFromObject(app)
+			latest := syncv1alpha1.ProgressiveSync{}
+			if err := r.Client.Get(ctx, key, &latest); err != nil {
+				return err
+			}
+
+			if _, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]; ok {
+				delete(app.Annotations, utils.ProgressiveSyncSyncedAtStageKey)
+				if err := r.Client.Status().Update(ctx, &latest); err != nil {
+					return err
+				}
+			}
+
+			return nil
+
+		})
+		if retryErr != nil {
+			return nil
 		}
 	}
 
@@ -399,23 +428,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
 	}
 	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
-
-	// Remove the annotation from the Healthy and OutOfSync Apps before passing them to the Scheduler.
-	// Healthy and OutOfSync apps are applications that have not been synced at this run of the Progressive Sync.
-	// This action allows the Scheduler to keep track at which stage an Application has been synced.
-	//outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-	//healthyApps := utils.GetAppsByHealthStatusCode(outOfSyncApps, health.HealthStatusHealthy)
-	//if err := r.removeAnnotationFromApps(ctx, healthyApps, utils.ProgressiveSyncSyncedAtStageKey); err != nil {
-	//	message := "failed to remove out-of-sync annotation from apps"
-	//	log.Error(err, message)
-	//
-	//	r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
-	//	// Set ProgressiveSync status
-	//	failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
-	//	apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-	//
-	//	return ps, ctrl.Result{}, err
-	//}
 
 	// Get the Applications to update
 	scheduledApps := scheduler.Scheduler(log, apps, stage)
