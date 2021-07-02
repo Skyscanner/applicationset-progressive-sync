@@ -279,20 +279,6 @@ func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context
 	return apps, nil
 }
 
-// removeAnnotationFromApps remove an annotation from the given Applications
-func (r *ProgressiveSyncReconciler) removeAnnotationFromApps(ctx context.Context, apps []argov1alpha1.Application, annotation string) error {
-	for _, app := range apps {
-		if _, ok := app.Annotations[annotation]; ok {
-			delete(app.Annotations, annotation)
-			if err := r.Client.Update(ctx, &app); err != nil {
-				r.Log.Error(err, "failed to update Application", "app", app.Name)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // updateStageStatus updates the target stage given a stage name, message and phase
 func (r *ProgressiveSyncReconciler) updateStageStatus(ctx context.Context, name, message string, phase syncv1alpha1.StageStatusPhase, pr *syncv1alpha1.ProgressiveSync) {
 	stageStatus := syncv1alpha1.NewStageStatus(
@@ -399,23 +385,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
 	}
 	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
-
-	// Remove the annotation from the Healthy and OutOfSync Apps before passing them to the Scheduler.
-	// Healthy and OutOfSync apps are applications that have not been synced at this run of the Progressive Sync.
-	// This action allows the Scheduler to keep track at which stage an Application has been synced.
-	//outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-	//healthyApps := utils.GetAppsByHealthStatusCode(outOfSyncApps, health.HealthStatusHealthy)
-	//if err := r.removeAnnotationFromApps(ctx, healthyApps, utils.ProgressiveSyncSyncedAtStageKey); err != nil {
-	//	message := "failed to remove out-of-sync annotation from apps"
-	//	log.Error(err, message)
-	//
-	//	r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
-	//	// Set ProgressiveSync status
-	//	failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
-	//	apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-	//
-	//	return ps, ctrl.Result{}, err
-	//}
 
 	// Get the Applications to update
 	scheduledApps := scheduler.Scheduler(log, apps, stage)
