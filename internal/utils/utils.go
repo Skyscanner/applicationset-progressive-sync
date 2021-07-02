@@ -74,7 +74,7 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 
 	for _, app := range apps {
 		val, ok := app.Annotations[ProgressiveSyncSyncedAtStageKey]
-		if ok && val == name && app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced && app.Status.Health.Status == health.HealthStatusHealthy {
+		if ok && val == name && app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced {
 			result = append(result, app)
 		}
 	}

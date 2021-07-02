@@ -39,7 +39,8 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 
 	log.Info("fetched out-of-sync apps", "apps", utils.GetAppsName(outOfSyncApps))
 
-	syncedInCurrentStage := utils.GetSyncedAppsByStage(apps, stage.Name)
+	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
+	syncedInCurrentStage := utils.GetSyncedAppsByStage(healthyApps, stage.Name)
 	log.Info("fetched synced-in-current-stage apps", "apps", utils.GetAppsName(syncedInCurrentStage))
 
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
