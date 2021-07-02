@@ -121,7 +121,7 @@ func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.Progr
 	// - there is at least one app with Health Status Code == Progressing
 	// - the number of apps synced so far is less than the apps to sync
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
-	annotatedApps := utils.GetAppsBySyncAtAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
+	annotatedApps := utils.GetAppsByAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
 
 	syncedApps := utils.GetSyncedAppsByStage(apps, stage.Name)
 	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
@@ -139,7 +139,7 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 	// - its Sync Status Code is Synced
 	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
 	syncedApps := utils.GetAppsBySyncStatusCode(healthyApps, argov1alpha1.SyncStatusCodeSynced)
-	annotatedApps := utils.GetAppsBySyncAtAnnotation(syncedApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
+	annotatedApps := utils.GetAppsByAnnotation(syncedApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
 
 	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
 	if err != nil {

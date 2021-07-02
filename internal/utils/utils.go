@@ -39,8 +39,8 @@ func GetAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alpha1.
 	return result
 }
 
-// GetAppsBySyncAtAnnotation returns the Applications having the specified annotation
-func GetAppsBySyncAtAnnotation(apps []argov1alpha1.Application, annotation string, stageName string) []argov1alpha1.Application {
+// GetAppsByAnnotation returns the Applications having the specified annotation
+func GetAppsByAnnotation(apps []argov1alpha1.Application, annotation string, stageName string) []argov1alpha1.Application {
 	var result []argov1alpha1.Application
 
 	for _, app := range apps {
