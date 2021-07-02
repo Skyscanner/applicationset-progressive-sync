@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/argoproj/gitops-engine/pkg/health"
 	"strings"
 	"time"
 
@@ -172,31 +171,31 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 	// Healthy and OutOfSync apps are applications that have not been synced at this run of the Progressive Sync.
 	// This action allows the Scheduler to keep track at which stage an Application has been synced.
 
-	if app.Status.Sync.Status == argov1alpha1.SyncStatusCodeOutOfSync && app.Status.Health.Status != health.HealthStatusProgressing {
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-
-			key := client.ObjectKeyFromObject(app)
-			latest := argov1alpha1.Application{}
-			if err := r.Client.Get(ctx, key, &latest); err != nil {
-				return err
-			}
-
-			if _, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]; ok {
-				delete(app.Annotations, utils.ProgressiveSyncSyncedAtStageKey)
-				if err := r.Client.Status().Update(ctx, &latest); err != nil {
-					return err
-				}
-			}
-
-			r.Log.Info("removed syncedAt annotation", "app", app.Name, "status.sync", app.Status.Sync.Status, "status.health", app.Status.Health.Status)
-
-			return nil
-
-		})
-		if retryErr != nil {
-			return nil
-		}
-	}
+	//if app.Status.Sync.Status == argov1alpha1.SyncStatusCodeOutOfSync && app.Status.Health.Status != health.HealthStatusProgressing {
+	//	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	//
+	//		key := client.ObjectKeyFromObject(app)
+	//		latest := argov1alpha1.Application{}
+	//		if err := r.Client.Get(ctx, key, &latest); err != nil {
+	//			return err
+	//		}
+	//
+	//		if _, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]; ok {
+	//			delete(app.Annotations, utils.ProgressiveSyncSyncedAtStageKey)
+	//			if err := r.Client.Status().Update(ctx, &latest); err != nil {
+	//				return err
+	//			}
+	//		}
+	//
+	//		r.Log.Info("removed syncedAt annotation", "app", app.Name, "status.sync", app.Status.Sync.Status, "status.health", app.Status.Health.Status)
+	//
+	//		return nil
+	//
+	//	})
+	//	if retryErr != nil {
+	//		return nil
+	//	}
+	//}
 
 	return requests
 }
