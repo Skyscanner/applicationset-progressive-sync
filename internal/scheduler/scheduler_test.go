@@ -855,6 +855,7 @@ func TestIsStageFailed(t *testing.T) {
 	testCases := []struct {
 		name     string
 		apps     []argov1alpha1.Application
+		stage    syncv1alpha1.ProgressiveSyncStage
 		expected bool
 	}{
 		{
@@ -934,6 +935,9 @@ func TestIsStageFailed(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-six",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -944,6 +948,12 @@ func TestIsStageFailed(t *testing.T) {
 						},
 					},
 				},
+			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: true,
 		},
@@ -1021,13 +1031,19 @@ func TestIsStageFailed(t *testing.T) {
 					},
 				},
 			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
 			expected: false,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageFailed(testCase.apps)
+			got := IsStageFailed(testCase.apps, testCase.stage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
