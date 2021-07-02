@@ -380,15 +380,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Name:      fmt.Sprintf("%s-ps", testPrefix),
 			}
 
-			// Make sure the annotation is added
-			Eventually(func() bool {
-				return hasAnnotation(
-					"account1-eu-west-1a-1",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"one cluster as canary in eu-west-1")
-			}).Should(BeTrue())
-
 			// We need to progress account1-eu-west-1a-1 because the selector returns
 			// a sorted-by-name list, so account1-eu-west-1a-1 will be the first one
 			By("progressing account1-eu-west-1a-1")
@@ -423,7 +414,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			// Make sure the ProgressiveSync status is still progressing because the sync is not completed yet
 			progress := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
 
 			// The sort-by-name function will return
 			// account2-eu-central-1a-1, account2-eu-central-1b-1
@@ -441,7 +432,201 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
+			// Make sure the previous stage is still completed
+			// TODO: we probably need to check that startedAt and finishedAt didn't change
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+
+			// Make sure the current stage is progressing
+			message = "one cluster as canary in every other region stage in progress"
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+
+			// Make sure there are only two stages in status.stages
+			// TODO: should we change ExpectStagesInStatus to take the stages name and return a bool?
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			By("completing the second stage applications sync")
+
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account2-eu-central-1a-1", namespace)
+			}).Should(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account2-eu-central-1b-1", namespace)
+			}).Should(Succeed())
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account3-ap-southeast-1a-1", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is completed
+			message = "one cluster as canary in every other region stage completed"
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync status is still progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			// The sort-by-name function will return
+			// account1-eu-west-1a-2, account3-ap-southeast-1c-1
+			// account4-ap-northeast-1a-1 and account4-ap-northeast-1a-2
+			By("progressing 25% of the third stage applications")
+
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is progressing
+			message = "rollout to remaining clusters stage in progress"
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			By("completing 25% of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is still in progress
+			// because we still have 75% of clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			By("progressing 50% of the third stage applications")
+
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is progressing
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			By("completing 50% of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account3-ap-southeast-1c-1", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is still in progress
+			// because we still have 75% of clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			By("progressing 75% of the third stage applications")
+
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is progressing
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			By("completing 75% of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-1", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is still in progress
+			// because we still have 75% of clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			By("progressing 100% of the third stage applications")
+
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is progressing
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason))
+
+			By("completing 100% of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-2", namespace)
+			}).Should(Succeed())
+
+			// Make sure the current stage is completed
+			message = "rollout to remaining clusters stage completed"
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+
+			// Make sure the ProgressiveSync is completed
+			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason))
+
+			// Make sure the apps are annotated
+			Eventually(func() bool {
+				return hasAnnotation(
+					"account1-eu-west-1a-1",
+					namespace,
+					utils.ProgressiveSyncSyncedAtStageKey,
+					"one cluster as canary in eu-west-1")
+			}).Should(BeTrue())
+
 			Eventually(func() bool {
 				return hasAnnotation(
 					"account2-eu-central-1a-1",
@@ -466,64 +651,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					"one cluster as canary in every other region")
 			}).Should(BeTrue())
 
-			// Make sure the previous stage is still completed
-			// TODO: we probably need to check that startedAt and finishedAt didn't change
-			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "one cluster as canary in eu-west-1",
-				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: message,
-			}))
-
-			// Make sure the current stage is progressing
-			message = "one cluster as canary in every other region stage in progress"
-			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "one cluster as canary in every other region",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: message,
-			}))
-
-			// Make sure there are only two stages in status.stages
-			// TODO: should we change ExpectStagesInStatus to take the stages name and return a bool?
-			ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
-
-			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
-			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			By("completing the second stage applications sync")
-
-			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account2-eu-central-1a-1", namespace)
-			}).Should(Succeed())
-			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account2-eu-central-1b-1", namespace)
-			}).Should(Succeed())
-			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account3-ap-southeast-1a-1", namespace)
-			}).Should(Succeed())
-
-			// Make sure the current stage is completed
-			message = "one cluster as canary in every other region stage completed"
-			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "one cluster as canary in every other region",
-				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: message,
-			}))
-
-			// Make sure the ProgressiveSync status is still progressing because the sync is not completed yet
-			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			// The sort-by-name function will return
-			// account1-eu-west-1a-2, account3-ap-southeast-1c-1
-			// account4-ap-northeast-1a-1 and account4-ap-northeast-1a-2
-			By("progressing 25% of the third stage applications")
-
-			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
-			}).Should(Succeed())
-
-			// Make sure the annotation is added
 			Eventually(func() bool {
 				return hasAnnotation(
 					"account1-eu-west-1a-2",
@@ -532,41 +659,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					"rollout to remaining clusters")
 			}).Should(BeTrue())
 
-			// Make sure the current stage is progressing
-			message = "rollout to remaining clusters stage in progress"
-			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "rollout to remaining clusters",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: message,
-			}))
-			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
-
-			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
-			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			By("completing 25% of the third stage applications")
-			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)
-			}).Should(Succeed())
-
-			// Make sure the current stage is still in progress
-			// because we still have 75% of clusters to sync
-			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "rollout to remaining clusters",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: message,
-			}))
-
-			// Make sure the ProgressiveSync is still in progress
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			By("progressing 50% of the third stage applications")
-			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)
-			}).Should(Succeed())
-
-			// Make sure the annotation is added
 			Eventually(func() bool {
 				return hasAnnotation(
 					"account3-ap-southeast-1c-1",
@@ -575,40 +667,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					"rollout to remaining clusters")
 			}).Should(BeTrue())
 
-			// Make sure the current stage is progressing
-			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "rollout to remaining clusters",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: message,
-			}))
-			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
-
-			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			By("completing 50% of the third stage applications")
-			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account3-ap-southeast-1c-1", namespace)
-			}).Should(Succeed())
-
-			// Make sure the current stage is still in progress
-			// because we still have 75% of clusters to sync
-			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "rollout to remaining clusters",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: message,
-			}))
-
-			// Make sure the ProgressiveSync is still in progress
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			By("progressing 75% of the third stage applications")
-
-			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)
-			}).Should(Succeed())
-
-			// Make sure the annotation is added
 			Eventually(func() bool {
 				return hasAnnotation(
 					"account4-ap-northeast-1a-1",
@@ -617,40 +675,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					"rollout to remaining clusters")
 			}).Should(BeTrue())
 
-			// Make sure the current stage is progressing
-			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "rollout to remaining clusters",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: message,
-			}))
-			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
-
-			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			By("completing 75% of the third stage applications")
-			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-1", namespace)
-			}).Should(Succeed())
-
-			// Make sure the current stage is still in progress
-			// because we still have 75% of clusters to sync
-			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "rollout to remaining clusters",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: message,
-			}))
-
-			// Make sure the ProgressiveSync is still in progress
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			By("progressing 100% of the third stage applications")
-
-			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)
-			}).Should(Succeed())
-
-			// Make sure the annotation is added
 			Eventually(func() bool {
 				return hasAnnotation(
 					"account4-ap-northeast-1a-2",
@@ -659,34 +683,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					"rollout to remaining clusters")
 			}).Should(BeTrue())
 
-			// Make sure the current stage is progressing
-			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "rollout to remaining clusters",
-				Phase:   syncv1alpha1.PhaseProgressing,
-				Message: message,
-			}))
-			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
-
-			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
-			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
-
-			By("completing 100% of the third stage applications")
-			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-2", namespace)
-			}).Should(Succeed())
-
-			// Make sure the current stage is completed
-			message = "rollout to remaining clusters stage completed"
-			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-				Name:    "rollout to remaining clusters",
-				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: message,
-			}))
-
-			// Make sure the ProgressiveSync is completed
-			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
-
+			// Delete the Progressive Sync
 			Expect(k8sClient.Delete(ctx, &ps)).To(Succeed())
 		})
 
@@ -783,7 +780,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
 
 			expected := failedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, "stage 0 stage failed")
-			ExpectCondition(&failedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+			ExpectCondition(&failedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason))
 		})
 	})
 
@@ -1021,13 +1018,13 @@ func hasAnnotation(appName, namespace, key, value string) bool {
 }
 
 // statusString returns a formatted string with a condition status, reason and message
-func statusString(status metav1.ConditionStatus, reason string, message string) string {
-	return fmt.Sprintf("Status: %s, Reason: %s, Message: %s", status, reason, message)
+func statusString(status metav1.ConditionStatus, reason string) string {
+	return fmt.Sprintf("Status: %s, Reason: %s", status, reason)
 }
 
-// HaveStatus is a gomega matcher for a condition status, reason and message
-func HaveStatus(status metav1.ConditionStatus, reason string, message string) gomegatypes.GomegaMatcher {
-	return Equal(statusString(status, reason, message))
+// HaveStatus is a gomega matcher for a condition status and reason
+func HaveStatus(status metav1.ConditionStatus, reason string) gomegatypes.GomegaMatcher {
+	return Equal(statusString(status, reason))
 }
 
 // MatchStage is a gomega matcher for a stage, matching name, message and phase
@@ -1051,7 +1048,7 @@ func ExpectCondition(
 		)
 		for _, c := range ps.Status.Conditions {
 			if c.Type == ct {
-				return statusString(c.Status, c.Reason, c.Message)
+				return statusString(c.Status, c.Reason)
 			}
 		}
 		return ""
