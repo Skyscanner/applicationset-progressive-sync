@@ -120,6 +120,11 @@ func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.Progr
 	// An stage is in progress if:
 	// - there is at least one app with Health Status Code == Progressing
 	// - the number of apps synced so far is less than the apps to sync
+
+	if apps == nil {
+		return false
+	}
+
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
 	progressingAnnotatedApps := utils.GetAppsByAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
 
