@@ -428,7 +428,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
 		log.Info("sync failed")
-		return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: requeueDelayOnError}, nil
 	}
 
 	if scheduler.IsStageInProgress(apps, stage) {
