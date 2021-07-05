@@ -111,9 +111,8 @@ func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.Progressi
 	// - its Health Status Code == Degraded
 	// - its Sync Status Code == Synced
 	degradedApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusDegraded)
-	syncedApps := utils.GetAppsBySyncStatusCode(degradedApps, argov1alpha1.SyncStatusCodeSynced)
-	annotatedApps := utils.GetAppsByAnnotation(syncedApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
-	return len(annotatedApps) > 0
+	stageApps := utils.GetSyncedAppsByStage(degradedApps, stage.Name)
+	return len(stageApps) > 0
 }
 
 // IsStageInProgress returns true if at least one app is is in progress
