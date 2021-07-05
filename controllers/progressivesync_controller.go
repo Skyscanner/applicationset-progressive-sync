@@ -369,7 +369,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
-		return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: requeueDelayOnError}, err
 	}
 	log.Info("fetched clusters using label selector", "clusters", utils.GetClustersName(clusters.Items))
 
@@ -382,7 +382,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-		return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: requeueDelayOnError}, err
 	}
 	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
 
