@@ -38,16 +38,29 @@ jobs:
       - name: Build
         run: make manager
 
-      - name: Login to GitHub Packages Docker Registry
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            ghcr.io/skyscanner/applicationset-progressive-sync
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=ref,event=pr
+            type=semver,pattern={{raw}}
+            type=sha
+
+      - name: Login to GitHub Packages
         uses: docker/login-action@v1.9.0
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-        if: github.event_name != 'pull_request'
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish a docker image when merge in main
+      - name: Build and publish a docker image
         uses: docker/build-push-action@v2.5.0
         with:
           push: true
-          tags: maruina/applicationset-progressive-sync:main
-        if: github.event_name != 'pull_request'
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
