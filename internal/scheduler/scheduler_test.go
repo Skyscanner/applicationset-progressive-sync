@@ -1039,6 +1039,17 @@ func TestIsStageFailed(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "stage not failed when apps is nil",
+			apps: nil,
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
+			expected: false,
+		},
 	}
 
 	for _, testCase := range testCases {

@@ -110,6 +110,11 @@ func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.Progressi
 	// A stage is failed if any of its applications has:
 	// - its Health Status Code == Degraded
 	// - its Sync Status Code == Synced
+
+	if apps == nil {
+		return false
+	}
+
 	degradedApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusDegraded)
 	stageApps := utils.GetSyncedAppsByStage(degradedApps, stage.Name)
 	return len(stageApps) > 0
