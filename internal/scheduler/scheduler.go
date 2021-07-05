@@ -142,6 +142,11 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 	// An app is complete if:
 	// - its Health Status Code is Healthy
 	// - its Sync Status Code is Synced
+
+	if apps == nil {
+		return true
+	}
+
 	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
 	stageApps := utils.GetSyncedAppsByStage(healthyApps, stage.Name)
 
