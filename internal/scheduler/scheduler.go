@@ -138,8 +138,7 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 	// - its Health Status Code is Healthy
 	// - its Sync Status Code is Synced
 	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
-	syncedApps := utils.GetAppsBySyncStatusCode(healthyApps, argov1alpha1.SyncStatusCodeSynced)
-	annotatedApps := utils.GetAppsByAnnotation(syncedApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
+	stageApps := utils.GetSyncedAppsByStage(healthyApps, stage.Name)
 
 	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
 	if err != nil {
@@ -151,5 +150,5 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 		appsToCompleteStage = maxTargets
 	}
 
-	return len(annotatedApps) == appsToCompleteStage
+	return len(stageApps) == appsToCompleteStage
 }
