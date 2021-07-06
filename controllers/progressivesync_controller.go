@@ -110,7 +110,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	}
 
-	// Progressive rollout completed
+	// Progressive sync completed
 	completed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 	apimeta.SetStatusCondition(ps.GetStatusConditions(), completed)
 	if err := r.updateStatusWithRetry(ctx, &ps); err != nil {
@@ -134,11 +134,11 @@ func (r *ProgressiveSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// requestsForApplicationChange returns a reconcile request for a Progressive Rollout object when an Application change
+// requestsForApplicationChange returns a reconcile request when an Application changes
 func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object) []reconcile.Request {
 
 	/*
-		We trigger a Progressive Rollout reconciliation loop on an Application event if:
+		We trigger a reconciliation loop on an Application event if:
 		- the Application owner is referenced by a ProgressiveSync object
 	*/
 
@@ -170,11 +170,11 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 	return requests
 }
 
-// requestsForSecretChange returns a reconcile request for a Progressive Rollout object when a Secret change
+// requestsForSecretChange returns a reconcile request when a Secret changes
 func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
 
 	/*
-		We trigger a Progressive Rollout reconciliation loop on a Secret event if:
+		We trigger a reconciliation loop on a Secret event if:
 		- the Secret is an ArgoCD cluster, AND
 		- there is an Application targeting that secret/cluster, AND
 		- that Application owner is referenced by a ProgressiveSync object
@@ -212,14 +212,15 @@ func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []r
 		for _, app := range appList.Items {
 			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.Owns(app.GetOwnerReferences()) {
 				/*
-					Consider the following scenario:
-					- 2 Applications
-					- owned by the same ApplicationSet
-					- referenced by the same Progressive Rollout
-					- targeting the same cluster
+						Consider the following scenario:
+						- two Applications
+						- owned by the same ApplicationSet
+						- referenced by the same ProgressiveSync
+						- targeting the same cluster
 
-					In this scenario, we would trigger the reconciliation loop twice.
-					To avoid that, we use a map to store for which Progressive Rollout objects we already trigger the reconciliation loop.
+						In this scenario, we would trigger the reconciliation loop twice.
+						To avoid that, we use a map to store for which ProgressiveSync object
+					    we already triggered the reconciliation loop.
 				*/
 
 				namespacedName := types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}
