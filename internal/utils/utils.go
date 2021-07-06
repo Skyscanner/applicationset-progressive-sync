@@ -45,13 +45,13 @@ func GetAppsByAnnotation(apps []argov1alpha1.Application, annotation string, sta
 
 	for _, app := range apps {
 
-		value, ok := app.Annotations[annotation]
+		_ = app.Annotations[annotation]
 		//
 		//if ok && value == stageName {
 		//	result = append(result, app)
 		//}
 
-		value, ok = syncedAtStage[app.Name]
+		value, ok := syncedAtStage[app.Name]
 
 		if ok && value == stageName {
 			result = append(result, app)
