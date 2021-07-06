@@ -50,6 +50,7 @@ type ProgressiveSyncReconciler struct {
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	ArgoCDAppClient utils.ArgoCDAppClient
+	SyncedAtStage   map[string]string // Key: App name, Value: Stage name
 }
 
 // +kubebuilder:rbac:groups=argoproj.skyscanner.net,resources=progressivesyncs,verbs=get;list;watch;create;update;patch;delete
@@ -347,6 +348,9 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 		if err := r.Client.Update(ctx, &latest); err != nil {
 			return err
 		}
+
+		r.SyncedAtStage[latest.Name] = stageName
+
 		log.Info("app annotated")
 		return nil
 	})
@@ -388,7 +392,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
 
 	// Get the Applications to update
-	scheduledApps := scheduler.Scheduler(log, apps, stage)
+	scheduledApps := scheduler.Scheduler(log, apps, stage, r.SyncedAtStage)
 
 	for _, s := range scheduledApps {
 		log.Info("syncing app", "app", fmt.Sprintf("%s/%s", s.Namespace, s.Name), "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
@@ -419,7 +423,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	}
 
-	if scheduler.IsStageFailed(apps, stage) {
+	if scheduler.IsStageFailed(apps, stage, r.SyncedAtStage) {
 		message := fmt.Sprintf("%s stage failed", stage.Name)
 		log.Info(message)
 
@@ -432,7 +436,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return ps, ctrl.Result{Requeue: true, RequeueAfter: requeueDelayOnError}, nil
 	}
 
-	if scheduler.IsStageInProgress(apps, stage) {
+	if scheduler.IsStageInProgress(apps, stage, r.SyncedAtStage) {
 		message := fmt.Sprintf("%s stage in progress", stage.Name)
 		log.Info(message)
 
@@ -449,7 +453,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return ps, ctrl.Result{Requeue: true}, nil
 	}
 
-	if scheduler.IsStageComplete(apps, stage) {
+	if scheduler.IsStageComplete(apps, stage, r.SyncedAtStage) {
 		message := fmt.Sprintf("%s stage completed", stage.Name)
 		log.Info(message)
 

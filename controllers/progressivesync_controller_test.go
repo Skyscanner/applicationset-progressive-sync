@@ -1091,6 +1091,7 @@ func ExpectStagesInStatus(ctx context.Context, key client.ObjectKey) AsyncAssert
 func TestSync(t *testing.T) {
 	r := ProgressiveSyncReconciler{
 		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncOK{},
+		SyncedAtStage:   make(map[string]string),
 	}
 
 	testAppName := "foo-bar"
@@ -1105,6 +1106,7 @@ func TestSync(t *testing.T) {
 func TestSyncErr(t *testing.T) {
 	r := ProgressiveSyncReconciler{
 		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncNotOK{},
+		SyncedAtStage:   make(map[string]string),
 	}
 
 	testAppName := "foo-bar"

@@ -10,7 +10,7 @@ import (
 )
 
 // Scheduler returns a list of apps to sync for a given stage
-func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) []argov1alpha1.Application {
+func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, syncedAtStage map[string]string) []argov1alpha1.Application {
 
 	/*
 		The Scheduler takes:
@@ -40,7 +40,7 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 	log.Info("fetched out-of-sync apps", "apps", utils.GetAppsName(outOfSyncApps))
 
 	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
-	syncedInCurrentStage := utils.GetSyncedAppsByStage(healthyApps, stage.Name)
+	syncedInCurrentStage := utils.GetSyncedAppsByStage(healthyApps, stage.Name, syncedAtStage)
 	log.Info("fetched synced-in-current-stage apps", "apps", utils.GetAppsName(syncedInCurrentStage))
 
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
@@ -106,7 +106,7 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 }
 
 // IsStageFailed returns true if at least one app is failed in the given stage
-func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
+func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, syncedAtStage map[string]string) bool {
 	// A stage is failed if any of its applications has:
 	// - its Health Status Code == Degraded
 	// - its Sync Status Code == Synced
@@ -116,12 +116,12 @@ func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.Progressi
 	}
 
 	degradedApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusDegraded)
-	stageApps := utils.GetSyncedAppsByStage(degradedApps, stage.Name)
+	stageApps := utils.GetSyncedAppsByStage(degradedApps, stage.Name, syncedAtStage)
 	return len(stageApps) > 0
 }
 
 // IsStageInProgress returns true if at least one app is is in progress
-func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
+func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, syncedAtStage map[string]string) bool {
 	// An stage is in progress if:
 	// - there is at least one app with Health Status Code == Progressing
 	// - the number of apps synced so far is less than the apps to sync
@@ -131,9 +131,9 @@ func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.Progr
 	}
 
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
-	progressingAnnotatedApps := utils.GetAppsByAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name)
+	progressingAnnotatedApps := utils.GetAppsByAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name, syncedAtStage)
 
-	stageApps := utils.GetSyncedAppsByStage(apps, stage.Name)
+	stageApps := utils.GetSyncedAppsByStage(apps, stage.Name, syncedAtStage)
 	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
 	if err != nil {
 		return false
@@ -143,7 +143,7 @@ func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.Progr
 }
 
 // IsStageComplete returns true if all applications are Synced and Healthy
-func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
+func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, syncedAtStage map[string]string) bool {
 	// An app is complete if:
 	// - its Health Status Code is Healthy
 	// - its Sync Status Code is Synced
@@ -153,7 +153,7 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 	}
 
 	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
-	stageApps := utils.GetSyncedAppsByStage(healthyApps, stage.Name)
+	stageApps := utils.GetSyncedAppsByStage(healthyApps, stage.Name, syncedAtStage)
 
 	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
 	if err != nil {

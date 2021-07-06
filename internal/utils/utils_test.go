@@ -95,10 +95,11 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 	namespace := "default"
 	stage := "test-stage"
 	testCases := []struct {
-		name     string
-		apps     []argov1alpha1.Application
-		stage    string
-		expected []argov1alpha1.Application
+		name          string
+		apps          []argov1alpha1.Application
+		stage         string
+		syncedAtStage map[string]string
+		expected      []argov1alpha1.Application
 	}{
 		{
 			name: "Correct annotation, stage, sync status",
@@ -115,6 +116,9 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				},
 			}},
 			stage: stage,
+			syncedAtStage: map[string]string{
+				"appA": stage,
+			},
 			expected: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -142,7 +146,10 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 						Status: argov1alpha1.SyncStatusCodeSynced},
 				}},
 			},
-			stage:    stage,
+			stage: stage,
+			syncedAtStage: map[string]string{
+				"appA": "wrong-stage",
+			},
 			expected: nil,
 		},
 		{
@@ -159,7 +166,10 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 						Status: argov1alpha1.SyncStatusCodeOutOfSync},
 				}},
 			},
-			stage:    stage,
+			stage: stage,
+			syncedAtStage: map[string]string{
+				"appA": stage,
+			},
 			expected: nil,
 		},
 		{
@@ -174,8 +184,9 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 						Status: argov1alpha1.SyncStatusCodeSynced},
 				}},
 			},
-			stage:    stage,
-			expected: nil,
+			syncedAtStage: make(map[string]string),
+			stage:         stage,
+			expected:      nil,
 		},
 		{
 			name: "2 Applications: 1 with correct annotation, stage, sync status and 1 with incorrect data",
@@ -203,6 +214,9 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					},
 				}},
 			stage: stage,
+			syncedAtStage: map[string]string{
+				"appA": stage,
+			},
 			expected: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -221,7 +235,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			g := NewWithT(t)
-			got := GetSyncedAppsByStage(testCase.apps, testCase.stage)
+			got := GetSyncedAppsByStage(testCase.apps, testCase.stage, testCase.syncedAtStage)
 			g.Expect(got).Should(Equal(testCase.expected))
 		})
 	}

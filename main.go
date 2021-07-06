@@ -83,6 +83,7 @@ func main() {
 		Log:             ctrl.Log.WithName("controllers").WithName("ProgressiveSync"),
 		Scheme:          mgr.GetScheme(),
 		ArgoCDAppClient: utils.GetArgoCDAppClient(c),
+		SyncedAtStage:   make(map[string]string),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveSync")
 		os.Exit(1)

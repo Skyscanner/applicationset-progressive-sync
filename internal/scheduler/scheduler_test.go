@@ -1,16 +1,15 @@
 package scheduler
 
 import (
-	"github.com/go-logr/logr"
-	"testing"
-
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"testing"
 )
 
 const (
@@ -20,10 +19,11 @@ const (
 
 func TestScheduler(t *testing.T) {
 	testCases := []struct {
-		name     string
-		apps     []argov1alpha1.Application
-		stage    syncv1alpha1.ProgressiveSyncStage
-		expected []argov1alpha1.Application
+		name          string
+		apps          []argov1alpha1.Application
+		stage         syncv1alpha1.ProgressiveSyncStage
+		syncedAtStage map[string]string
+		expected      []argov1alpha1.Application
 	}{
 		{
 			name: "Applications: outOfSync 3, syncedInCurrentStage 0, progressing 0, | Stage: maxTargets 2, maxParallel 2 | Expected: scheduled 2",
@@ -68,6 +68,7 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: make(map[string]string),
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -161,6 +162,10 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: map[string]string{
+				"app-four": StageName,
+				"app-five": StageName,
+			},
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -240,6 +245,7 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: make(map[string]string),
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -330,6 +336,7 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("50%"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: make(map[string]string),
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -435,6 +442,11 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: map[string]string{
+				"app-two":   StageName,
+				"app-three": StageName,
+				"app-four":  StageName,
+			},
 			expected: nil,
 		},
 		{
@@ -458,6 +470,7 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("1"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: make(map[string]string),
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -537,6 +550,7 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: make(map[string]string),
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -605,6 +619,7 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("10%"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: make(map[string]string),
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -663,6 +678,9 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("2"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: map[string]string{
+				"app-three": "previous-stage",
+			},
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -697,7 +715,8 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
-			expected: nil,
+			syncedAtStage: make(map[string]string),
+			expected:      nil,
 		},
 		{
 			name: "Applications: outOfSync 4, syncedInCurrentStage 2, progressing 1, syncedInPreviousStage 2 | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 2",
@@ -810,6 +829,12 @@ func TestScheduler(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: map[string]string{
+				"app-one":   StageName,
+				"app-two":   StageName,
+				"app-seven": "previous-stage",
+				"app-eight": "previous-stage",
+			},
 			expected: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -844,7 +869,7 @@ func TestScheduler(t *testing.T) {
 		log := logr.Discard()
 		t.Run(testCase.name, func(t *testing.T) {
 			utils.SortAppsByName(testCase.apps)
-			got := Scheduler(log, testCase.apps, testCase.stage)
+			got := Scheduler(log, testCase.apps, testCase.stage, testCase.syncedAtStage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -853,10 +878,11 @@ func TestScheduler(t *testing.T) {
 
 func TestIsStageFailed(t *testing.T) {
 	testCases := []struct {
-		name     string
-		apps     []argov1alpha1.Application
-		stage    syncv1alpha1.ProgressiveSyncStage
-		expected bool
+		name          string
+		apps          []argov1alpha1.Application
+		stage         syncv1alpha1.ProgressiveSyncStage
+		syncedAtStage map[string]string
+		expected      bool
 	}{
 		{
 			name: "stage failed",
@@ -955,6 +981,9 @@ func TestIsStageFailed(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: map[string]string{
+				"app-six": StageName,
+			},
 			expected: true,
 		},
 		{
@@ -1037,7 +1066,8 @@ func TestIsStageFailed(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
-			expected: false,
+			syncedAtStage: make(map[string]string),
+			expected:      false,
 		},
 		{
 			name: "stage not failed when apps is nil",
@@ -1048,13 +1078,14 @@ func TestIsStageFailed(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
-			expected: false,
+			syncedAtStage: make(map[string]string),
+			expected:      false,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageFailed(testCase.apps, testCase.stage)
+			got := IsStageFailed(testCase.apps, testCase.stage, testCase.syncedAtStage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -1063,10 +1094,11 @@ func TestIsStageFailed(t *testing.T) {
 
 func TestIsStageInProgress(t *testing.T) {
 	testCases := []struct {
-		name     string
-		apps     []argov1alpha1.Application
-		stage    syncv1alpha1.ProgressiveSyncStage
-		expected bool
+		name          string
+		apps          []argov1alpha1.Application
+		stage         syncv1alpha1.ProgressiveSyncStage
+		syncedAtStage map[string]string
+		expected      bool
 	}{
 		{
 			name: "stage in progress",
@@ -1162,7 +1194,8 @@ func TestIsStageInProgress(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
-			expected: true,
+			syncedAtStage: make(map[string]string),
+			expected:      true,
 		},
 		{
 			name: "stage not in progress",
@@ -1259,6 +1292,13 @@ func TestIsStageInProgress(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
+			syncedAtStage: map[string]string{
+				"app-one":   StageName,
+				"app-two":   StageName,
+				"app-three": StageName,
+				"app-four":  StageName,
+				"app-five":  StageName,
+			},
 			expected: false,
 		},
 		{
@@ -1270,13 +1310,14 @@ func TestIsStageInProgress(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
-			expected: false,
+			syncedAtStage: make(map[string]string),
+			expected:      false,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageInProgress(testCase.apps, testCase.stage)
+			got := IsStageInProgress(testCase.apps, testCase.stage, testCase.syncedAtStage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -1285,10 +1326,11 @@ func TestIsStageInProgress(t *testing.T) {
 
 func TestIsStageComplete(t *testing.T) {
 	testCases := []struct {
-		name     string
-		apps     []argov1alpha1.Application
-		stage    syncv1alpha1.ProgressiveSyncStage
-		expected bool
+		name          string
+		apps          []argov1alpha1.Application
+		stage         syncv1alpha1.ProgressiveSyncStage
+		syncedAtStage map[string]string
+		expected      bool
 	}{
 		{
 			name: "stage is complete",
@@ -1347,6 +1389,10 @@ func TestIsStageComplete(t *testing.T) {
 				MaxParallel: intstr.Parse("2"),
 				MaxTargets:  intstr.Parse("2"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
+			syncedAtStage: map[string]string{
+				"app-one": StageName,
+				"app-two": StageName,
 			},
 			expected: true,
 		},
@@ -1416,7 +1462,8 @@ func TestIsStageComplete(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
-			expected: false,
+			syncedAtStage: make(map[string]string),
+			expected:      false,
 		},
 		{
 			name: "stage is completed when apps is nil",
@@ -1427,13 +1474,14 @@ func TestIsStageComplete(t *testing.T) {
 				MaxTargets:  intstr.Parse("3"),
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
-			expected: true,
+			syncedAtStage: make(map[string]string),
+			expected:      true,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageComplete(testCase.apps, testCase.stage)
+			got := IsStageComplete(testCase.apps, testCase.stage, testCase.syncedAtStage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})

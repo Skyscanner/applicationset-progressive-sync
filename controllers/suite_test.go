@@ -92,6 +92,7 @@ var _ = BeforeSuite(func(done Done) {
 		Client:          k8sManager.GetClient(),
 		Log:             ctrl.Log.WithName("controllers").WithName("progressiverollout"),
 		ArgoCDAppClient: &mockAcdClient,
+		SyncedAtStage:   make(map[string]string),
 	}
 	err = reconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
