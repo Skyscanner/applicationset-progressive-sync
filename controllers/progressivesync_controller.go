@@ -394,6 +394,15 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// Get the Applications to update
 	scheduledApps := scheduler.Scheduler(log, apps, stage, r.SyncedAtStage)
 
+	//if len(scheduledApps) == 0 {
+	//	maxTargets, _ := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
+	//
+	//	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
+	//	for i := 0; i < maxTargets; i++ {
+	//		r.SyncedAtStage[healthyApps[i].Name] = stage.Name
+	//	}
+	//}
+
 	for _, s := range scheduledApps {
 		log.Info("syncing app", "app", fmt.Sprintf("%s/%s", s.Namespace, s.Name), "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
 

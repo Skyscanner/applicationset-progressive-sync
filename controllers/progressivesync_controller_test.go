@@ -785,6 +785,102 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			expected := failedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, "stage 0 stage failed")
 			ExpectCondition(&failedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 		})
+
+		FIt("should set conditions when apps already synced", func() {
+			testPrefix := "synced-stage"
+			appSet := fmt.Sprintf("%s-appset", testPrefix)
+
+			By("creating two ArgoCD clusters")
+			targets := []Target{
+				{
+					Name:           "account6-us-west-1a-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "us-west-1",
+					AZ:             "us-west-1a",
+				}, {
+					Name:           "account6-us-west-2a-2",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "us-west-2",
+					AZ:             "us-west-2a",
+				},
+			}
+			clusters, err := createClusters(ctx, targets)
+			Expect(err).To(BeNil())
+			Expect(clusters).To(Not(BeNil()))
+
+			By("creating one application targeting each cluster")
+			apps, err := createSyncedAndHealthyApplications(ctx, targets)
+			Expect(err).To(BeNil())
+			Expect(apps).To(Not(BeNil()))
+
+			By("creating a progressive sync")
+			syncedStagePS := syncv1alpha1.ProgressiveSync{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-ps", testPrefix),
+					Namespace: namespace,
+				},
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetAPIRef,
+						Kind:     utils.AppSetKind,
+						Name:     appSet,
+					},
+					Stages: []syncv1alpha1.ProgressiveSyncStage{{
+						Name:        "stage 0",
+						MaxParallel: intstr.IntOrString{IntVal: 1},
+						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
+							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+								//"cluster": clusters[0].Name,
+								"region": "us-west-1",
+							}},
+						}},
+					}, {
+						Name:        "stage 1",
+						MaxParallel: intstr.IntOrString{IntVal: 1},
+						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
+							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+								//"cluster": clusters[1].Name,
+								"region": "us-west-2",
+							}},
+						}},
+					}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &syncedStagePS)).To(Succeed())
+
+			//// Make sure the finalizer is added
+			//createdPS := syncv1alpha1.ProgressiveSync{}
+			//Eventually(func() int {
+			//	_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&syncedStagePS), &createdPS)
+			//	return len(createdPS.ObjectMeta.Finalizers)
+			//}).Should(Equal(1))
+			//Expect(createdPS.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
+
+			psKey := client.ObjectKey{
+				Namespace: namespace,
+				Name:      fmt.Sprintf("%s-ps", testPrefix),
+			}
+			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "stage 0",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "stage 0 stage succeeded",
+			}))
+			ExpectStageStatus(ctx, psKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "stage 1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "stage 1 stage succeeded",
+			}))
+			//ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
+
+			expected := syncedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+			ExpectCondition(&syncedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+		})
 	})
 
 	Describe("sync application", func() {
@@ -911,6 +1007,51 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 			Status: argov1alpha1.ApplicationStatus{
 				Sync: argov1alpha1.SyncStatus{
 					Status: argov1alpha1.SyncStatusCodeOutOfSync,
+				},
+				Health: argov1alpha1.HealthStatus{
+					Status: health.HealthStatusHealthy,
+				},
+			},
+		}
+
+		err := k8sClient.Create(ctx, &app)
+		if err != nil {
+			return nil, err
+		}
+
+		apps = append(apps, app)
+	}
+
+	return apps, nil
+}
+
+// createSyncedAndHealthyApplications is a helper function that creates an ArgoCD application given a prefix and a cluster
+func createSyncedAndHealthyApplications(ctx context.Context, targets []Target) ([]argov1alpha1.Application, error) {
+	var apps []argov1alpha1.Application
+
+	for _, t := range targets {
+
+		app := argov1alpha1.Application{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        t.Name,
+				Namespace:   t.Namespace,
+				Annotations: make(map[string]string),
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: utils.AppSetAPIGroup,
+					Kind:       utils.AppSetKind,
+					Name:       t.ApplicationSet,
+					UID:        uuid.NewUUID(),
+				}},
+			},
+			Spec: argov1alpha1.ApplicationSpec{
+				Destination: argov1alpha1.ApplicationDestination{
+					Server:    fmt.Sprintf("https://%s.kubernetes.io", t.Name),
+					Namespace: t.Namespace,
+					Name:      t.Name,
+				}},
+			Status: argov1alpha1.ApplicationStatus{
+				Sync: argov1alpha1.SyncStatus{
+					Status: argov1alpha1.SyncStatusCodeSynced,
 				},
 				Health: argov1alpha1.HealthStatus{
 					Status: health.HealthStatusHealthy,
