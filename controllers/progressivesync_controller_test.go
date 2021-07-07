@@ -353,9 +353,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 								},
 							}},
 					}, {
-						Name: "rollout to remaining clusters",
-						// MaxParallel: intstr.Parse("25%"),
-						// MaxTargets:  intstr.Parse("100%"),
+						Name:        "rollout to remaining clusters",
 						MaxParallel: intstr.Parse("1"),
 						MaxTargets:  intstr.Parse("4"),
 						Targets: syncv1alpha1.ProgressiveSyncTargets{
@@ -687,7 +685,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
-			Expect(k8sClient.Delete(ctx, &ps)).To(Succeed())
 		})
 
 		It("should fail if unable to sync an application", func() {
