@@ -334,7 +334,7 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 			return err
 		}
 
-		log = log.WithValues("app", fmt.Sprintf("%s/%s", app.Namespace, app.Name))
+		log = log.WithValues("app", fmt.Sprintf("%s/%s", latest.Namespace, latest.Name))
 
 		if latest.Annotations == nil {
 			latest.Annotations = map[string]string{
