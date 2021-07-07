@@ -35,6 +35,7 @@ var (
 	ctx          = context.Background()
 )
 
+// Target is an helper structure that holds the information to create clusters and applications
 type Target struct {
 	Name           string
 	Namespace      string
