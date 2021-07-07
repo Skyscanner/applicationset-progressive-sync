@@ -329,7 +329,7 @@ func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, p
 }
 
 // setSyncedAtAnnotation sets the SyncedAt annotation for the currently progressing stage of the app
-func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, app argov1alpha1.Application, stageName string, ps syncv1alpha1.ProgressiveSync) error {
+func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, app argov1alpha1.Application, stageName string, stageMaxTargets int, ps syncv1alpha1.ProgressiveSync) error {
 
 	log := r.Log.WithValues("stage", stageName)
 
@@ -365,7 +365,11 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 		if !ok {
 			r.SyncedAppsPerStage[stageKeyValue] = 1
 		} else {
-			r.SyncedAppsPerStage[stageKeyValue] = val + 1
+			if val+1 > stageMaxTargets {
+				r.SyncedAppsPerStage[stageKeyValue] = stageMaxTargets
+			} else {
+				r.SyncedAppsPerStage[stageKeyValue] = val + 1
+			}
 		}
 
 		log.Info("app annotated")
@@ -453,8 +457,8 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			}
 			log.Info("failed to sync app because it is already syncing")
 		}
-
-		err := r.setSyncedAtAnnotation(ctx, s, stage.Name, ps)
+		stageMaxTargets, _ := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
+		err := r.setSyncedAtAnnotation(ctx, s, stage.Name, stageMaxTargets, ps)
 		if err != nil {
 			message := "failed at setSyncedAtAnnotation"
 			log.Error(err, message, "message", err.Error())
