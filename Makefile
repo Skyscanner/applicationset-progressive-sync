@@ -23,7 +23,7 @@ lint: fmt vet
 
 # Run tests
 test: tools generate fmt vet manifests
-	ginkgo -reportPassed -r --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress
+	ginkgo -r --failOnPending --cover -coverprofile=../coverage.out --trace --race --progress
 
 # Build manager binary
 manager: generate fmt vet
