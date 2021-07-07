@@ -530,6 +530,18 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					"rollout to remaining clusters")
 			}).Should(BeTrue())
 
+			// Make sure the previous stages are still completed
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in eu-west-1 stage completed",
+			}))
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in every other region stage completed",
+			}))
+
 			// Make sure the current stage is progressing
 			message = "rollout to remaining clusters stage in progress"
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
