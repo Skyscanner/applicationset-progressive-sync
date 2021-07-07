@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 360
+	timeout  = time.Second * 10
 	interval = time.Millisecond * 10
 )
 
@@ -243,7 +243,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	})
 
 	Describe("reconciliation loop", func() {
-		It("should reconcile a multi-stage progressive sync", func() {
+		FIt("should reconcile a multi-stage progressive sync", func() {
 			testPrefix := "multi"
 			appSet := fmt.Sprintf("%s-appset", testPrefix)
 
@@ -786,7 +786,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectCondition(&failedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 		})
 
-		FIt("should set conditions when apps already synced", func() {
+		It("should set conditions when apps already synced", func() {
 			testPrefix := "synced-stage"
 			appSet := fmt.Sprintf("%s-appset", testPrefix)
 
@@ -854,14 +854,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &syncedStagePS)).To(Succeed())
 
-			//// Make sure the finalizer is added
-			//createdPS := syncv1alpha1.ProgressiveSync{}
-			//Eventually(func() int {
-			//	_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&syncedStagePS), &createdPS)
-			//	return len(createdPS.ObjectMeta.Finalizers)
-			//}).Should(Equal(1))
-			//Expect(createdPS.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
-
 			psKey := client.ObjectKey{
 				Namespace: namespace,
 				Name:      fmt.Sprintf("%s-ps", testPrefix),
@@ -869,14 +861,14 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 0",
 				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: "stage 0 stage succeeded",
+				Message: "stage 0 stage completed",
 			}))
 			ExpectStageStatus(ctx, psKey, "stage 1").Should(MatchStage(syncv1alpha1.StageStatus{
 				Name:    "stage 1",
 				Phase:   syncv1alpha1.PhaseSucceeded,
-				Message: "stage 1 stage succeeded",
+				Message: "stage 1 stage completed",
 			}))
-			//ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
 
 			expected := syncedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&syncedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
@@ -1231,8 +1223,9 @@ func ExpectStagesInStatus(ctx context.Context, key client.ObjectKey) AsyncAssert
 
 func TestSync(t *testing.T) {
 	r := ProgressiveSyncReconciler{
-		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncOK{},
-		SyncedAtStage:   make(map[string]string),
+		ArgoCDAppClient:    &mocks.MockArgoCDAppClientSyncOK{},
+		SyncedAtStage:      make(map[string]string),
+		SyncedAppsPerStage: make(map[string]int),
 	}
 
 	testAppName := "foo-bar"
@@ -1246,8 +1239,9 @@ func TestSync(t *testing.T) {
 
 func TestSyncErr(t *testing.T) {
 	r := ProgressiveSyncReconciler{
-		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncNotOK{},
-		SyncedAtStage:   make(map[string]string),
+		ArgoCDAppClient:    &mocks.MockArgoCDAppClientSyncNotOK{},
+		SyncedAtStage:      make(map[string]string),
+		SyncedAppsPerStage: make(map[string]int),
 	}
 
 	testAppName := "foo-bar"

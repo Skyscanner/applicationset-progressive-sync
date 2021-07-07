@@ -89,10 +89,11 @@ var _ = BeforeSuite(func(done Done) {
 
 	mockAcdClient := mocks.ArgoCDAppClientStub{}
 	reconciler = &ProgressiveSyncReconciler{
-		Client:          k8sManager.GetClient(),
-		Log:             ctrl.Log.WithName("controllers").WithName("progressiverollout"),
-		ArgoCDAppClient: &mockAcdClient,
-		SyncedAtStage:   make(map[string]string),
+		Client:             k8sManager.GetClient(),
+		Log:                ctrl.Log.WithName("controllers").WithName("progressiverollout"),
+		ArgoCDAppClient:    &mockAcdClient,
+		SyncedAtStage:      make(map[string]string),
+		SyncedAppsPerStage: make(map[string]int),
 	}
 	err = reconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())

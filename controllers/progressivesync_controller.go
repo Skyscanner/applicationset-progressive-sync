@@ -27,12 +27,14 @@ import (
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
+	"github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -47,10 +49,11 @@ import (
 // ProgressiveSyncReconciler reconciles a ProgressiveSync object
 type ProgressiveSyncReconciler struct {
 	client.Client
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	ArgoCDAppClient utils.ArgoCDAppClient
-	SyncedAtStage   map[string]string // Key: App name, Value: Stage name
+	Log                logr.Logger
+	Scheme             *runtime.Scheme
+	ArgoCDAppClient    utils.ArgoCDAppClient
+	SyncedAtStage      map[string]string // Key: App name, Value: Stage name
+	SyncedAppsPerStage map[string]int    // Key: Stage name, Value: Number of apps per stage
 }
 
 // +kubebuilder:rbac:groups=argoproj.skyscanner.net,resources=progressivesyncs,verbs=get;list;watch;create;update;patch;delete
@@ -96,11 +99,15 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	latest := ps
+	var result reconcile.Result
+	var reconcileErr error
+
 	for _, stage := range ps.Spec.Stages {
 		log = log.WithValues("stage", stage.Name)
 
-		ps, result, reconcileErr := r.reconcileStage(ctx, ps, stage)
-		if err := r.updateStatusWithRetry(ctx, &ps); err != nil {
+		latest, result, reconcileErr = r.reconcileStage(ctx, latest, stage)
+		if err := r.updateStatusWithRetry(ctx, &latest); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -112,9 +119,9 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Progressive sync completed
-	completed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-	apimeta.SetStatusCondition(ps.GetStatusConditions(), completed)
-	if err := r.updateStatusWithRetry(ctx, &ps); err != nil {
+	completed := latest.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+	apimeta.SetStatusCondition(latest.GetStatusConditions(), completed)
+	if err := r.updateStatusWithRetry(ctx, &latest); err != nil {
 		log.Error(err, "failed to update object status")
 		return ctrl.Result{}, err
 	}
@@ -351,6 +358,13 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 
 		r.SyncedAtStage[latest.Name] = stageName
 
+		val, ok := r.SyncedAppsPerStage[stageName]
+		if !ok {
+			r.SyncedAppsPerStage[stageName] = 1
+		} else {
+			r.SyncedAppsPerStage[stageName] = val + 1
+		}
+
 		log.Info("app annotated")
 		return nil
 	})
@@ -394,14 +408,27 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// Get the Applications to update
 	scheduledApps := scheduler.Scheduler(log, apps, stage, r.SyncedAtStage)
 
-	//if len(scheduledApps) == 0 {
-	//	maxTargets, _ := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
-	//
-	//	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
-	//	for i := 0; i < maxTargets; i++ {
-	//		r.SyncedAtStage[healthyApps[i].Name] = stage.Name
-	//	}
-	//}
+	if len(scheduledApps) == 0 {
+		maxTargets, _ := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
+
+		healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
+
+		if maxTargets > len(healthyApps) {
+			maxTargets = len(healthyApps)
+		}
+
+		_, ok := r.SyncedAppsPerStage[stage.Name]
+		if !ok {
+			r.SyncedAppsPerStage[stage.Name] = 0
+		}
+
+		maxTargets = maxTargets - r.SyncedAppsPerStage[stage.Name]
+
+		for i := 0; i < maxTargets; i++ {
+			r.SyncedAtStage[healthyApps[i].Name] = stage.Name
+			r.SyncedAppsPerStage[stage.Name]++
+		}
+	}
 
 	for _, s := range scheduledApps {
 		log.Info("syncing app", "app", fmt.Sprintf("%s/%s", s.Namespace, s.Name), "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
