@@ -117,7 +117,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 			}},
 			stage: stage,
 			syncedAtStage: map[string]string{
-				"appA": stage,
+				"psName/appA": stage,
 			},
 			expected: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -148,7 +148,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 			},
 			stage: stage,
 			syncedAtStage: map[string]string{
-				"appA": "wrong-stage",
+				"psName/appA": "wrong-stage",
 			},
 			expected: nil,
 		},
@@ -168,7 +168,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 			},
 			stage: stage,
 			syncedAtStage: map[string]string{
-				"appA": stage,
+				"psName/appA": stage,
 			},
 			expected: nil,
 		},
@@ -215,7 +215,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				}},
 			stage: stage,
 			syncedAtStage: map[string]string{
-				"appA": stage,
+				"psName/appA": stage,
 			},
 			expected: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -235,7 +235,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			g := NewWithT(t)
-			got := GetSyncedAppsByStage(testCase.apps, testCase.stage, testCase.syncedAtStage)
+			got := GetSyncedAppsByStage(testCase.apps, testCase.stage, testCase.syncedAtStage, "psName")
 			g.Expect(got).Should(Equal(testCase.expected))
 		})
 	}

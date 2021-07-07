@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 10
+	timeout  = time.Second * 360
 	interval = time.Millisecond * 10
 )
 
@@ -243,7 +243,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	})
 
 	Describe("reconciliation loop", func() {
-		FIt("should reconcile a multi-stage progressive sync", func() {
+		It("should reconcile a multi-stage progressive sync", func() {
 			testPrefix := "multi"
 			appSet := fmt.Sprintf("%s-appset", testPrefix)
 

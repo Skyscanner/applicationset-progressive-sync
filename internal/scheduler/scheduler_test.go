@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"testing"
+
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
@@ -9,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"testing"
 )
 
 const (
@@ -163,8 +164,8 @@ func TestScheduler(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			syncedAtStage: map[string]string{
-				"app-four": StageName,
-				"app-five": StageName,
+				"psName/app-four": StageName,
+				"psName/app-five": StageName,
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -443,9 +444,9 @@ func TestScheduler(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			syncedAtStage: map[string]string{
-				"app-two":   StageName,
-				"app-three": StageName,
-				"app-four":  StageName,
+				"psName/app-two":   StageName,
+				"psName/app-three": StageName,
+				"psName/app-four":  StageName,
 			},
 			expected: nil,
 		},
@@ -679,7 +680,7 @@ func TestScheduler(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			syncedAtStage: map[string]string{
-				"app-three": "previous-stage",
+				"psName/app-three": "previous-stage",
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -830,10 +831,10 @@ func TestScheduler(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			syncedAtStage: map[string]string{
-				"app-one":   StageName,
-				"app-two":   StageName,
-				"app-seven": "previous-stage",
-				"app-eight": "previous-stage",
+				"psName/app-one":   StageName,
+				"psName/app-two":   StageName,
+				"psName/app-seven": "previous-stage",
+				"psName/app-eight": "previous-stage",
 			},
 			expected: []argov1alpha1.Application{
 				{
@@ -869,7 +870,7 @@ func TestScheduler(t *testing.T) {
 		log := logr.Discard()
 		t.Run(testCase.name, func(t *testing.T) {
 			utils.SortAppsByName(testCase.apps)
-			got := Scheduler(log, testCase.apps, testCase.stage, testCase.syncedAtStage)
+			got := Scheduler(log, testCase.apps, testCase.stage, testCase.syncedAtStage, "psName")
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -982,7 +983,7 @@ func TestIsStageFailed(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			syncedAtStage: map[string]string{
-				"app-six": StageName,
+				"psName/app-six": StageName,
 			},
 			expected: true,
 		},
@@ -1085,7 +1086,7 @@ func TestIsStageFailed(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageFailed(testCase.apps, testCase.stage, testCase.syncedAtStage)
+			got := IsStageFailed(testCase.apps, testCase.stage, testCase.syncedAtStage, "psName")
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -1293,11 +1294,11 @@ func TestIsStageInProgress(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			syncedAtStage: map[string]string{
-				"app-one":   StageName,
-				"app-two":   StageName,
-				"app-three": StageName,
-				"app-four":  StageName,
-				"app-five":  StageName,
+				"psName/app-one":   StageName,
+				"psName/app-two":   StageName,
+				"psName/app-three": StageName,
+				"psName/app-four":  StageName,
+				"psName/app-five":  StageName,
 			},
 			expected: false,
 		},
@@ -1317,7 +1318,7 @@ func TestIsStageInProgress(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageInProgress(testCase.apps, testCase.stage, testCase.syncedAtStage)
+			got := IsStageInProgress(testCase.apps, testCase.stage, testCase.syncedAtStage, "psName")
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -1391,8 +1392,8 @@ func TestIsStageComplete(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			syncedAtStage: map[string]string{
-				"app-one": StageName,
-				"app-two": StageName,
+				"psName/app-one": StageName,
+				"psName/app-two": StageName,
 			},
 			expected: true,
 		},
@@ -1481,7 +1482,7 @@ func TestIsStageComplete(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageComplete(testCase.apps, testCase.stage, testCase.syncedAtStage)
+			got := IsStageComplete(testCase.apps, testCase.stage, testCase.syncedAtStage, "psName")
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})

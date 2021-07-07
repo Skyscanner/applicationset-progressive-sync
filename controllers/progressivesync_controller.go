@@ -329,7 +329,7 @@ func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, p
 }
 
 // setSyncedAtAnnotation sets the SyncedAt annotation for the currently progressing stage of the app
-func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, app argov1alpha1.Application, stageName string) error {
+func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, app argov1alpha1.Application, stageName string, ps syncv1alpha1.ProgressiveSync) error {
 
 	log := r.Log.WithValues("stage", stageName)
 
@@ -356,13 +356,16 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 			return err
 		}
 
-		r.SyncedAtStage[latest.Name] = stageName
+		stageKeyValue := ps.Name + "/" + stageName
+		appKeyValue := ps.Name + "/" + app.Name
 
-		val, ok := r.SyncedAppsPerStage[stageName]
+		r.SyncedAtStage[appKeyValue] = stageName
+
+		val, ok := r.SyncedAppsPerStage[stageKeyValue]
 		if !ok {
-			r.SyncedAppsPerStage[stageName] = 1
+			r.SyncedAppsPerStage[stageKeyValue] = 1
 		} else {
-			r.SyncedAppsPerStage[stageName] = val + 1
+			r.SyncedAppsPerStage[stageKeyValue] = val + 1
 		}
 
 		log.Info("app annotated")
@@ -406,7 +409,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
 
 	// Get the Applications to update
-	scheduledApps := scheduler.Scheduler(log, apps, stage, r.SyncedAtStage)
+	scheduledApps := scheduler.Scheduler(log, apps, stage, r.SyncedAtStage, ps.Name)
 
 	if len(scheduledApps) == 0 {
 		maxTargets, _ := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
@@ -417,16 +420,18 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			maxTargets = len(healthyApps)
 		}
 
-		_, ok := r.SyncedAppsPerStage[stage.Name]
+		stageKeyValue := ps.Name + "/" + stage.Name
+		_, ok := r.SyncedAppsPerStage[stageKeyValue]
 		if !ok {
-			r.SyncedAppsPerStage[stage.Name] = 0
+			r.SyncedAppsPerStage[stageKeyValue] = 0
 		}
 
-		maxTargets = maxTargets - r.SyncedAppsPerStage[stage.Name]
+		maxTargets = maxTargets - r.SyncedAppsPerStage[stageKeyValue]
 
 		for i := 0; i < maxTargets; i++ {
-			r.SyncedAtStage[healthyApps[i].Name] = stage.Name
-			r.SyncedAppsPerStage[stage.Name]++
+			appKeyValue := ps.Name + "/" + healthyApps[i].Name
+			r.SyncedAtStage[appKeyValue] = stage.Name
+			r.SyncedAppsPerStage[stageKeyValue]++
 		}
 	}
 
@@ -449,7 +454,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			log.Info("failed to sync app because it is already syncing")
 		}
 
-		err := r.setSyncedAtAnnotation(ctx, s, stage.Name)
+		err := r.setSyncedAtAnnotation(ctx, s, stage.Name, ps)
 		if err != nil {
 			message := "failed at setSyncedAtAnnotation"
 			log.Error(err, message, "message", err.Error())
@@ -459,7 +464,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	}
 
-	if scheduler.IsStageFailed(apps, stage, r.SyncedAtStage) {
+	if scheduler.IsStageFailed(apps, stage, r.SyncedAtStage, ps.Name) {
 		message := fmt.Sprintf("%s stage failed", stage.Name)
 		log.Info(message)
 
@@ -472,7 +477,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return ps, ctrl.Result{Requeue: true, RequeueAfter: requeueDelayOnError}, nil
 	}
 
-	if scheduler.IsStageInProgress(apps, stage, r.SyncedAtStage) {
+	if scheduler.IsStageInProgress(apps, stage, r.SyncedAtStage, ps.Name) {
 		message := fmt.Sprintf("%s stage in progress", stage.Name)
 		log.Info(message)
 
@@ -489,7 +494,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return ps, ctrl.Result{Requeue: true}, nil
 	}
 
-	if scheduler.IsStageComplete(apps, stage, r.SyncedAtStage) {
+	if scheduler.IsStageComplete(apps, stage, r.SyncedAtStage, ps.Name) {
 		message := fmt.Sprintf("%s stage completed", stage.Name)
 		log.Info(message)
 

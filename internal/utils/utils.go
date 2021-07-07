@@ -40,7 +40,7 @@ func GetAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alpha1.
 }
 
 // GetAppsByAnnotation returns the Applications having the specified annotation
-func GetAppsByAnnotation(apps []argov1alpha1.Application, annotation string, stageName string, syncedAtStage map[string]string) []argov1alpha1.Application {
+func GetAppsByAnnotation(apps []argov1alpha1.Application, annotation string, stageName string, syncedAtStage map[string]string, psName string) []argov1alpha1.Application {
 	var result []argov1alpha1.Application
 
 	for _, app := range apps {
@@ -50,8 +50,9 @@ func GetAppsByAnnotation(apps []argov1alpha1.Application, annotation string, sta
 		//if ok && value == stageName {
 		//	result = append(result, app)
 		//}
+		appKeyValue := psName + "/" + app.Name
 
-		value, ok := syncedAtStage[app.Name]
+		value, ok := syncedAtStage[appKeyValue]
 
 		if ok && value == stageName {
 			result = append(result, app)
@@ -75,7 +76,7 @@ func GetAppsByHealthStatusCode(apps []argov1alpha1.Application, code health.Heal
 }
 
 // GetSyncedAppsByStage returns the Applications that synced during the given stage
-func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string, syncedAtStage map[string]string) []argov1alpha1.Application {
+func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string, syncedAtStage map[string]string, psName string) []argov1alpha1.Application {
 	var result []argov1alpha1.Application
 
 	for _, app := range apps {
@@ -83,8 +84,9 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string, syncedAt
 		//if ok && val == name && app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced {
 		//	result = append(result, app)
 		//}
+		appKeyValue := psName + "/" + app.Name
 
-		val, ok := syncedAtStage[app.Name]
+		val, ok := syncedAtStage[appKeyValue]
 		if ok && val == name && app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced {
 			result = append(result, app)
 		}
