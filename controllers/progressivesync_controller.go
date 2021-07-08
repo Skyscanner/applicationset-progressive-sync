@@ -394,7 +394,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	for _, s := range scheduledApps {
 		log.Info("syncing app", "app", fmt.Sprintf("%s/%s", s.Namespace, s.Name), "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
 
-		_, err = r.syncApp(ctx, s.Name)
+		_, err := r.syncApp(ctx, s.Name)
 
 		if err != nil {
 			if !strings.Contains(err.Error(), "another operation is already in progress") {
@@ -410,7 +410,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			log.Info("failed to sync app because it is already syncing")
 		}
 
-		err := r.setSyncedAtAnnotation(ctx, s, stage.Name)
+		err = r.setSyncedAtAnnotation(ctx, s, stage.Name)
 		if err != nil {
 			message := "failed at setSyncedAtAnnotation"
 			log.Error(err, message, "message", err.Error())
