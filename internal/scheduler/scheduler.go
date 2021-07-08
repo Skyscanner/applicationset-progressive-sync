@@ -134,7 +134,16 @@ func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.Progr
 	progressingAnnotatedApps := utils.GetAppsByAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name, syncedAtStage, psName)
 
 	stageApps := utils.GetSyncedAppsByStage(apps, stage.Name, syncedAtStage, psName)
-	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
+
+	unprocessedApps := make([]argov1alpha1.Application, 0)
+	for _, app := range apps {
+		appKeyValue := psName + "/" + app.Name
+		if _, ok := syncedAtStage[appKeyValue]; !ok {
+			unprocessedApps = append(unprocessedApps, app)
+		}
+	}
+
+	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(unprocessedApps), false)
 	if err != nil {
 		return false
 	}
@@ -155,7 +164,15 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
 	stageApps := utils.GetSyncedAppsByStage(healthyApps, stage.Name, syncedAtStage, psName)
 
-	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
+	unprocessedApps := make([]argov1alpha1.Application, 0)
+	for _, app := range apps {
+		appKeyValue := psName + "/" + app.Name
+		if _, ok := syncedAtStage[appKeyValue]; !ok {
+			unprocessedApps = append(unprocessedApps, app)
+		}
+	}
+
+	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(unprocessedApps), false)
 	if err != nil {
 		return false
 	}
@@ -165,5 +182,5 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 		appsToCompleteStage = maxTargets
 	}
 
-	return len(stageApps) == appsToCompleteStage
+	return len(stageApps) == appsToCompleteStage || maxTargets == 0
 }

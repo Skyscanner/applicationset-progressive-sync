@@ -417,9 +417,19 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	scheduledApps := scheduler.Scheduler(log, apps, stage, r.SyncedAtStage, ps.Name)
 
 	if len(scheduledApps) == 0 {
-		maxTargets, _ := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(apps), false)
 
-		healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
+		//get all the apps that are not annotated
+		unprocessedApps := make([]argov1alpha1.Application, 0)
+		for _, app := range apps {
+			appKeyValue := ps.Name + "/" + app.Name
+			if _, ok := r.SyncedAtStage[appKeyValue]; !ok {
+				unprocessedApps = append(unprocessedApps, app)
+			}
+		}
+
+		maxTargets, _ := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(unprocessedApps), false)
+
+		healthyApps := utils.GetAppsByHealthStatusCode(unprocessedApps, health.HealthStatusHealthy)
 
 		if maxTargets > len(healthyApps) {
 			maxTargets = len(healthyApps)
