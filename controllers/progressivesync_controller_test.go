@@ -35,6 +35,7 @@ var (
 	ctx          = context.Background()
 )
 
+// Target is an helper structure that holds the information to create clusters and applications
 type Target struct {
 	Name           string
 	Namespace      string
@@ -330,8 +331,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
 						Name:        "one cluster as canary in eu-west-1",
-						MaxParallel: intstr.IntOrString{IntVal: 1},
-						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						MaxParallel: intstr.Parse("1"),
+						MaxTargets:  intstr.Parse("1"),
 						Targets: syncv1alpha1.ProgressiveSyncTargets{
 							Clusters: syncv1alpha1.Clusters{
 								Selector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -340,8 +341,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 							}},
 					}, {
 						Name:        "one cluster as canary in every other region",
-						MaxParallel: intstr.IntOrString{IntVal: 3},
-						MaxTargets:  intstr.IntOrString{IntVal: 3},
+						MaxParallel: intstr.Parse("3"),
+						MaxTargets:  intstr.Parse("3"),
 						Targets: syncv1alpha1.ProgressiveSyncTargets{
 							Clusters: syncv1alpha1.Clusters{
 								Selector: metav1.LabelSelector{
@@ -353,9 +354,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 								},
 							}},
 					}, {
-						Name: "rollout to remaining clusters",
-						// MaxParallel: intstr.Parse("25%"),
-						// MaxTargets:  intstr.Parse("100%"),
+						Name:        "rollout to remaining clusters",
 						MaxParallel: intstr.Parse("1"),
 						MaxTargets:  intstr.Parse("4"),
 						Targets: syncv1alpha1.ProgressiveSyncTargets{
@@ -532,6 +531,18 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					"rollout to remaining clusters")
 			}).Should(BeTrue())
 
+			// Make sure the previous stages are still completed
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in eu-west-1 stage completed",
+			}))
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in every other region stage completed",
+			}))
+
 			// Make sure the current stage is progressing
 			message = "rollout to remaining clusters stage in progress"
 			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -687,7 +698,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
-			Expect(k8sClient.Delete(ctx, &ps)).To(Succeed())
 		})
 
 		It("should fail if unable to sync an application", func() {
@@ -732,8 +742,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
 						Name:        "stage 0",
-						MaxParallel: intstr.IntOrString{IntVal: 1},
-						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						MaxParallel: intstr.Parse("1"),
+						MaxTargets:  intstr.Parse("1"),
 						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 								"cluster": clusters[0].Name,
@@ -741,8 +751,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 						}},
 					}, {
 						Name:        "stage 1",
-						MaxParallel: intstr.IntOrString{IntVal: 1},
-						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						MaxParallel: intstr.Parse("1"),
+						MaxTargets:  intstr.Parse("1"),
 						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 								"cluster": clusters[1].Name,
@@ -923,8 +933,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
 						Name:        "stage 1",
-						MaxParallel: intstr.IntOrString{IntVal: 1},
-						MaxTargets:  intstr.IntOrString{IntVal: 1},
+						MaxParallel: intstr.Parse("1"),
+						MaxTargets:  intstr.Parse("1"),
 						Targets: syncv1alpha1.ProgressiveSyncTargets{Clusters: syncv1alpha1.Clusters{
 							Selector: metav1.LabelSelector{MatchLabels: nil},
 						}},

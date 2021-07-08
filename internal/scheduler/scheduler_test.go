@@ -3,11 +3,12 @@ package scheduler
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
+
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -1477,6 +1478,17 @@ func TestIsStageComplete(t *testing.T) {
 			},
 			syncedAtStage: make(map[string]string),
 			expected:      true,
+		},
+		{
+			name: "stage is completed when apps is nil",
+			apps: nil,
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
+			expected: true,
 		},
 	}
 

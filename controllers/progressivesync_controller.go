@@ -46,6 +46,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const RequeueDelayOnError = time.Minute * 5
+
 // ProgressiveSyncReconciler reconciles a ProgressiveSync object
 type ProgressiveSyncReconciler struct {
 	client.Client
@@ -342,7 +344,7 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 			return err
 		}
 
-		log = log.WithValues("app", fmt.Sprintf("%s/%s", app.Namespace, app.Name))
+		log = log.WithValues("app", fmt.Sprintf("%s/%s", latest.Namespace, latest.Name))
 
 		if latest.Annotations == nil {
 			latest.Annotations = map[string]string{
@@ -381,7 +383,6 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 // reconcileStage reconcile a ProgressiveSyncStage
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {
 	log := r.Log.WithValues("progressivesync", fmt.Sprintf("%s/%s", ps.Namespace, ps.Name), "applicationset", ps.Spec.SourceRef.Name, "stage", stage.Name, "syncedAtStage", r.SyncedAtStage)
-	requeueDelayOnError := time.Minute * 5
 
 	// Get the clusters to update
 	clusters, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
@@ -395,7 +396,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
-		return ps, ctrl.Result{Requeue: true, RequeueAfter: requeueDelayOnError}, err
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: RequeueDelayOnError}, err
 	}
 	log.Info("fetched clusters using label selector", "clusters", utils.GetClustersName(clusters.Items))
 
@@ -408,7 +409,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-		return ps, ctrl.Result{Requeue: true, RequeueAfter: requeueDelayOnError}, err
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: RequeueDelayOnError}, err
 	}
 	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
 
@@ -453,7 +454,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 				// Set ProgressiveSync status
 				failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 				apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-				return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
+				return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 			}
 			log.Info("failed to sync app because it is already syncing")
 		}
@@ -463,7 +464,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			message := "failed at setSyncedAtAnnotation"
 			log.Error(err, message, "message", err.Error())
 
-			return ps, ctrl.Result{RequeueAfter: requeueDelayOnError}, err
+			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 		}
 
 	}
@@ -478,7 +479,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
 		log.Info("sync failed")
-		return ps, ctrl.Result{Requeue: true, RequeueAfter: requeueDelayOnError}, nil
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: RequeueDelayOnError}, nil
 	}
 
 	if scheduler.IsStageInProgress(apps, stage, r.SyncedAtStage, ps.Name) {
