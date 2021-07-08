@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/gitops-engine/pkg/health"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,7 +101,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 		expected []argov1alpha1.Application
 	}{
 		{
-			name: "Correct annotation, stage, sync status, health status",
+			name: "Correct annotation, stage, sync status",
 			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -113,9 +112,6 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
 						Status: argov1alpha1.SyncStatusCodeSynced},
-					Health: argov1alpha1.HealthStatus{
-						Status: health.HealthStatusHealthy,
-					},
 				},
 			}},
 			stage: stage,
@@ -129,14 +125,11 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
 						Status: argov1alpha1.SyncStatusCodeSynced},
-					Health: argov1alpha1.HealthStatus{
-						Status: health.HealthStatusHealthy,
-					},
 				},
 			}},
 		},
 		{
-			name: "Correct annotation, sync status, health status. Incorrect annotation value",
+			name: "Correct annotation, sync status but incorrect annotation value",
 			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -147,36 +140,13 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
 						Status: argov1alpha1.SyncStatusCodeSynced},
-					Health: argov1alpha1.HealthStatus{
-						Status: health.HealthStatusHealthy,
-					},
 				}},
 			},
 			stage:    stage,
 			expected: nil,
 		},
 		{
-			name: "Correct annotation, value, sync status. Incorrect health status",
-			apps: []argov1alpha1.Application{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "appA",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						ProgressiveSyncSyncedAtStageKey: stage,
-					}},
-				Status: argov1alpha1.ApplicationStatus{
-					Sync: argov1alpha1.SyncStatus{
-						Status: argov1alpha1.SyncStatusCodeSynced},
-					Health: argov1alpha1.HealthStatus{
-						Status: health.HealthStatusProgressing,
-					},
-				}},
-			},
-			stage:    stage,
-			expected: nil,
-		},
-		{
-			name: "Correct annotation, value and health status. Incorrect sync status",
+			name: "Correct annotation, value but incorrect sync status",
 			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -187,10 +157,7 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
 						Status: argov1alpha1.SyncStatusCodeOutOfSync},
-					Health: argov1alpha1.HealthStatus{
-						Status: health.HealthStatusHealthy,
-					}},
-			},
+				}},
 			},
 			stage:    stage,
 			expected: nil,
@@ -205,16 +172,13 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
 						Status: argov1alpha1.SyncStatusCodeSynced},
-					Health: argov1alpha1.HealthStatus{
-						Status: health.HealthStatusHealthy,
-					}},
-			},
+				}},
 			},
 			stage:    stage,
 			expected: nil,
 		},
 		{
-			name: "2 Applications: 1 with correct annotation, stage, sync status, health status. 1 with incorrect data",
+			name: "2 Applications: 1 with correct annotation, stage, sync status and 1 with incorrect data",
 			apps: []argov1alpha1.Application{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "appA",
@@ -225,9 +189,6 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
 						Status: argov1alpha1.SyncStatusCodeSynced},
-					Health: argov1alpha1.HealthStatus{
-						Status: health.HealthStatusHealthy,
-					},
 				},
 			},
 				{
@@ -238,9 +199,6 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
 							Status: argov1alpha1.SyncStatusCodeOutOfSync,
-						},
-						Health: argov1alpha1.HealthStatus{
-							Status: health.HealthStatusProgressing,
 						},
 					},
 				}},
@@ -255,9 +213,6 @@ func TestGetSyncedAppsByStage(t *testing.T) {
 				Status: argov1alpha1.ApplicationStatus{
 					Sync: argov1alpha1.SyncStatus{
 						Status: argov1alpha1.SyncStatusCodeSynced},
-					Health: argov1alpha1.HealthStatus{
-						Status: health.HealthStatusHealthy,
-					},
 				},
 			}},
 		},

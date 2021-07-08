@@ -44,6 +44,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const RequeueDelayOnError = time.Minute * 5
+
 // ProgressiveSyncReconciler reconciles a ProgressiveSync object
 type ProgressiveSyncReconciler struct {
 	client.Client
@@ -62,20 +64,21 @@ type ProgressiveSyncReconciler struct {
 // Reconcile performs the reconciling for a single named ProgressiveSync object
 func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("progressivesync", req.NamespacedName)
+	log.Info("reconciliation loop started")
 
 	// Get the ProgressiveSync object
-	var pr syncv1alpha1.ProgressiveSync
-	if err := r.Get(ctx, req.NamespacedName, &pr); err != nil {
+	var ps syncv1alpha1.ProgressiveSync
+	if err := r.Get(ctx, req.NamespacedName, &ps); err != nil {
 		log.Error(err, "unable to fetch progressivesync object")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	log = r.Log.WithValues("applicationset", pr.Spec.SourceRef.Name)
+	log = log.WithValues("applicationset", ps.Spec.SourceRef.Name)
 
 	// If the object is being deleted, remove finalizer and don't requeue it
-	if !pr.ObjectMeta.DeletionTimestamp.IsZero() {
-		controllerutil.RemoveFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer)
-		if err := r.Update(ctx, &pr); err != nil {
+	if !ps.ObjectMeta.DeletionTimestamp.IsZero() {
+		controllerutil.RemoveFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer)
+		if err := r.Update(ctx, &ps); err != nil {
 			log.Error(err, "failed to update object when removing finalizer")
 			return ctrl.Result{}, err
 		}
@@ -84,9 +87,9 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Add finalizer if it doesn't exist
-	if !controllerutil.ContainsFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer) {
-		controllerutil.AddFinalizer(&pr, syncv1alpha1.ProgressiveSyncFinalizer)
-		if err := r.Update(ctx, &pr); err != nil {
+	if !controllerutil.ContainsFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer) {
+		controllerutil.AddFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer)
+		if err := r.Update(ctx, &ps); err != nil {
 			log.Error(err, "failed to update object when adding finalizer")
 			return ctrl.Result{}, err
 		}
@@ -94,25 +97,25 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	for _, stage := range pr.Spec.Stages {
-		log = r.Log.WithValues("stage", stage.Name)
+	for _, stage := range ps.Spec.Stages {
+		log = log.WithValues("stage", stage.Name)
 
-		pr, result, err := r.reconcileStage(ctx, pr, stage)
-		if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
+		ps, result, reconcileErr := r.reconcileStage(ctx, ps, stage)
+		if err := r.updateStatusWithRetry(ctx, &ps); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		if result.Requeue {
+		if result.Requeue || reconcileErr != nil {
 			log.Info("requeuing stage")
-			return result, err
+			return result, reconcileErr
 		}
 
 	}
 
-	// Progressive rollout completed
-	completed := pr.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-	apimeta.SetStatusCondition(pr.GetStatusConditions(), completed)
-	if err := r.updateStatusWithRetry(ctx, &pr); err != nil {
+	// Progressive sync completed
+	completed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+	apimeta.SetStatusCondition(ps.GetStatusConditions(), completed)
+	if err := r.updateStatusWithRetry(ctx, &ps); err != nil {
 		log.Error(err, "failed to update object status")
 		return ctrl.Result{}, err
 	}
@@ -133,11 +136,11 @@ func (r *ProgressiveSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// requestsForApplicationChange returns a reconcile request for a Progressive Rollout object when an Application change
+// requestsForApplicationChange returns a reconcile request when an Application changes
 func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object) []reconcile.Request {
 
 	/*
-		We trigger a Progressive Rollout reconciliation loop on an Application event if:
+		We trigger a reconciliation loop on an Application event if:
 		- the Application owner is referenced by a ProgressiveSync object
 	*/
 
@@ -169,11 +172,11 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 	return requests
 }
 
-// requestsForSecretChange returns a reconcile request for a Progressive Rollout object when a Secret change
+// requestsForSecretChange returns a reconcile request when a Secret changes
 func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
 
 	/*
-		We trigger a Progressive Rollout reconciliation loop on a Secret event if:
+		We trigger a reconciliation loop on a Secret event if:
 		- the Secret is an ArgoCD cluster, AND
 		- there is an Application targeting that secret/cluster, AND
 		- that Application owner is referenced by a ProgressiveSync object
@@ -211,14 +214,15 @@ func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []r
 		for _, app := range appList.Items {
 			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.Owns(app.GetOwnerReferences()) {
 				/*
-					Consider the following scenario:
-					- 2 Applications
-					- owned by the same ApplicationSet
-					- referenced by the same Progressive Rollout
-					- targeting the same cluster
+						Consider the following scenario:
+						- two Applications
+						- owned by the same ApplicationSet
+						- referenced by the same ProgressiveSync
+						- targeting the same cluster
 
-					In this scenario, we would trigger the reconciliation loop twice.
-					To avoid that, we use a map to store for which Progressive Rollout objects we already trigger the reconciliation loop.
+						In this scenario, we would trigger the reconciliation loop twice.
+						To avoid that, we use a map to store for which ProgressiveSync object
+					    we already triggered the reconciliation loop.
 				*/
 
 				namespacedName := types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}
@@ -278,20 +282,6 @@ func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context
 	return apps, nil
 }
 
-// removeAnnotationFromApps remove an annotation from the given Applications
-func (r *ProgressiveSyncReconciler) removeAnnotationFromApps(ctx context.Context, apps []argov1alpha1.Application, annotation string) error {
-	for _, app := range apps {
-		if _, ok := app.Annotations[annotation]; ok {
-			delete(app.Annotations, annotation)
-			if err := r.Client.Update(ctx, &app); err != nil {
-				r.Log.Error(err, "failed to update Application", "app", app.Name)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // updateStageStatus updates the target stage given a stage name, message and phase
 func (r *ProgressiveSyncReconciler) updateStageStatus(ctx context.Context, name, message string, phase syncv1alpha1.StageStatusPhase, pr *syncv1alpha1.ProgressiveSync) {
 	stageStatus := syncv1alpha1.NewStageStatus(
@@ -334,26 +324,32 @@ func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, p
 
 // setSyncedAtAnnotation sets the SyncedAt annotation for the currently progressing stage of the app
 func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, app argov1alpha1.Application, stageName string) error {
+
+	log := r.Log.WithValues("stage", stageName)
+
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		key := client.ObjectKeyFromObject(&app)
 		latest := argov1alpha1.Application{}
+
 		if err := r.Client.Get(ctx, key, &latest); err != nil {
+			log.Info("failed to get app when adding syncedAt annotation")
 			return err
 		}
-		val, ok := app.Annotations[utils.ProgressiveSyncSyncedAtStageKey]
-		// Required due to the use of `omitempty` in serialisation.
-		// `omitempty` converts the empty map into nil.
-		if !ok {
-			r.Log.Info("Initialising empty map for Annotations")
-			latest.Annotations = make(map[string]string)
-		}
-		if val != stageName {
-			r.Log.Info("Setting the annotation for the currently progressing stage")
-			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
-			if err := r.Client.Update(ctx, &latest); err != nil {
-				return err
+
+		log = log.WithValues("app", fmt.Sprintf("%s/%s", latest.Namespace, latest.Name))
+
+		if latest.Annotations == nil {
+			latest.Annotations = map[string]string{
+				utils.ProgressiveSyncSyncedAtStageKey: stageName,
 			}
+		} else {
+			latest.Annotations[utils.ProgressiveSyncSyncedAtStageKey] = stageName
 		}
+
+		if err := r.Client.Update(ctx, &latest); err != nil {
+			return err
+		}
+		log.Info("app annotated")
 		return nil
 	})
 	return retryErr
@@ -361,7 +357,7 @@ func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, a
 
 // reconcileStage reconcile a ProgressiveSyncStage
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {
-	log := r.Log.WithValues("stage", stage.Name)
+	log := r.Log.WithValues("progressivesync", fmt.Sprintf("%s/%s", ps.Namespace, ps.Name), "applicationset", ps.Spec.SourceRef.Name, "stage", stage.Name)
 
 	// Get the clusters to update
 	clusters, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
@@ -375,9 +371,9 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
-		return ps, ctrl.Result{}, err
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: RequeueDelayOnError}, err
 	}
-	log.Info("clusters selected", "clusters", utils.GetClustersName(clusters.Items))
+	log.Info("fetched clusters using label selector", "clusters", utils.GetClustersName(clusters.Items))
 
 	// Get only the Applications owned by the ProgressiveSync targeting the selected clusters
 	apps, err := r.getOwnedAppsFromClusters(ctx, clusters, &ps)
@@ -388,30 +384,15 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
 		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-		return ps, ctrl.Result{}, err
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: RequeueDelayOnError}, err
 	}
-	log.Info("apps selected", "apps", utils.GetAppsName(apps))
-
-	// Remove the annotation from the OutOfSync Applications before passing them to the Scheduler
-	// This action allows the Scheduler to keep track at which stage an Application has been synced.
-	outOfSyncApps := utils.GetAppsBySyncStatusCode(apps, argov1alpha1.SyncStatusCodeOutOfSync)
-	if err := r.removeAnnotationFromApps(ctx, outOfSyncApps, utils.ProgressiveSyncSyncedAtStageKey); err != nil {
-		message := "failed to remove out-of-sync annotation from apps"
-		log.Error(err, message)
-
-		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseFailed, &ps)
-		// Set ProgressiveSync status
-		failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
-		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-
-		return ps, ctrl.Result{}, err
-	}
+	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
 
 	// Get the Applications to update
-	scheduledApps := scheduler.Scheduler(apps, stage)
+	scheduledApps := scheduler.Scheduler(log, apps, stage)
 
 	for _, s := range scheduledApps {
-		log.Info("syncing app", "app", s)
+		log.Info("syncing app", "app", fmt.Sprintf("%s/%s", s.Namespace, s.Name), "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
 
 		_, err := r.syncApp(ctx, s.Name)
 
@@ -424,20 +405,22 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 				// Set ProgressiveSync status
 				failed := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, message)
 				apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
-				return ps, ctrl.Result{}, err
+				return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 			}
+			log.Info("failed to sync app because it is already syncing")
 		}
 
 		err = r.setSyncedAtAnnotation(ctx, s, stage.Name)
 		if err != nil {
-			message := "failed to add syncedAt annotation"
+			message := "failed at setSyncedAtAnnotation"
 			log.Error(err, message, "message", err.Error())
 
-			return ps, ctrl.Result{}, err
+			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 		}
+
 	}
 
-	if scheduler.IsStageFailed(apps) {
+	if scheduler.IsStageFailed(apps, stage) {
 		message := fmt.Sprintf("%s stage failed", stage.Name)
 		log.Info(message)
 
@@ -447,13 +430,16 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		apimeta.SetStatusCondition(ps.GetStatusConditions(), failed)
 
 		log.Info("sync failed")
-		// We can set Requeue: true once we have a timeout in place
-		return ps, ctrl.Result{}, nil
+		return ps, ctrl.Result{Requeue: true, RequeueAfter: RequeueDelayOnError}, nil
 	}
 
-	if scheduler.IsStageInProgress(apps) {
+	if scheduler.IsStageInProgress(apps, stage) {
 		message := fmt.Sprintf("%s stage in progress", stage.Name)
 		log.Info(message)
+
+		for _, app := range apps {
+			log.Info("application details", "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name), "annotations", app.GetAnnotations(), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
+		}
 
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseProgressing, &ps)
 
@@ -464,7 +450,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return ps, ctrl.Result{Requeue: true}, nil
 	}
 
-	if scheduler.IsStageComplete(apps) {
+	if scheduler.IsStageComplete(apps, stage) {
 		message := fmt.Sprintf("%s stage completed", stage.Name)
 		log.Info(message)
 
@@ -477,5 +463,5 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	}
 
-	return ps, ctrl.Result{}, nil
+	return ps, ctrl.Result{Requeue: true}, nil
 }

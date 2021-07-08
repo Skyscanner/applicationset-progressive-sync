@@ -39,6 +39,22 @@ func GetAppsBySyncStatusCode(apps []argov1alpha1.Application, code argov1alpha1.
 	return result
 }
 
+// GetAppsByAnnotation returns the Applications having the specified annotation
+func GetAppsByAnnotation(apps []argov1alpha1.Application, annotation string, stageName string) []argov1alpha1.Application {
+	var result []argov1alpha1.Application
+
+	for _, app := range apps {
+
+		value, ok := app.Annotations[annotation]
+
+		if ok && value == stageName {
+			result = append(result, app)
+		}
+	}
+
+	return result
+}
+
 // GetAppsByHealthStatusCode returns the Applications matching the specified health status code
 func GetAppsByHealthStatusCode(apps []argov1alpha1.Application, code health.HealthStatusCode) []argov1alpha1.Application {
 	var result []argov1alpha1.Application
@@ -58,7 +74,7 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 
 	for _, app := range apps {
 		val, ok := app.Annotations[ProgressiveSyncSyncedAtStageKey]
-		if ok && val == name && app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced && app.Status.Health.Status == health.HealthStatusHealthy {
+		if ok && val == name && app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced {
 			result = append(result, app)
 		}
 	}
@@ -66,7 +82,7 @@ func GetSyncedAppsByStage(apps []argov1alpha1.Application, name string) []argov1
 	return result
 }
 
-// GetClustersName returns a string containing a comma-separated list of names of the given apps
+// GetAppsName returns a string containing a comma-separated list of names of the given apps
 func GetAppsName(apps []argov1alpha1.Application) string {
 	var names []string
 	for _, a := range apps {

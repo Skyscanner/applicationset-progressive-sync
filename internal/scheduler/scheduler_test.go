@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"github.com/go-logr/logr"
 	"testing"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
@@ -618,7 +619,6 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name: "Applications: outOfSync 2, syncedInCurrentStage 0, progressing 0, syncedInPreviousStage 1 | Stage: maxTargets 2, maxParallel 2 | Expected: scheduled 2",
 			apps: []argov1alpha1.Application{
@@ -688,7 +688,6 @@ func TestScheduler(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name: "Applications: outOfSync 0, syncedInCurrentStage 0, progressing 0, | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 0",
 			apps: nil,
@@ -700,12 +699,152 @@ func TestScheduler(t *testing.T) {
 			},
 			expected: nil,
 		},
+		{
+			name: "Applications: outOfSync 4, syncedInCurrentStage 2, progressing 1, syncedInPreviousStage 2 | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 2",
+			apps: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "app-one",
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveSyncSyncedAtStageKey: StageName},
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "app-two",
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveSyncSyncedAtStageKey: StageName},
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusProgressing,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-six",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "app-seven",
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveSyncSyncedAtStageKey: "previous-stage"},
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "app-eight",
+						Namespace:   SchedulerTestNamespace,
+						Annotations: map[string]string{utils.ProgressiveSyncSyncedAtStageKey: "previous-stage"},
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeSynced,
+						},
+					},
+				},
+			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("3"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
+			expected: []argov1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-five",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-three",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusProgressing,
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
+		log := logr.Discard()
 		t.Run(testCase.name, func(t *testing.T) {
 			utils.SortAppsByName(testCase.apps)
-			got := Scheduler(testCase.apps, testCase.stage)
+			got := Scheduler(log, testCase.apps, testCase.stage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -716,6 +855,7 @@ func TestIsStageFailed(t *testing.T) {
 	testCases := []struct {
 		name     string
 		apps     []argov1alpha1.Application
+		stage    syncv1alpha1.ProgressiveSyncStage
 		expected bool
 	}{
 		{
@@ -795,6 +935,9 @@ func TestIsStageFailed(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-six",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -805,6 +948,12 @@ func TestIsStageFailed(t *testing.T) {
 						},
 					},
 				},
+			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: true,
 		},
@@ -882,13 +1031,30 @@ func TestIsStageFailed(t *testing.T) {
 					},
 				},
 			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
+			expected: false,
+		},
+		{
+			name: "stage not failed when apps is nil",
+			apps: nil,
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
 			expected: false,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageFailed(testCase.apps)
+			got := IsStageFailed(testCase.apps, testCase.stage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -899,6 +1065,7 @@ func TestIsStageInProgress(t *testing.T) {
 	testCases := []struct {
 		name     string
 		apps     []argov1alpha1.Application
+		stage    syncv1alpha1.ProgressiveSyncStage
 		expected bool
 	}{
 		{
@@ -989,6 +1156,12 @@ func TestIsStageInProgress(t *testing.T) {
 					},
 				},
 			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
 			expected: true,
 		},
 		{
@@ -998,6 +1171,9 @@ func TestIsStageInProgress(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -1012,6 +1188,9 @@ func TestIsStageInProgress(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -1026,6 +1205,9 @@ func TestIsStageInProgress(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-three",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -1040,6 +1222,9 @@ func TestIsStageInProgress(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-four",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -1054,6 +1239,9 @@ func TestIsStageInProgress(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-five",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -1065,13 +1253,30 @@ func TestIsStageInProgress(t *testing.T) {
 					},
 				},
 			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
+			expected: false,
+		},
+		{
+			name: "stage not in progress when apps is nil",
+			apps: nil,
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
 			expected: false,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageInProgress(testCase.apps)
+			got := IsStageInProgress(testCase.apps, testCase.stage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
@@ -1082,6 +1287,7 @@ func TestIsStageComplete(t *testing.T) {
 	testCases := []struct {
 		name     string
 		apps     []argov1alpha1.Application
+		stage    syncv1alpha1.ProgressiveSyncStage
 		expected bool
 	}{
 		{
@@ -1091,6 +1297,9 @@ func TestIsStageComplete(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-one",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -1105,6 +1314,9 @@ func TestIsStageComplete(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "app-two",
 						Namespace: SchedulerTestNamespace,
+						Annotations: map[string]string{
+							utils.ProgressiveSyncSyncedAtStageKey: StageName,
+						},
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Health: argov1alpha1.HealthStatus{
@@ -1125,10 +1337,16 @@ func TestIsStageComplete(t *testing.T) {
 							Status: health.HealthStatusHealthy,
 						},
 						Sync: argov1alpha1.SyncStatus{
-							Status: argov1alpha1.SyncStatusCodeSynced,
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
 						},
 					},
 				},
+			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("2"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			expected: true,
 		},
@@ -1192,13 +1410,30 @@ func TestIsStageComplete(t *testing.T) {
 					},
 				},
 			},
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
 			expected: false,
+		},
+		{
+			name: "stage is completed when apps is nil",
+			apps: nil,
+			stage: syncv1alpha1.ProgressiveSyncStage{
+				Name:        StageName,
+				MaxParallel: intstr.Parse("2"),
+				MaxTargets:  intstr.Parse("3"),
+				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
+			},
+			expected: true,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsStageComplete(testCase.apps)
+			got := IsStageComplete(testCase.apps, testCase.stage)
 			g := NewWithT(t)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
