@@ -21,6 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -32,7 +34,8 @@ const (
 
 var (
 	appSetAPIRef = utils.AppSetAPIGroup
-	ctx          = context.Background()
+	ctx          context.Context
+	cancel       context.CancelFunc
 )
 
 // Target is an helper structure that holds the information to create clusters and applications
@@ -82,10 +85,34 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	)
 
 	BeforeEach(func() {
+		ctx, cancel = context.WithCancel(context.Background())
+
 		namespace, ns = createRandomNamespace()
+
+		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme:    scheme.Scheme,
+			Namespace: namespace,
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		mockAcdClient := mocks.ArgoCDAppClientStub{}
+		reconciler = &ProgressiveSyncReconciler{
+			Client:          k8sManager.GetClient(),
+			Log:             ctrl.Log.WithName("controllers").WithName("progressivesync"),
+			ArgoCDAppClient: &mockAcdClient,
+		}
+		err = reconciler.SetupWithManager(k8sManager)
+		Expect(err).ToNot(HaveOccurred())
+
+		go func() {
+			defer GinkgoRecover()
+			err = k8sManager.Start(ctx)
+			Expect(err).ToNot(HaveOccurred())
+		}()
 	})
 
 	AfterEach(func() {
+		defer cancel()
 		Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 	})
 
