@@ -97,9 +97,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 		mockAcdClient := mocks.ArgoCDAppClientStub{}
 		reconciler = &ProgressiveSyncReconciler{
-			Client:          k8sManager.GetClient(),
-			Log:             ctrl.Log.WithName("controllers").WithName("progressivesync"),
-			ArgoCDAppClient: &mockAcdClient,
+			Client:             k8sManager.GetClient(),
+			Log:                ctrl.Log.WithName("controllers").WithName("progressivesync"),
+			ArgoCDAppClient:    &mockAcdClient,
+			SyncedAtStage:      make(map[string]string),
+			SyncedAppsPerStage: make(map[string]int),
 		}
 		err = reconciler.SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())

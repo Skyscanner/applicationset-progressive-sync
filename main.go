@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	"os"
+
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -64,7 +65,6 @@ func main() {
 		Scheme:             scheme,
 		Namespace:          namespace,
 		MetricsBindAddress: metricsAddr,
-		Namespace:          "argocd",
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "b84175a0.argoproj.skyscanner.net",
