@@ -18,9 +18,8 @@ package main
 
 import (
 	"flag"
-	"os"
-
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -48,9 +47,10 @@ func init() {
 }
 
 func main() {
-	var metricsAddr string
+	var metricsAddr, namespace string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&namespace, "namespace", "argocd", "The controller namespace")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -62,6 +62,7 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
+		Namespace:          namespace,
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
