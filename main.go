@@ -18,10 +18,8 @@ package main
 
 import (
 	"flag"
-	"os"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -65,7 +63,6 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		Namespace:          namespace,
-		NewCache:           cache.MultiNamespacedCacheBuilder([]string{namespace}),
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,

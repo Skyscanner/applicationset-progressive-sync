@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"testing"
 	"time"
 
@@ -93,7 +92,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 			Scheme:    scheme.Scheme,
 			Namespace: namespace,
-			NewCache:  cache.MultiNamespacedCacheBuilder([]string{namespace}),
 		})
 		Expect(err).ToNot(HaveOccurred())
 
