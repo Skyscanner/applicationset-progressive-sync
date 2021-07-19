@@ -81,12 +81,11 @@ func main() {
 	}
 
 	if err = (&controllers.ProgressiveSyncReconciler{
-		Client:             mgr.GetClient(),
-		Log:                ctrl.Log.WithName("controllers").WithName("ProgressiveSync"),
-		Scheme:             mgr.GetScheme(),
-		ArgoCDAppClient:    utils.GetArgoCDAppClient(c),
-		SyncedAtStage:      make(map[string]string),
-		SyncedAppsPerStage: make(map[string]int),
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("controllers").WithName("ProgressiveSync"),
+		Scheme:          mgr.GetScheme(),
+		ArgoCDAppClient: utils.GetArgoCDAppClient(c),
+		StateManager:    utils.NewProgressiveSyncManager(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveSync")
 		os.Exit(1)

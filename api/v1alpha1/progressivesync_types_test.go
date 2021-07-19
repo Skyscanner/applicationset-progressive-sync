@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,8 +22,8 @@ func TestOwns(t *testing.T) {
 			Kind:       "fakeKind",
 			Name:       "fakeName",
 		}, {
-			APIVersion: utils.AppSetAPIGroup,
-			Kind:       utils.AppSetKind,
+			APIVersion: consts.AppSetAPIGroup,
+			Kind:       consts.AppSetKind,
 			Name:       "owner-app-set",
 		}},
 		expected: true,
@@ -37,13 +37,13 @@ func TestOwns(t *testing.T) {
 		expected: false,
 	}}
 
-	ref := utils.AppSetAPIGroup
+	ref := consts.AppSetAPIGroup
 	pr := ProgressiveSync{
 		ObjectMeta: metav1.ObjectMeta{Name: "pr", Namespace: "namespace"},
 		Spec: ProgressiveSyncSpec{
 			SourceRef: corev1.TypedLocalObjectReference{
 				APIGroup: &ref,
-				Kind:     utils.AppSetKind,
+				Kind:     consts.AppSetKind,
 				Name:     "owner-app-set",
 			},
 			Stages: nil,
@@ -142,13 +142,13 @@ func TestSetStageStatus(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			ref := utils.AppSetAPIGroup
+			ref := consts.AppSetAPIGroup
 			pr := ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: "pr", Namespace: "namespace"},
 				Spec: ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &ref,
-						Kind:     utils.AppSetKind,
+						Kind:     consts.AppSetKind,
 						Name:     "owner-app-set",
 					},
 					Stages: nil,

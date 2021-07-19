@@ -10,7 +10,7 @@ import (
 )
 
 // Scheduler returns a list of apps to sync for a given stage
-func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, syncedAtStage map[string]string, psName string) []argov1alpha1.Application {
+func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) []argov1alpha1.Application {
 
 	/*
 		The Scheduler takes:
@@ -40,7 +40,7 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 	log.Info("fetched out-of-sync apps", "apps", utils.GetAppsName(outOfSyncApps))
 
 	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
-	syncedInCurrentStage := utils.GetSyncedAppsByStage(healthyApps, stage.Name, syncedAtStage, psName)
+	syncedInCurrentStage := utils.GetSyncedAppsByStage(healthyApps, stage, pss)
 	log.Info("fetched synced-in-current-stage apps", "apps", utils.GetAppsName(syncedInCurrentStage))
 
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
@@ -106,7 +106,7 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 }
 
 // IsStageFailed returns true if at least one app is failed in the given stage
-func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, syncedAtStage map[string]string, psName string) bool {
+func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) bool {
 	// A stage is failed if any of its applications has:
 	// - its Health Status Code == Degraded
 	// - its Sync Status Code == Synced
@@ -116,12 +116,12 @@ func IsStageFailed(apps []argov1alpha1.Application, stage syncv1alpha1.Progressi
 	}
 
 	degradedApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusDegraded)
-	stageApps := utils.GetSyncedAppsByStage(degradedApps, stage.Name, syncedAtStage, psName)
+	stageApps := utils.GetSyncedAppsByStage(degradedApps, stage, pss)
 	return len(stageApps) > 0
 }
 
 // IsStageInProgress returns true if at least one app is is in progress
-func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, syncedAtStage map[string]string, psName string) bool {
+func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) bool {
 	// An stage is in progress if:
 	// - there is at least one app with Health Status Code == Progressing
 	// - the number of apps synced so far is less than the apps to sync
@@ -131,28 +131,15 @@ func IsStageInProgress(apps []argov1alpha1.Application, stage syncv1alpha1.Progr
 	}
 
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
-	progressingAnnotatedApps := utils.GetAppsByAnnotation(progressingApps, utils.ProgressiveSyncSyncedAtStageKey, stage.Name, syncedAtStage, psName)
+	progressingAnnotatedApps := utils.GetSyncedAppsByStage(progressingApps, stage, pss)
 
-	stageApps := utils.GetSyncedAppsByStage(apps, stage.Name, syncedAtStage, psName)
+	stageApps := utils.GetSyncedAppsByStage(apps, stage, pss)
 
-	unprocessedApps := make([]argov1alpha1.Application, 0)
-	for _, app := range apps {
-		appKeyValue := psName + "/" + app.Name
-		if _, ok := syncedAtStage[appKeyValue]; !ok {
-			unprocessedApps = append(unprocessedApps, app)
-		}
-	}
-
-	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(unprocessedApps), false)
-	if err != nil {
-		return false
-	}
-
-	return len(progressingAnnotatedApps) > 0 || len(stageApps) < maxTargets
+	return len(progressingAnnotatedApps) > 0 || len(stageApps) < pss.GetMaxTargets(stage)
 }
 
 // IsStageComplete returns true if all applications are Synced and Healthy
-func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, syncedAtStage map[string]string, psName string) bool {
+func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) bool {
 	// An app is complete if:
 	// - its Health Status Code is Healthy
 	// - its Sync Status Code is Synced
@@ -162,25 +149,9 @@ func IsStageComplete(apps []argov1alpha1.Application, stage syncv1alpha1.Progres
 	}
 
 	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
-	stageApps := utils.GetSyncedAppsByStage(healthyApps, stage.Name, syncedAtStage, psName)
+	stageApps := utils.GetSyncedAppsByStage(healthyApps, stage, pss)
 
-	unprocessedApps := make([]argov1alpha1.Application, 0)
-	for _, app := range apps {
-		appKeyValue := psName + "/" + app.Name
-		if _, ok := syncedAtStage[appKeyValue]; !ok {
-			unprocessedApps = append(unprocessedApps, app)
-		}
-	}
+	appsToCompleteStage := pss.GetMaxTargets(stage)
 
-	maxTargets, err := intstr.GetScaledValueFromIntOrPercent(&stage.MaxTargets, len(unprocessedApps), false)
-	if err != nil {
-		return false
-	}
-
-	appsToCompleteStage := len(apps)
-	if maxTargets < appsToCompleteStage {
-		appsToCompleteStage = maxTargets
-	}
-
-	return len(stageApps) == appsToCompleteStage || maxTargets == 0
+	return len(stageApps) == appsToCompleteStage || appsToCompleteStage == 0
 }
