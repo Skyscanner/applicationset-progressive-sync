@@ -329,14 +329,14 @@ func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, p
 	return retryErr
 }
 
-// setSyncedAtAnnotation sets the SyncedAt annotation for the currently progressing stage of the app
-func (r *ProgressiveSyncReconciler) setSyncedAtAnnotation(ctx context.Context, app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) error {
+// markAppAsSynced marks the app as synced in the specified stage
+func (r *ProgressiveSyncReconciler) markAppAsSynced(ctx context.Context, app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) error {
 
 	log := r.Log.WithValues("stage", stage.Name, "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name))
 
 	pss.MarkAppAsSynced(app, stage)
 
-	log.Info("app annotated")
+	log.Info("app marked as synced")
 
 	return nil
 }
@@ -374,10 +374,10 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	}
 	log.Info("fetched apps targeting selected clusters", "apps", utils.GetAppsName(apps))
 
+	pss.RefreshState(apps, stage)
+
 	// Get the Applications to update
 	scheduledApps := scheduler.Scheduler(log, apps, stage, pss)
-
-	pss.RefreshState(apps, stage)
 
 	for _, s := range scheduledApps {
 		log.Info("syncing app", "app", fmt.Sprintf("%s/%s", s.Namespace, s.Name), "sync.status", s.Status.Sync.Status, "health.status", s.Status.Health.Status)
@@ -397,9 +397,9 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			}
 			log.Info("failed to sync app because it is already syncing")
 		}
-		err := r.setSyncedAtAnnotation(ctx, s, stage, pss)
+		err := r.markAppAsSynced(ctx, s, stage, pss)
 		if err != nil {
-			message := "failed at setSyncedAtAnnotation"
+			message := "failed at markAppAsSynced"
 			log.Error(err, message, "message", err.Error())
 
 			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
@@ -425,7 +425,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		log.Info(message)
 
 		for _, app := range apps {
-			log.Info("application details", "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name), "annotations", app.GetAnnotations(), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
+			log.Info("application details", "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
 		}
 
 		r.updateStageStatus(ctx, stage.Name, message, syncv1alpha1.PhaseProgressing, &ps)
