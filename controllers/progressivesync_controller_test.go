@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 360
+	timeout  = time.Second * 10
 	interval = time.Millisecond * 10
 )
 
@@ -951,6 +951,319 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			expected := syncedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&syncedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
+		})
+
+		FIt("should reconcile a multi-stage progressive sync after controller restart", func() {
+			testPrefix := "reset-multi"
+			appSet := fmt.Sprintf("%s-appset", testPrefix)
+
+			By("creating five ArgoCD clusters")
+			targets := []Target{
+				{
+					Name:           "cells-1-eu-west-1a-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1a",
+				},
+				{
+					Name:           "cells-1-eu-west-1b-2",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1b-2",
+				},
+				{
+					Name:           "cells-1-eu-west-1c-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1c-1",
+				},
+				{
+					Name:           "cellsdev-1-eu-west-1a-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1a-1",
+				},
+				{
+					Name:           "cellsdev-1-eu-west-1b-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1b-1",
+				},
+			}
+			clusters, err := createClusters(ctx, targets)
+			Expect(err).To(BeNil())
+			Expect(clusters).To(Not(BeNil()))
+
+			By("creating one application targeting each cluster")
+			apps, err := createApplications(ctx, targets)
+			Expect(apps).To(Not(BeNil()))
+			Expect(err).To(BeNil())
+
+			By("creating a progressive sync")
+			ps := syncv1alpha1.ProgressiveSync{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-ps", testPrefix),
+					Namespace: namespace,
+				},
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetAPIRef,
+						Kind:     consts.AppSetKind,
+						Name:     appSet,
+					},
+					Stages: []syncv1alpha1.ProgressiveSyncStage{{
+						Name:        "one cluster as canary in eu-west-1",
+						MaxParallel: intstr.Parse("1"),
+						MaxTargets:  intstr.Parse("1"),
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+									"region": "eu-west-1",
+								}},
+							}},
+					}, {
+						Name:        "one cluster as canary in every other region",
+						MaxParallel: intstr.Parse("3"),
+						MaxTargets:  intstr.Parse("3"),
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      "region",
+										Operator: metav1.LabelSelectorOpNotIn,
+										Values:   []string{"eu-west-1"},
+									}},
+								},
+							}},
+					}, {
+						Name:        "rollout to remaining clusters",
+						MaxParallel: intstr.Parse("1"),
+						MaxTargets:  intstr.Parse("4"),
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{},
+							}},
+					}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
+
+			// Make sure the finalizer is added
+			createdPS := syncv1alpha1.ProgressiveSync{}
+			Eventually(func() int {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &createdPS)
+				return len(createdPS.ObjectMeta.Finalizers)
+			}).Should(Equal(1))
+			Expect(createdPS.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
+
+			psKey := client.ObjectKey{
+				Namespace: namespace,
+				Name:      fmt.Sprintf("%s-ps", testPrefix),
+			}
+
+			// We need to progress cells-1-eu-west-1a-1 because the selector returns
+			// a sorted-by-name list, so cells-1-eu-west-1a-1 will be the first one
+			By("progressing cells-1-eu-west-1a-1")
+			// Progress account1-eu-west-1a-1
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "cells-1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
+			// Make sure the stage is progressing
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: "one cluster as canary in eu-west-1 stage in progress",
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
+
+			By("completing cells-1-eu-west-1a-1 sync")
+			// Completed cells-1-eu-west-1a-1
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "cells-1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
+			// Make sure the stage is completed
+			message := "one cluster as canary in eu-west-1 stage completed"
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+			// Make sure the ProgressiveSync status is still progressing because the sync is not completed yet
+			progress := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			// Stage 2 is be empty
+			By("second stage is set straight to completed")
+			// Make sure the previous stage is still completed
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+			// Make sure the current stage is completed
+			message = "one cluster as canary in every other region stage completed"
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+			// Make sure there are only two stages in status.stages
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(2))
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			// The sort-by-name function will return
+			// cells-1-eu-west-1b-2, cells-1-eu-west-1c-1
+			// cellsdev-1-eu-west-1a-1, cellsdev-1-eu-west-1b-1
+			By("progressing 1/4 application of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "cells-1-eu-west-1b-2", namespace)
+			}).Should(Succeed())
+			// Make sure the previous stages are still completed
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in eu-west-1 stage completed",
+			}))
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in every other region stage completed",
+			}))
+			// Make sure the current stage is progressing
+			message = "rollout to remaining clusters stage in progress"
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			progress = ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesProgressingReason, message)
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("completing 1/4 of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "cells-1-eu-west-1b-2", namespace)
+			}).Should(Succeed())
+			// Make sure the current stage is still in progress
+			// because we still have 3 applications from the clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			//ResetController(namespace)
+
+			By("progressing 2/4 of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "cells-1-eu-west-1c-1", namespace)
+			}).Should(Succeed())
+			// Make sure the previous stages are still completed
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in eu-west-1 stage completed",
+			}))
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in every other region stage completed",
+			}))
+			// Make sure the current stage is progressing
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("completing 2/4 of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "cells-1-eu-west-1c-1", namespace)
+			}).Should(Succeed())
+			// Make sure the current stage is still in progress
+			// because we still have 2 applications from the clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("progressing 3/4 of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "cellsdev-1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
+			// Make sure the current stage is progressing
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("completing 3/4 of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "cellsdev-1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
+			// Make sure the current stage is still in progress
+			// because we still have 1 application from the clusters to sync
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			// Make sure the ProgressiveSync is still in progress
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("progressing 4/4 of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "cellsdev-1-eu-west-1b-1", namespace)
+			}).Should(Succeed())
+			// Make sure the current stage is progressing
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseProgressing,
+				Message: message,
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+			// Make sure the ProgressiveSync status is progressing because the sync is not completed yet
+			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
+
+			By("completing 4/4 of the third stage applications")
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "cellsdev-1-eu-west-1b-1", namespace)
+			}).Should(Succeed())
+			// Make sure the current stage is completed
+			message = "rollout to remaining clusters stage completed"
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+			// Make sure the ProgressiveSync is completed
+			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 		})
 	})
 
