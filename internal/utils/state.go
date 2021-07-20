@@ -77,19 +77,16 @@ func (s *InMemorySyncState) MarkAppAsSynced(app argov1alpha1.Application, stage 
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 
-	stageKeyValue := s.Name + "/" + stage.Name
-	appKeyValue := s.Name + "/" + app.Name
+	s.SyncedAtStage[app.Name] = stage.Name
 
-	s.SyncedAtStage[appKeyValue] = stage.Name
-
-	val, ok := s.SyncedAppsPerStage[stageKeyValue]
+	val, ok := s.SyncedAppsPerStage[stage.Name]
 	if !ok {
-		s.SyncedAppsPerStage[stageKeyValue] = 1
+		s.SyncedAppsPerStage[stage.Name] = 1
 	} else {
 		if val+1 > s.MaxTargetsPerStage[stage.Name] {
-			s.SyncedAppsPerStage[stageKeyValue] = s.MaxTargetsPerStage[stage.Name]
+			s.SyncedAppsPerStage[stage.Name] = s.MaxTargetsPerStage[stage.Name]
 		} else {
-			s.SyncedAppsPerStage[stageKeyValue] = val + 1
+			s.SyncedAppsPerStage[stage.Name] = val + 1
 		}
 	}
 
@@ -100,8 +97,7 @@ func (s *InMemorySyncState) getUnmarkedApps(apps []argov1alpha1.Application, sta
 
 	unmarkedApps := make([]argov1alpha1.Application, 0)
 	for _, app := range apps {
-		appKeyValue := s.Name + "/" + app.Name
-		if _, ok := s.SyncedAtStage[appKeyValue]; !ok {
+		if _, ok := s.SyncedAtStage[app.Name]; !ok {
 			unmarkedApps = append(unmarkedApps, app)
 		}
 	}
@@ -115,8 +111,7 @@ func (s *InMemorySyncState) IsAppMarkedInStage(app argov1alpha1.Application, sta
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 
-	appKeyValue := s.Name + "/" + app.Name
-	value, ok := s.SyncedAtStage[appKeyValue]
+	value, ok := s.SyncedAtStage[app.Name]
 
 	if ok && value == stage.Name {
 		return true
@@ -157,22 +152,20 @@ func (s *InMemorySyncState) RefreshState(apps []argov1alpha1.Application, stage 
 
 	healthyApps := GetAppsByHealthStatusCode(unmarkedApps, health.HealthStatusHealthy)
 
-	stageKeyValue := s.Name + "/" + stage.Name
-	_, ok := s.SyncedAppsPerStage[stageKeyValue]
+	_, ok := s.SyncedAppsPerStage[stage.Name]
 	if !ok {
-		s.SyncedAppsPerStage[stageKeyValue] = 0
+		s.SyncedAppsPerStage[stage.Name] = 0
 	}
 
-	appsToMark := s.MaxTargetsPerStage[stage.Name] - s.SyncedAppsPerStage[stageKeyValue]
+	appsToMark := s.MaxTargetsPerStage[stage.Name] - s.SyncedAppsPerStage[stage.Name]
 
 	if len(healthyApps) < appsToMark {
 		appsToMark = len(healthyApps)
 	}
 
 	for i := 0; i < appsToMark; i++ {
-		appKeyValue := s.Name + "/" + healthyApps[i].Name
-		s.SyncedAtStage[appKeyValue] = stage.Name
-		s.SyncedAppsPerStage[stageKeyValue]++
+		s.SyncedAtStage[healthyApps[i].Name] = stage.Name
+		s.SyncedAppsPerStage[stage.Name]++
 	}
 
 }

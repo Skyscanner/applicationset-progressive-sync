@@ -873,7 +873,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 			Expect(clusters).To(Not(BeNil()))
 
-			By("creating one application targeting each cluster")
+			By("creating one healthy and synced application targeting each cluster")
 			apps, err := createSyncedAndHealthyApplications(ctx, targets)
 			Expect(err).To(BeNil())
 			Expect(apps).To(Not(BeNil()))
