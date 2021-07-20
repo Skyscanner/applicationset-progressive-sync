@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 10
+	timeout  = time.Second * 360
 	interval = time.Millisecond * 10
 )
 
@@ -953,7 +953,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 		})
 
-		FIt("should reconcile a multi-stage progressive sync after controller restart", func() {
+		It("should reconcile a multi-stage progressive sync after controller restart", func() {
 			testPrefix := "reset-multi"
 			appSet := fmt.Sprintf("%s-appset", testPrefix)
 
@@ -1167,7 +1167,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// Make sure the ProgressiveSync is still in progress
 			ExpectCondition(&ps, progress.Type).Should(HaveStatus(progress.Status, progress.Reason, progress.Message))
 
-			//ResetController(namespace)
+			ResetController()
 
 			By("progressing 2/4 of the third stage applications")
 			Eventually(func() error {
@@ -1515,6 +1515,10 @@ func setAppStatusFailed(ctx context.Context, appName string, namespace string) e
 	}
 
 	return k8sClient.Update(ctx, &app)
+}
+
+func ResetController() {
+	reconciler.StateManager = utils.NewProgressiveSyncManager()
 }
 
 // isMarkedInStage returns true if the application has been marked as synced in the specified stage
