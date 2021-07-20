@@ -127,9 +127,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "owned-app",
-					Namespace:   localNS,
-					Annotations: make(map[string]string),
+					Name:      "owned-app",
+					Namespace: localNS,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -158,9 +157,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			nonOwnedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "non-owned-app",
-					Namespace:   namespace,
-					Annotations: make(map[string]string),
+					Name:      "non-owned-app",
+					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -189,9 +187,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			app := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "matching-app",
-					Namespace:   namespace,
-					Annotations: make(map[string]string),
+					Name:      "matching-app",
+					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -241,9 +238,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			externalApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "non-matching-app",
-					Namespace:   namespace,
-					Annotations: make(map[string]string),
+					Name:      "non-matching-app",
+					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -416,7 +412,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			// Make sure that the first application is marked as synced in the first stage
 			Eventually(func() bool {
-				return hasAnnotation(
+				return isMarkedInStage(
 					ps,
 					appsMap["account1-eu-west-1a-1"],
 					ps.Spec.Stages[0],
@@ -475,9 +471,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotations are added
 			Eventually(func() bool {
-				return hasAnnotation(
+				return isMarkedInStage(
 					ps,
 					appsMap["account2-eu-central-1a-1"],
 					ps.Spec.Stages[1],
@@ -485,7 +480,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(BeTrue())
 
 			Eventually(func() bool {
-				return hasAnnotation(
+				return isMarkedInStage(
 					ps,
 					appsMap["account2-eu-central-1b-1"],
 					ps.Spec.Stages[1],
@@ -493,7 +488,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(BeTrue())
 
 			Eventually(func() bool {
-				return hasAnnotation(
+				return isMarkedInStage(
 					ps,
 					appsMap["account3-ap-southeast-1a-1"],
 					ps.Spec.Stages[1],
@@ -557,9 +552,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
+				return isMarkedInStage(
 					ps,
 					appsMap["account1-eu-west-1a-2"],
 					ps.Spec.Stages[2],
@@ -612,9 +606,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
+				return isMarkedInStage(
 					ps,
 					appsMap["account3-ap-southeast-1c-1"],
 					ps.Spec.Stages[2],
@@ -654,9 +647,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
+				return isMarkedInStage(
 					ps,
 					appsMap["account4-ap-northeast-1a-1"],
 					ps.Spec.Stages[2],
@@ -696,9 +688,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
+				return isMarkedInStage(
 					ps,
 					appsMap["account4-ap-northeast-1a-2"],
 					ps.Spec.Stages[2],
@@ -1069,9 +1060,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application targeting the cluster")
 			singleStageApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        testAppName,
-					Namespace:   namespace,
-					Annotations: make(map[string]string),
+					Name:      testAppName,
+					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -1156,9 +1146,8 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 
 		app := argov1alpha1.Application{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        t.Name,
-				Namespace:   t.Namespace,
-				Annotations: make(map[string]string),
+				Name:      t.Name,
+				Namespace: t.Namespace,
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion: consts.AppSetAPIGroup,
 					Kind:       consts.AppSetKind,
@@ -1201,9 +1190,8 @@ func createSyncedAndHealthyApplications(ctx context.Context, targets []Target) (
 
 		app := argov1alpha1.Application{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        t.Name,
-				Namespace:   t.Namespace,
-				Annotations: make(map[string]string),
+				Name:      t.Name,
+				Namespace: t.Namespace,
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion: consts.AppSetAPIGroup,
 					Kind:       consts.AppSetKind,
@@ -1304,8 +1292,8 @@ func setAppStatusFailed(ctx context.Context, appName string, namespace string) e
 	return k8sClient.Update(ctx, &app)
 }
 
-// hasAnnotation returns true if the application has an annotation with the given key and value
-func hasAnnotation(ps syncv1alpha1.ProgressiveSync, app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
+// isMarkedInStage returns true if the application has been marked as synced in the specified stage
+func isMarkedInStage(ps syncv1alpha1.ProgressiveSync, app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
 
 	pss, _ := reconciler.StateManager.Get(ps.Name)
 	return pss.IsAppMarkedInStage(app, stage)
