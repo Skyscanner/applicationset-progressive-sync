@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 )
 
 // Configuration holds the configuration to connect to the Argo CD server
@@ -36,7 +38,7 @@ func readFromEnvOrFile(paramName string) (string, error) {
 	value, ok := os.LookupEnv(paramName)
 
 	if !ok {
-		value, err = readFromFile(ConfigDirectory + paramName)
+		value, err = readFromFile(consts.ConfigDirectory + paramName)
 		if err != nil {
 			return "", err
 		}
@@ -67,17 +69,17 @@ func ReadConfiguration() (Configuration, error) {
 	var acdAuthToken, acdServerAddr string
 	var acdInsecure bool
 
-	acdAuthToken, err = readFromEnvOrFile(ArgoCDAuthTokenKey)
+	acdAuthToken, err = readFromEnvOrFile(consts.ArgoCDAuthTokenKey)
 	if err != nil {
 		return Configuration{}, err
 	}
 
-	acdServerAddr, err = readFromEnvOrFile(ArgoCDServerAddrKey)
+	acdServerAddr, err = readFromEnvOrFile(consts.ArgoCDServerAddrKey)
 	if err != nil {
 		return Configuration{}, err
 	}
 
-	acdInsecure, err = isFlagSet(ArgoCDInsecureKey)
+	acdInsecure, err = isFlagSet(consts.ArgoCDInsecureKey)
 	if err != nil {
 		return Configuration{}, err
 	}

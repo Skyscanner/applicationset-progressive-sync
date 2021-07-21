@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	"os"
+
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -84,6 +85,7 @@ func main() {
 		Log:             ctrl.Log.WithName("controllers").WithName("ProgressiveSync"),
 		Scheme:          mgr.GetScheme(),
 		ArgoCDAppClient: utils.GetArgoCDAppClient(c),
+		StateManager:    utils.NewProgressiveSyncManager(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveSync")
 		os.Exit(1)

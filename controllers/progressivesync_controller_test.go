@@ -7,6 +7,7 @@ import (
 	"time"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	"github.com/Skyscanner/applicationset-progressive-sync/mocks"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
@@ -33,7 +34,7 @@ const (
 )
 
 var (
-	appSetAPIRef = utils.AppSetAPIGroup
+	appSetAPIRef = consts.AppSetAPIGroup
 	ctx          context.Context
 	cancel       context.CancelFunc
 )
@@ -64,7 +65,7 @@ func createOwnerPR(ns string, owner string) *syncv1alpha1.ProgressiveSync {
 		Spec: syncv1alpha1.ProgressiveSyncSpec{
 			SourceRef: corev1.TypedLocalObjectReference{
 				APIGroup: &appSetAPIRef,
-				Kind:     utils.AppSetKind,
+				Kind:     consts.AppSetKind,
 				Name:     "owner-app-set",
 			},
 			Stages: nil,
@@ -73,7 +74,7 @@ func createOwnerPR(ns string, owner string) *syncv1alpha1.ProgressiveSync {
 
 var _ = Describe("ProgressiveRollout Controller", func() {
 
-	appSetAPIRef = utils.AppSetAPIGroup
+	appSetAPIRef = consts.AppSetAPIGroup
 	// See https://onsi.github.io/gomega#modifying-default-intervals
 	SetDefaultEventuallyTimeout(timeout)
 	SetDefaultEventuallyPollingInterval(interval)
@@ -100,6 +101,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Client:          k8sManager.GetClient(),
 			Log:             ctrl.Log.WithName("controllers").WithName("progressivesync"),
 			ArgoCDAppClient: &mockAcdClient,
+			StateManager:    utils.NewProgressiveSyncManager(),
 		}
 		err = reconciler.SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
@@ -125,12 +127,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "owned-app",
-					Namespace:   localNS,
-					Annotations: make(map[string]string),
+					Name:      "owned-app",
+					Namespace: localNS,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: utils.AppSetAPIGroup,
-						Kind:       utils.AppSetKind,
+						APIVersion: consts.AppSetAPIGroup,
+						Kind:       consts.AppSetKind,
 						Name:       "owner-app-set",
 						UID:        uuid.NewUUID(),
 					}},
@@ -156,12 +157,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			nonOwnedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "non-owned-app",
-					Namespace:   namespace,
-					Annotations: make(map[string]string),
+					Name:      "non-owned-app",
+					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: utils.AppSetAPIGroup,
-						Kind:       utils.AppSetKind,
+						APIVersion: consts.AppSetAPIGroup,
+						Kind:       consts.AppSetKind,
 						Name:       "not-owned",
 						UID:        uuid.NewUUID(),
 					}},
@@ -187,12 +187,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			app := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "matching-app",
-					Namespace:   namespace,
-					Annotations: make(map[string]string),
+					Name:      "matching-app",
+					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: utils.AppSetAPIGroup,
-						Kind:       utils.AppSetKind,
+						APIVersion: consts.AppSetAPIGroup,
+						Kind:       consts.AppSetKind,
 						Name:       "owner-app-set",
 						UID:        uuid.NewUUID(),
 					}},
@@ -207,7 +206,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a cluster secret")
 			cluster := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte(serverURL)}}
 
 			Eventually(func() int {
@@ -239,12 +238,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application")
 			externalApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "non-matching-app",
-					Namespace:   namespace,
-					Annotations: make(map[string]string),
+					Name:      "non-matching-app",
+					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: utils.AppSetAPIGroup,
-						Kind:       utils.AppSetKind,
+						APIVersion: consts.AppSetAPIGroup,
+						Kind:       consts.AppSetKind,
 						Name:       "owner-app-set",
 						UID:        uuid.NewUUID(),
 					}},
@@ -259,7 +257,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a cluster secret")
 			internalCluster := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte("https://local-kubernetes.default.svc")}}
 
 			Eventually(func() int {
@@ -341,6 +339,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating one application targeting each cluster")
 			apps, err := createApplications(ctx, targets)
+			var appsMap map[string]argov1alpha1.Application = make(map[string]argov1alpha1.Application)
+
+			for i := 0; i < len(apps); i++ {
+				appsMap[apps[i].Name] = apps[i]
+			}
+
 			Expect(apps).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 
@@ -353,7 +357,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
-						Kind:     utils.AppSetKind,
+						Kind:     consts.AppSetKind,
 						Name:     appSet,
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
@@ -406,13 +410,13 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Name:      fmt.Sprintf("%s-ps", testPrefix),
 			}
 
-			// Make sure the annotation is added
+			// Make sure that the first application is marked as synced in the first stage
 			Eventually(func() bool {
-				return hasAnnotation(
-					"account1-eu-west-1a-1",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"one cluster as canary in eu-west-1")
+				return isMarkedInStage(
+					ps,
+					appsMap["account1-eu-west-1a-1"],
+					ps.Spec.Stages[0],
+				)
 			}).Should(BeTrue())
 
 			// We need to progress account1-eu-west-1a-1 because the selector returns
@@ -467,29 +471,28 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
-					"account2-eu-central-1a-1",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"one cluster as canary in every other region")
+				return isMarkedInStage(
+					ps,
+					appsMap["account2-eu-central-1a-1"],
+					ps.Spec.Stages[1],
+				)
 			}).Should(BeTrue())
 
 			Eventually(func() bool {
-				return hasAnnotation(
-					"account2-eu-central-1b-1",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"one cluster as canary in every other region")
+				return isMarkedInStage(
+					ps,
+					appsMap["account2-eu-central-1b-1"],
+					ps.Spec.Stages[1],
+				)
 			}).Should(BeTrue())
 
 			Eventually(func() bool {
-				return hasAnnotation(
-					"account3-ap-southeast-1a-1",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"one cluster as canary in every other region")
+				return isMarkedInStage(
+					ps,
+					appsMap["account3-ap-southeast-1a-1"],
+					ps.Spec.Stages[1],
+				)
 			}).Should(BeTrue())
 
 			// Make sure the previous stage is still completed
@@ -549,13 +552,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
-					"account1-eu-west-1a-2",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"rollout to remaining clusters")
+				return isMarkedInStage(
+					ps,
+					appsMap["account1-eu-west-1a-2"],
+					ps.Spec.Stages[2],
+				)
 			}).Should(BeTrue())
 
 			// Make sure the previous stages are still completed
@@ -604,13 +606,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
-					"account3-ap-southeast-1c-1",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"rollout to remaining clusters")
+				return isMarkedInStage(
+					ps,
+					appsMap["account3-ap-southeast-1c-1"],
+					ps.Spec.Stages[2],
+				)
 			}).Should(BeTrue())
 
 			// Make sure the current stage is progressing
@@ -646,13 +647,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
-					"account4-ap-northeast-1a-1",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"rollout to remaining clusters")
+				return isMarkedInStage(
+					ps,
+					appsMap["account4-ap-northeast-1a-1"],
+					ps.Spec.Stages[2],
+				)
 			}).Should(BeTrue())
 
 			// Make sure the current stage is progressing
@@ -688,13 +688,12 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)
 			}).Should(Succeed())
 
-			// Make sure the annotation is added
 			Eventually(func() bool {
-				return hasAnnotation(
-					"account4-ap-northeast-1a-2",
-					namespace,
-					utils.ProgressiveSyncSyncedAtStageKey,
-					"rollout to remaining clusters")
+				return isMarkedInStage(
+					ps,
+					appsMap["account4-ap-northeast-1a-2"],
+					ps.Spec.Stages[2],
+				)
 			}).Should(BeTrue())
 
 			// Make sure the current stage is progressing
@@ -764,7 +763,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
-						Kind:     utils.AppSetKind,
+						Kind:     consts.AppSetKind,
 						Name:     appSet,
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
@@ -822,6 +821,137 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			expected := failedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, "stage 0 stage failed")
 			ExpectCondition(&failedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 		})
+
+		It("should set conditions when apps already synced - empty stage", func() {
+			testPrefix := "synced-stage-empty"
+			appSet := fmt.Sprintf("%s-appset", testPrefix)
+
+			By("creating two ArgoCD clusters")
+			targets := []Target{
+				{
+					Name:           "cells-1-eu-west-1a-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1a",
+				},
+				{
+					Name:           "cells-1-eu-west-1b-2",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1b-2",
+				},
+				{
+					Name:           "cells-1-eu-west-1c-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1c-1",
+				},
+				{
+					Name:           "cellsdev-1-eu-west-1a-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1a-1",
+				},
+				{
+					Name:           "cellsdev-1-eu-west-1b-1",
+					Namespace:      namespace,
+					ApplicationSet: appSet,
+					Area:           "emea",
+					Region:         "eu-west-1",
+					AZ:             "eu-west-1b-1",
+				},
+			}
+			clusters, err := createClusters(ctx, targets)
+			Expect(err).To(BeNil())
+			Expect(clusters).To(Not(BeNil()))
+
+			By("creating one healthy and synced application targeting each cluster")
+			apps, err := createSyncedAndHealthyApplications(ctx, targets)
+			Expect(err).To(BeNil())
+			Expect(apps).To(Not(BeNil()))
+
+			By("creating a progressive sync")
+			syncedStagePS := syncv1alpha1.ProgressiveSync{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-ps", testPrefix),
+					Namespace: namespace,
+				},
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetAPIRef,
+						Kind:     consts.AppSetKind,
+						Name:     appSet,
+					},
+					Stages: []syncv1alpha1.ProgressiveSyncStage{{
+						Name:        "one cluster as canary in eu-west-1",
+						MaxParallel: intstr.Parse("1"),
+						MaxTargets:  intstr.Parse("1"),
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+									"region": "eu-west-1",
+								}},
+							}},
+					}, {
+						Name:        "one cluster as canary in every other region",
+						MaxParallel: intstr.Parse("3"),
+						MaxTargets:  intstr.Parse("3"),
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      "region",
+										Operator: metav1.LabelSelectorOpNotIn,
+										Values:   []string{"eu-west-1"},
+									}},
+								},
+							}},
+					}, {
+						Name:        "rollout to remaining clusters",
+						MaxParallel: intstr.Parse("25%"),
+						MaxTargets:  intstr.Parse("100%"),
+						Targets: syncv1alpha1.ProgressiveSyncTargets{
+							Clusters: syncv1alpha1.Clusters{
+								Selector: metav1.LabelSelector{},
+							}},
+					}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &syncedStagePS)).To(Succeed())
+
+			psKey := client.ObjectKey{
+				Namespace: namespace,
+				Name:      fmt.Sprintf("%s-ps", testPrefix),
+			}
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in eu-west-1 stage completed",
+			}))
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in every other region",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "one cluster as canary in every other region stage completed",
+			}))
+			ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "rollout to remaining clusters",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: "rollout to remaining clusters stage completed",
+			}))
+			ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
+
+			expected := syncedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+			ExpectCondition(&syncedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+
+		})
 	})
 
 	Describe("sync application", func() {
@@ -832,7 +962,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating an ArgoCD cluster")
 			cluster := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster}},
+				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
 				Data: map[string][]byte{
 					"server": []byte("https://single-stage-pr.kubernetes.io"),
 				},
@@ -842,12 +972,11 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating an application targeting the cluster")
 			singleStageApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        testAppName,
-					Namespace:   namespace,
-					Annotations: make(map[string]string),
+					Name:      testAppName,
+					Namespace: namespace,
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: utils.AppSetAPIGroup,
-						Kind:       utils.AppSetKind,
+						APIVersion: consts.AppSetAPIGroup,
+						Kind:       consts.AppSetKind,
 						Name:       "single-stage-appset",
 						UID:        uuid.NewUUID(),
 					}},
@@ -867,7 +996,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
-						Kind:     utils.AppSetKind,
+						Kind:     consts.AppSetKind,
 						Name:     "single-stage-appset",
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
@@ -899,11 +1028,11 @@ func createClusters(ctx context.Context, targets []Target) ([]corev1.Secret, err
 				Name:      t.Name,
 				Namespace: t.Namespace,
 				Labels: map[string]string{
-					utils.ArgoCDSecretTypeLabel: utils.ArgoCDSecretTypeCluster,
-					"area":                      t.Area,
-					"region":                    t.Region,
-					"az":                        t.AZ,
-					"cluster":                   t.Name,
+					consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster,
+					"area":                       t.Area,
+					"region":                     t.Region,
+					"az":                         t.AZ,
+					"cluster":                    t.Name,
 				}},
 			Data: map[string][]byte{
 				"server": []byte(fmt.Sprintf("https://%s.kubernetes.io", t.Name)),
@@ -929,12 +1058,11 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 
 		app := argov1alpha1.Application{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        t.Name,
-				Namespace:   t.Namespace,
-				Annotations: make(map[string]string),
+				Name:      t.Name,
+				Namespace: t.Namespace,
 				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion: utils.AppSetAPIGroup,
-					Kind:       utils.AppSetKind,
+					APIVersion: consts.AppSetAPIGroup,
+					Kind:       consts.AppSetKind,
 					Name:       t.ApplicationSet,
 					UID:        uuid.NewUUID(),
 				}},
@@ -948,6 +1076,50 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 			Status: argov1alpha1.ApplicationStatus{
 				Sync: argov1alpha1.SyncStatus{
 					Status: argov1alpha1.SyncStatusCodeOutOfSync,
+				},
+				Health: argov1alpha1.HealthStatus{
+					Status: health.HealthStatusHealthy,
+				},
+			},
+		}
+
+		err := k8sClient.Create(ctx, &app)
+		if err != nil {
+			return nil, err
+		}
+
+		apps = append(apps, app)
+	}
+
+	return apps, nil
+}
+
+// createSyncedAndHealthyApplications is a helper function that creates an ArgoCD application given a prefix and a cluster
+func createSyncedAndHealthyApplications(ctx context.Context, targets []Target) ([]argov1alpha1.Application, error) {
+	var apps []argov1alpha1.Application
+
+	for _, t := range targets {
+
+		app := argov1alpha1.Application{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      t.Name,
+				Namespace: t.Namespace,
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: consts.AppSetAPIGroup,
+					Kind:       consts.AppSetKind,
+					Name:       t.ApplicationSet,
+					UID:        uuid.NewUUID(),
+				}},
+			},
+			Spec: argov1alpha1.ApplicationSpec{
+				Destination: argov1alpha1.ApplicationDestination{
+					Server:    fmt.Sprintf("https://%s.kubernetes.io", t.Name),
+					Namespace: t.Namespace,
+					Name:      t.Name,
+				}},
+			Status: argov1alpha1.ApplicationStatus{
+				Sync: argov1alpha1.SyncStatus{
+					Status: argov1alpha1.SyncStatusCodeSynced,
 				},
 				Health: argov1alpha1.HealthStatus{
 					Status: health.HealthStatusHealthy,
@@ -1032,28 +1204,11 @@ func setAppStatusFailed(ctx context.Context, appName string, namespace string) e
 	return k8sClient.Update(ctx, &app)
 }
 
-// hasAnnotation returns true if the application has an annotation with the given key and value
-func hasAnnotation(appName, namespace, key, value string) bool {
+// isMarkedInStage returns true if the application has been marked as synced in the specified stage
+func isMarkedInStage(ps syncv1alpha1.ProgressiveSync, app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
 
-	app := argov1alpha1.Application{}
-
-	err := k8sClient.Get(ctx, client.ObjectKey{
-		Namespace: namespace,
-		Name:      appName,
-	}, &app)
-
-	if err != nil {
-		return false
-	}
-
-	val, ok := app.Annotations[key]
-	if !ok {
-		return false
-	}
-	if val != value {
-		return false
-	}
-	return true
+	pss, _ := reconciler.StateManager.Get(ps.Name)
+	return pss.IsAppMarkedInStage(app, stage)
 
 }
 
@@ -1128,6 +1283,7 @@ func ExpectStagesInStatus(ctx context.Context, key client.ObjectKey) AsyncAssert
 func TestSync(t *testing.T) {
 	r := ProgressiveSyncReconciler{
 		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncOK{},
+		StateManager:    utils.NewProgressiveSyncManager(),
 	}
 
 	testAppName := "foo-bar"
@@ -1142,6 +1298,7 @@ func TestSync(t *testing.T) {
 func TestSyncErr(t *testing.T) {
 	r := ProgressiveSyncReconciler{
 		ArgoCDAppClient: &mocks.MockArgoCDAppClientSyncNotOK{},
+		StateManager:    utils.NewProgressiveSyncManager(),
 	}
 
 	testAppName := "foo-bar"
