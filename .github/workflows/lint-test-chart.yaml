@@ -4,7 +4,7 @@ on: pull_request
 
 jobs:
   lint-test-chart:
-    runs-on: ubuntu-latest
+    runs-on: custom-runner-aps
     env:
       ARGOCD_VERSION: v1.8.6
     steps:

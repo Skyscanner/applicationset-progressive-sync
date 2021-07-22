@@ -11,7 +11,7 @@ on:
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-latest
+    runs-on: custom-runner-aps
     steps:
       - uses: actions/checkout@v2.3.4
       - name: golangci-lint

@@ -7,7 +7,7 @@ on:
 
 jobs:
   release-chart:
-    runs-on: ubuntu-latest
+    runs-on: custom-runner-aps
     steps:
       - name: Checkout
         uses: actions/checkout@v2.3.4
