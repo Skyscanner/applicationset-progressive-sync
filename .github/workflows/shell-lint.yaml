@@ -14,6 +14,9 @@ jobs:
     runs-on: custom-runner-aps
     steps:
       - uses: actions/checkout@v2.3.4
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ^1.15
       - name: shellcheck
         run: |
           pip install shellcheck-py
