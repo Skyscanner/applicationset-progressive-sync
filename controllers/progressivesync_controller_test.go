@@ -724,6 +724,36 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
+			Eventually(func() error {
+				return setAppStatusFailed(ctx, "account1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
+
+			message = "one cluster as canary in eu-west-1 stage failed"
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseFailed,
+				Message: message,
+			}))
+
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
+			}).Should(Succeed())
+
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)
+			}).Should(Succeed())
+
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-1", namespace)
+			}).Should(Succeed())
+
+			message = "one cluster as canary in eu-west-1 stage completed"
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
+
 		})
 
 		It("should fail if unable to sync an application", func() {
