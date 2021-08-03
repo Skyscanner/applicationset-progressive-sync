@@ -857,7 +857,7 @@ func TestScheduler(t *testing.T) {
 			},
 		},
 		{
-			name: "Applications: outOfSync 1, syncedInCurrentStage 2, progressing 2 | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 1",
+			name: "Applications: outOfSync 1, syncedInCurrentStage 3, progressing 2 | Stage: maxTargets 3, maxParallel 3 | Expected: scheduled 0",
 			apps: []argov1alpha1.Application{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -894,10 +894,24 @@ func TestScheduler(t *testing.T) {
 					},
 					Status: argov1alpha1.ApplicationStatus{
 						Sync: argov1alpha1.SyncStatus{
-							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+							Status: argov1alpha1.SyncStatusCodeSynced,
 						},
 						Health: argov1alpha1.HealthStatus{
 							Status: health.HealthStatusProgressing,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-four",
+						Namespace: SchedulerTestNamespace,
+					},
+					Status: argov1alpha1.ApplicationStatus{
+						Sync: argov1alpha1.SyncStatus{
+							Status: argov1alpha1.SyncStatusCodeOutOfSync,
+						},
+						Health: argov1alpha1.HealthStatus{
+							Status: health.HealthStatusHealthy,
 						},
 					},
 				},
@@ -909,25 +923,11 @@ func TestScheduler(t *testing.T) {
 				Targets:     syncv1alpha1.ProgressiveSyncTargets{},
 			},
 			syncedAtStage: map[string]string{
-				"app-one": StageName,
-				"app-two": StageName,
+				"app-one":   StageName,
+				"app-two":   StageName,
+				"app-three": StageName,
 			},
-			expected: []argov1alpha1.Application{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-three",
-						Namespace: SchedulerTestNamespace,
-					},
-					Status: argov1alpha1.ApplicationStatus{
-						Sync: argov1alpha1.SyncStatus{
-							Status: argov1alpha1.SyncStatusCodeOutOfSync,
-						},
-						Health: argov1alpha1.HealthStatus{
-							Status: health.HealthStatusProgressing,
-						},
-					},
-				},
-			},
+			expected: ([]argov1alpha1.Application)(nil),
 		},
 	}
 
