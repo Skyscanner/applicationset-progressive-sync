@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"testing"
 	"time"
 
@@ -91,8 +92,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		namespace, ns = createRandomNamespace()
 
 		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:    scheme.Scheme,
-			Namespace: namespace,
+			Scheme:   scheme.Scheme,
+			NewCache: cache.MultiNamespacedCacheBuilder([]string{namespace, argoNamespace}),
 		})
 		Expect(err).ToNot(HaveOccurred())
 
@@ -122,7 +123,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 		It("should forward events for owned applications", func() {
 			By("creating an owned application")
-			localNS := namespace
+			localNS := argoNamespace
 			ownerPR := createOwnerPR(localNS, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			ownedApp := argov1alpha1.Application{
@@ -158,7 +159,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			nonOwnedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "non-owned-app",
-					Namespace: namespace,
+					Namespace: argoNamespace,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -188,7 +189,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			app := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "matching-app",
-					Namespace: namespace,
+					Namespace: argoNamespace,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -198,7 +199,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
 					Server:    serverURL,
-					Namespace: namespace,
+					Namespace: argoNamespace,
 					Name:      "local-cluster",
 				}},
 			}
@@ -206,7 +207,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a cluster secret")
 			cluster := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: argoNamespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte(serverURL)}}
 
 			Eventually(func() int {
@@ -221,7 +222,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			By("creating a generic secret")
 			generic := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "generic", Namespace: namespace}, Data: map[string][]byte{"secret": []byte("insecure")},
+				ObjectMeta: metav1.ObjectMeta{Name: "generic", Namespace: argoNamespace}, Data: map[string][]byte{"secret": []byte("insecure")},
 			}
 
 			Eventually(func() int {
@@ -239,7 +240,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			externalApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "non-matching-app",
-					Namespace: namespace,
+					Namespace: argoNamespace,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -249,7 +250,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
 					Server:    "https://remote-url.kubernetes.io",
-					Namespace: namespace,
+					Namespace: argoNamespace,
 					Name:      "remote-cluster",
 				}},
 			}
@@ -257,7 +258,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a cluster secret")
 			internalCluster := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: namespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster", Namespace: argoNamespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
 				Data:       map[string][]byte{"server": []byte("https://local-kubernetes.default.svc")}}
 
 			Eventually(func() int {
@@ -277,56 +278,56 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			targets := []Target{
 				{
 					Name:           "account1-eu-west-1a-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-west-1",
 					AZ:             "eu-west-1a",
 				}, {
 					Name:           "account1-eu-west-1a-2",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-west-1",
 					AZ:             "eu-west-1a",
 				}, {
 					Name:           "account2-eu-central-1a-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-central-1",
 					AZ:             "eu-central-1a",
 				}, {
 					Name:           "account2-eu-central-1b-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-central-1",
 					AZ:             "eu-central-1b",
 				}, {
 					Name:           "account3-ap-southeast-1a-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "apac",
 					Region:         "ap-southeast-1",
 					AZ:             "ap-southeast-1a",
 				}, {
 					Name:           "account3-ap-southeast-1c-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "apac",
 					Region:         "ap-southeast-1",
 					AZ:             "ap-southeast-1c",
 				}, {
 					Name:           "account4-ap-northeast-1a-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "apac",
 					Region:         "ap-northeast-1",
 					AZ:             "ap-northeast-1a",
 				}, {
 					Name:           "account4-ap-northeast-1a-2",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "apac",
 					Region:         "ap-northeast-1",
@@ -425,7 +426,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			// Progress account1-eu-west-1a-1
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account1-eu-west-1a-1", namespace)
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			// Make sure the stage is progressing
@@ -440,7 +441,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			// Completed account1-eu-west-1a-1
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account1-eu-west-1a-1", namespace)
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			// Make sure the stage is completed
@@ -462,13 +463,13 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			// Progress the applications
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account2-eu-central-1a-1", namespace)
+				return setAppStatusProgressing(ctx, "account2-eu-central-1a-1", argoNamespace)
 			}).Should(Succeed())
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account2-eu-central-1b-1", namespace)
+				return setAppStatusProgressing(ctx, "account2-eu-central-1b-1", argoNamespace)
 			}).Should(Succeed())
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", namespace)
+				return setAppStatusProgressing(ctx, "account3-ap-southeast-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			Eventually(func() bool {
@@ -522,13 +523,13 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("completing the second stage applications sync")
 
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account2-eu-central-1a-1", namespace)
+				return setAppStatusCompleted(ctx, "account2-eu-central-1a-1", argoNamespace)
 			}).Should(Succeed())
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account2-eu-central-1b-1", namespace)
+				return setAppStatusCompleted(ctx, "account2-eu-central-1b-1", argoNamespace)
 			}).Should(Succeed())
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account3-ap-southeast-1a-1", namespace)
+				return setAppStatusCompleted(ctx, "account3-ap-southeast-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			// Make sure the current stage is completed
@@ -549,7 +550,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("progressing 25% of the third stage applications")
 
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", argoNamespace)
 			}).Should(Succeed())
 
 			Eventually(func() bool {
@@ -587,7 +588,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("completing 25% of the third stage applications")
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", argoNamespace)
 			}).Should(Succeed())
 
 			// Make sure the current stage is still in progress
@@ -603,7 +604,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("progressing 50% of the third stage applications")
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", namespace)
+				return setAppStatusProgressing(ctx, "account3-ap-southeast-1c-1", argoNamespace)
 			}).Should(Succeed())
 
 			Eventually(func() bool {
@@ -627,7 +628,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("completing 50% of the third stage applications")
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account3-ap-southeast-1c-1", namespace)
+				return setAppStatusCompleted(ctx, "account3-ap-southeast-1c-1", argoNamespace)
 			}).Should(Succeed())
 
 			// Make sure the current stage is still in progress
@@ -644,7 +645,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("progressing 75% of the third stage applications")
 
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", namespace)
+				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			Eventually(func() bool {
@@ -668,7 +669,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("completing 75% of the third stage applications")
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-1", namespace)
+				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			// Make sure the current stage is still in progress
@@ -685,7 +686,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("progressing 100% of the third stage applications")
 
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", namespace)
+				return setAppStatusProgressing(ctx, "account4-ap-northeast-1a-2", argoNamespace)
 			}).Should(Succeed())
 
 			Eventually(func() bool {
@@ -709,7 +710,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("completing 100% of the third stage applications")
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-2", namespace)
+				return setAppStatusCompleted(ctx, "account4-ap-northeast-1a-2", argoNamespace)
 			}).Should(Succeed())
 
 			// Make sure the current stage is completed
@@ -734,14 +735,14 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			targets := []Target{
 				{
 					Name:           "account5-us-west-1a-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "na",
 					Region:         "us-west-1",
 					AZ:             "us-west-1a",
 				}, {
 					Name:           "account5-us-west-1a-2",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "na",
 					Region:         "us-west-1",
@@ -796,7 +797,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("progressing the first application")
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account5-us-west-1a-1", namespace)
+				return setAppStatusProgressing(ctx, "account5-us-west-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -808,7 +809,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("failing syncing the first application")
 			Eventually(func() error {
-				return setAppStatusFailed(ctx, "account5-us-west-1a-1", namespace)
+				return setAppStatusFailed(ctx, "account5-us-west-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -830,7 +831,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			targets := []Target{
 				{
 					Name:           "cells-1-eu-west-1a-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-west-1",
@@ -838,7 +839,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				{
 					Name:           "cells-1-eu-west-1b-2",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-west-1",
@@ -846,7 +847,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				{
 					Name:           "cells-1-eu-west-1c-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-west-1",
@@ -854,7 +855,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				{
 					Name:           "cellsdev-1-eu-west-1a-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-west-1",
@@ -862,7 +863,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				{
 					Name:           "cellsdev-1-eu-west-1b-1",
-					Namespace:      namespace,
+					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
 					Region:         "eu-west-1",
@@ -962,7 +963,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating an ArgoCD cluster")
 			cluster := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: namespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
+				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-cluster", Namespace: argoNamespace, Labels: map[string]string{consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster}},
 				Data: map[string][]byte{
 					"server": []byte("https://single-stage-pr.kubernetes.io"),
 				},
@@ -973,7 +974,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			singleStageApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testAppName,
-					Namespace: namespace,
+					Namespace: argoNamespace,
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
@@ -983,7 +984,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				},
 				Spec: argov1alpha1.ApplicationSpec{Destination: argov1alpha1.ApplicationDestination{
 					Server:    "https://single-stage-pr.kubernetes.io",
-					Namespace: namespace,
+					Namespace: argoNamespace,
 					Name:      "remote-cluster",
 				}},
 				Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Status: argov1alpha1.SyncStatusCodeOutOfSync}},
