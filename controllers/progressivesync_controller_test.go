@@ -3,9 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"testing"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
@@ -727,7 +728,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			//Make sure that we can recover from transient app failures, due to flaky healthchecks for instance
 			Eventually(func() error {
-				return setAppStatusFailed(ctx, "account1-eu-west-1a-1", namespace)
+				return setAppStatusFailed(ctx, "account1-eu-west-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			message = "one cluster as canary in eu-west-1 stage failed"
@@ -738,15 +739,15 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}))
 
 			Eventually(func() error {
-				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", namespace)
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", argoNamespace)
 			}).Should(Succeed())
 
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", namespace)
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", argoNamespace)
 			}).Should(Succeed())
 
 			Eventually(func() error {
-				return setAppStatusCompleted(ctx, "account1-eu-west-1a-1", namespace)
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-1", argoNamespace)
 			}).Should(Succeed())
 
 			message = "one cluster as canary in eu-west-1 stage completed"
