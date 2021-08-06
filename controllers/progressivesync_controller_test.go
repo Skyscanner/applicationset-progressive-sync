@@ -3,9 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"testing"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
@@ -724,6 +725,37 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			// Make sure the ProgressiveSync is completed
 			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+
+			//Make sure that we can recover from transient app failures, due to flaky healthchecks for instance
+			Eventually(func() error {
+				return setAppStatusFailed(ctx, "account1-eu-west-1a-1", argoNamespace)
+			}).Should(Succeed())
+
+			message = "one cluster as canary in eu-west-1 stage failed"
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseFailed,
+				Message: message,
+			}))
+
+			Eventually(func() error {
+				return setAppStatusProgressing(ctx, "account1-eu-west-1a-2", argoNamespace)
+			}).Should(Succeed())
+
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-2", argoNamespace)
+			}).Should(Succeed())
+
+			Eventually(func() error {
+				return setAppStatusCompleted(ctx, "account1-eu-west-1a-1", argoNamespace)
+			}).Should(Succeed())
+
+			message = "one cluster as canary in eu-west-1 stage completed"
+			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
+				Name:    "one cluster as canary in eu-west-1",
+				Phase:   syncv1alpha1.PhaseSucceeded,
+				Message: message,
+			}))
 
 		})
 
