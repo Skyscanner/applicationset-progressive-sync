@@ -82,18 +82,18 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	format.TruncatedDiff = false
 
 	var (
-		namespace string
-		ns        *corev1.Namespace
+		ctrlNamespace string
+		ns            *corev1.Namespace
 	)
 
 	BeforeEach(func() {
 		ctx, cancel = context.WithCancel(context.Background())
 
-		namespace, ns = createRandomNamespace()
+		ctrlNamespace, ns = createRandomNamespace()
 
 		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 			Scheme:   scheme.Scheme,
-			NewCache: cache.MultiNamespacedCacheBuilder([]string{namespace, argoNamespace}),
+			NewCache: cache.MultiNamespacedCacheBuilder([]string{ctrlNamespace, argoNamespace}),
 		})
 		Expect(err).ToNot(HaveOccurred())
 
@@ -154,7 +154,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 		It("should filter out events for non-owned applications", func() {
 			By("creating a non-owned application")
-			ownerPR := createOwnerPR(namespace, "owner-pr")
+			ownerPR := createOwnerPR(ctrlNamespace, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			nonOwnedApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
@@ -181,7 +181,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 	Describe("requestsForSecretChange function", func() {
 
 		It("should forward an event for a matching argocd secret", func() {
-			ownerPR := createOwnerPR(namespace, "secret-owner-pr")
+			ownerPR := createOwnerPR(ctrlNamespace, "secret-owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			serverURL := "https://kubernetes.default.svc"
 
@@ -218,7 +218,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 
 		It("should not forward an event for a generic secret", func() {
-			ownerPR := createOwnerPR(namespace, "generic-owner-pr")
+			ownerPR := createOwnerPR(ctrlNamespace, "generic-owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 			By("creating a generic secret")
 			generic := corev1.Secret{
@@ -233,7 +233,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 		})
 
 		It("should not forward an event for an argocd secret not matching any application", func() {
-			ownerPR := createOwnerPR(namespace, "owner-pr")
+			ownerPR := createOwnerPR(ctrlNamespace, "owner-pr")
 			Expect(k8sClient.Create(ctx, ownerPR)).To(Succeed())
 
 			By("creating an application")
@@ -353,7 +353,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			ps := syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-ps", testPrefix),
-					Namespace: namespace,
+					Namespace: ctrlNamespace,
 				},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
@@ -407,7 +407,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(createdPS.ObjectMeta.Finalizers[0]).To(Equal(syncv1alpha1.ProgressiveSyncFinalizer))
 
 			psKey := client.ObjectKey{
-				Namespace: namespace,
+				Namespace: ctrlNamespace,
 				Name:      fmt.Sprintf("%s-ps", testPrefix),
 			}
 
@@ -760,7 +760,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a progressive sync")
 			failedStagePS := syncv1alpha1.ProgressiveSync{
-				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-ps", testPrefix), Namespace: namespace},
+				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-ps", testPrefix), Namespace: ctrlNamespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
@@ -791,7 +791,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, &failedStagePS)).To(Succeed())
 
 			psKey := client.ObjectKey{
-				Namespace: namespace,
+				Namespace: ctrlNamespace,
 				Name:      fmt.Sprintf("%s-ps", testPrefix),
 			}
 
@@ -883,7 +883,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			syncedStagePS := syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-ps", testPrefix),
-					Namespace: namespace,
+					Namespace: ctrlNamespace,
 				},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
@@ -929,7 +929,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, &syncedStagePS)).To(Succeed())
 
 			psKey := client.ObjectKey{
-				Namespace: namespace,
+				Namespace: ctrlNamespace,
 				Name:      fmt.Sprintf("%s-ps", testPrefix),
 			}
 			ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
@@ -993,7 +993,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 
 			By("creating a progressive sync")
 			singleStagePR := syncv1alpha1.ProgressiveSync{
-				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: namespace},
+				ObjectMeta: metav1.ObjectMeta{Name: "single-stage-pr", Namespace: ctrlNamespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,

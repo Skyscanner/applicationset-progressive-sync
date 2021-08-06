@@ -48,11 +48,11 @@ func init() {
 }
 
 func main() {
-	var metricsAddr, namespace, argoNamespace string
+	var metricsAddr, ctrlNamespace, argoNamespace string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&namespace, "namespace", "argocd", "The controller namespace")
-	flag.StringVar(&argoNamespace, "argo-namespace", "argocd", "The namespace where ArgoCD and ApplicationSet controller are deployed to.")
+	flag.StringVar(&ctrlNamespace, "ctrl-namespace", "argocd", "The controller namespace")
+	flag.StringVar(&argoNamespace, "argo-namespace", "argocd", "The namespace where ArgoCD and the ApplicationSet controller are deployed to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -62,8 +62,8 @@ func main() {
 	flag.Parse()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	namespaces := []string{namespace}
-	if namespace != argoNamespace {
+	namespaces := []string{ctrlNamespace}
+	if ctrlNamespace != argoNamespace {
 		namespaces = append(namespaces, argoNamespace)
 	}
 
