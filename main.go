@@ -18,9 +18,9 @@ package main
 
 import (
 	"flag"
-	"os"
-
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	"os"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -48,10 +48,11 @@ func init() {
 }
 
 func main() {
-	var metricsAddr, namespace string
+	var metricsAddr, ctrlNamespace, argoNamespace string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&namespace, "namespace", "argocd", "The controller namespace")
+	flag.StringVar(&ctrlNamespace, "ctrl-namespace", "argocd", "The controller namespace")
+	flag.StringVar(&argoNamespace, "argo-namespace", "argocd", "The namespace where ArgoCD and the ApplicationSet controller are deployed to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -61,10 +62,15 @@ func main() {
 	flag.Parse()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	namespaces := []string{ctrlNamespace}
+	if ctrlNamespace != argoNamespace {
+		namespaces = append(namespaces, argoNamespace)
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
-		Namespace:          namespace,
 		MetricsBindAddress: metricsAddr,
+		NewCache:           cache.MultiNamespacedCacheBuilder(namespaces),
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "b84175a0.argoproj.skyscanner.net",
