@@ -7,7 +7,7 @@ replicaCount: 1
 installCRDs: false
 
 image:
-  repository: maruina/applicationset-progressive-sync
+  repository: ghcr.io/skyscanner/applicationset-progressive-sync
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.
   tag: ""
