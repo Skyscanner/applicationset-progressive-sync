@@ -5,7 +5,6 @@ import (
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/gitops-engine/pkg/health"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -150,8 +149,6 @@ func (s *InMemorySyncState) RefreshState(apps []argov1alpha1.Application, stage 
 		s.MaxTargetsPerStage[stage.Name] = maxTargets
 	}
 
-	healthyApps := GetAppsByHealthStatusCode(unmarkedApps, health.HealthStatusHealthy)
-
 	_, ok := s.SyncedAppsPerStage[stage.Name]
 	if !ok {
 		s.SyncedAppsPerStage[stage.Name] = 0
@@ -159,12 +156,12 @@ func (s *InMemorySyncState) RefreshState(apps []argov1alpha1.Application, stage 
 
 	appsToMark := s.MaxTargetsPerStage[stage.Name] - s.SyncedAppsPerStage[stage.Name]
 
-	if len(healthyApps) < appsToMark {
-		appsToMark = len(healthyApps)
+	if len(unmarkedApps) < appsToMark {
+		appsToMark = len(unmarkedApps)
 	}
 
 	for i := 0; i < appsToMark; i++ {
-		s.SyncedAtStage[healthyApps[i].Name] = stage.Name
+		s.SyncedAtStage[unmarkedApps[i].Name] = stage.Name
 		s.SyncedAppsPerStage[stage.Name]++
 	}
 
