@@ -29,7 +29,6 @@ Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 | args.argoNamespace | string | `"argocd"` | The namespace where ArgoCD and the ApplicationSet controller are deployed to. |
 | args.enableLeaderElection | bool | `false` | Enable leader election for controller manager. |
 | args.metricsAddr | string | `":8080"` | The address the metric endpoint binds to. |
-| args.namespace | string | `"argocd"` | The controller namespace. |
 | config | object | `{"argoCDAuthToken":"example-token","argoCDInsecure":"true","argoCDServerAddr":"argocd-server"}` | Config options |
 | config.argoCDAuthToken | string | `"example-token"` | ArgoCD token |
 | config.argoCDInsecure | string | `"true"` | Allow insecure connection with ArgoCD server |
