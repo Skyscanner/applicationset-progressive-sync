@@ -13,8 +13,14 @@ image:
   tag: ""
 
 args:
+  # -- The address the metric endpoint binds to.
   metricsAddr: :8080
+  # -- Enable leader election for controller manager.
   enableLeaderElection: false
+  # -- The controller namespace.
+  namespace: argocd
+  # --  The namespace where ArgoCD and the ApplicationSet controller are deployed to.
+  argoNamespace: argocd
 
 imagePullSecrets: []
 nameOverride: ""

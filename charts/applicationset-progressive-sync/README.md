@@ -1,6 +1,6 @@
 # applicationset-progressive-sync
 
-![Version: 0.1.5-prealpha](https://img.shields.io/badge/Version-0.1.5--prealpha-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v0.2.0-prealpha](https://img.shields.io/badge/AppVersion-v0.2.0--prealpha-informational?style=flat-square)
+![Version: 0.3.0-prealpha](https://img.shields.io/badge/Version-0.3.0--prealpha-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v0.2.0-prealpha](https://img.shields.io/badge/AppVersion-v0.2.0--prealpha-informational?style=flat-square)
 
 A Helm chart to install the applicationset-progressive-sync controller.
 
@@ -26,8 +26,10 @@ Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
-| args.enableLeaderElection | bool | `false` |  |
-| args.metricsAddr | string | `":8080"` |  |
+| args.argoNamespace | string | `"argocd"` | The namespace where ArgoCD and the ApplicationSet controller are deployed to. |
+| args.enableLeaderElection | bool | `false` | Enable leader election for controller manager. |
+| args.metricsAddr | string | `":8080"` | The address the metric endpoint binds to. |
+| args.namespace | string | `"argocd"` | The controller namespace. |
 | config | object | `{"argoCDAuthToken":"example-token","argoCDInsecure":"true","argoCDServerAddr":"argocd-server"}` | Config options |
 | config.argoCDAuthToken | string | `"example-token"` | ArgoCD token |
 | config.argoCDInsecure | string | `"true"` | Allow insecure connection with ArgoCD server |
