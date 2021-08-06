@@ -173,6 +173,7 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 				Namespace: pr.Namespace,
 				Name:      pr.Name,
 			}})
+			r.Log.Info("application changed", "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
 		}
 	}
 
@@ -450,5 +451,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	}
 
+	message := fmt.Sprintf("%s is in an unknown state!", stage.Name)
+	log.Info(message)
 	return ps, ctrl.Result{Requeue: true}, nil
 }

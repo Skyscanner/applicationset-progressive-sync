@@ -17,6 +17,9 @@
 package controllers
 
 import (
+	"context"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math/rand"
 	"path/filepath"
 	"testing"
@@ -38,6 +41,8 @@ import (
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
+
+const argoNamespace = "argocd"
 
 var cfg *rest.Config
 var k8sClient client.Client
@@ -78,6 +83,11 @@ var _ = BeforeSuite(func(done Done) {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	ns := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: argoNamespace},
+	}
+	Expect(k8sClient.Create(context.Background(), &ns)).To(Succeed())
 
 	close(done)
 }, 60)

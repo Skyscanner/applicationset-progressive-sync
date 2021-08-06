@@ -38,8 +38,7 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 
 	log.Info("fetched out-of-sync apps", "apps", utils.GetAppsName(outOfSyncApps))
 
-	healthyApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusHealthy)
-	syncedInCurrentStage := utils.GetSyncedAppsByStage(healthyApps, stage, pss)
+	syncedInCurrentStage := utils.GetSyncedAppsByStage(apps, stage, pss)
 	log.Info("fetched synced-in-current-stage apps", "apps", utils.GetAppsName(syncedInCurrentStage))
 
 	progressingApps := utils.GetAppsByHealthStatusCode(apps, health.HealthStatusProgressing)
@@ -78,12 +77,6 @@ func Scheduler(log logr.Logger, apps []argov1alpha1.Application, stage syncv1alp
 	for i := 0; i < p; i++ {
 		scheduledApps = append(scheduledApps, outOfSyncApps[i])
 	}
-
-	// To recover from a case where something triggers an Application sync, the scheulder also return
-	// all the progressing apps but still out of sync, so we can mark them as synced and take back control of the app
-
-	progressingOutOfSyncApps := utils.GetAppsBySyncStatusCode(progressingApps, argov1alpha1.SyncStatusCodeOutOfSync)
-	scheduledApps = append(scheduledApps, progressingOutOfSyncApps...)
 
 	return scheduledApps
 }
