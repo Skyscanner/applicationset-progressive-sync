@@ -724,6 +724,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			expected := ps.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
 			ExpectCondition(&ps, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
 
+			//Make sure that we can recover from transient app failures, due to flaky healthchecks for instance
 			Eventually(func() error {
 				return setAppStatusFailed(ctx, "account1-eu-west-1a-1", namespace)
 			}).Should(Succeed())

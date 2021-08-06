@@ -173,8 +173,7 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 				Namespace: pr.Namespace,
 				Name:      pr.Name,
 			}})
-			message := fmt.Sprintf("App name: %s; App status: %s", app.Name, &app.Status)
-			r.Log.Info(message)
+			r.Log.Info("application changed", "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
 		}
 	}
 
