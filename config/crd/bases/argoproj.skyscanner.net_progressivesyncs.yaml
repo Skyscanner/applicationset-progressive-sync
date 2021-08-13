@@ -36,6 +36,13 @@ spec:
         spec:
           description: ProgressiveSyncSpec defines the desired state of ProgressiveSync
           properties:
+            progressDeadlineSeconds:
+              description: ProgressDeadlineSeconds defines the maximum time in seconds
+                for a ProgressiveSync object to make progress before it is marked
+                as failed
+              format: int32
+              minimum: 0
+              type: integer
             sourceRef:
               description: SourceRef defines the resource, example an ApplicationSet,
                 which owns ArgoCD Applications

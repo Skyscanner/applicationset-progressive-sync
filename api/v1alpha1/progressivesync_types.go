@@ -32,6 +32,13 @@ type ProgressiveSyncSpec struct {
 	// SourceRef defines the resource, example an ApplicationSet, which owns ArgoCD Applications
 	//+kubebuilder:validation:Required
 	SourceRef corev1.TypedLocalObjectReference `json:"sourceRef"`
+
+	// ProgressDeadlineSeconds defines the maximum time in seconds
+	// for a ProgressiveSync object to make progress before it is marked as failed
+	//+kubebuilder:validation:Optional
+	//+kubebuilder:validation:Minimum=0
+	ProgressDeadlineSeconds int32 `json:"progressDeadlineSeconds,omitempty"`
+
 	// Stages defines a list of Progressive Rollout stages
 	//+kubebuilder:validation:Optional
 	Stages []ProgressiveSyncStage `json:"stages,omitempty"`
