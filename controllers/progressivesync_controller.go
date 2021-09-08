@@ -296,7 +296,7 @@ func (r *ProgressiveSyncReconciler) updatePsHashAnnotation(ctx context.Context, 
 			latest.Annotations = make(map[string]string)
 		}
 
-		val, _ := latest.Annotations["specHashValue"]
+		val := latest.Annotations["specHashValue"]
 		if val != newHashValue {
 			r.Log.Info("Setting the annotation for the new hash value")
 			latest.Annotations["specHashValue"] = newHashValue
