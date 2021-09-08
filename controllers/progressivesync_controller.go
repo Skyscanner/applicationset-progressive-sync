@@ -283,7 +283,7 @@ func (r *ProgressiveSyncReconciler) getClustersFromSelector(ctx context.Context,
 // Calculate the hash value from the the source ref object (Spec of the ApplicationSet)
 // Store hash value inside the progressive sync annotation map
 
-func (r * ProgressiveSyncReconciler) updatePsHashAnnotation(ctx context.Context, pr *syncv1alpha1.ProgressiveSync, newHashValue string) error {
+func (r *ProgressiveSyncReconciler) updatePsHashAnnotation(ctx context.Context, pr *syncv1alpha1.ProgressiveSync, newHashValue string) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 
 		key := client.ObjectKeyFromObject(pr)
@@ -309,7 +309,7 @@ func (r * ProgressiveSyncReconciler) updatePsHashAnnotation(ctx context.Context,
 	return retryErr
 }
 
-func (r * ProgressiveSyncReconciler) calculateHashValue(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) (string, error) {
+func (r *ProgressiveSyncReconciler) calculateHashValue(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) (string, error) {
 	key := client.ObjectKeyFromObject(pr)
 	latest := syncv1alpha1.ProgressiveSync{}
 	if err := r.Client.Get(ctx, key, &latest); err != nil {
@@ -329,7 +329,6 @@ func (r * ProgressiveSyncReconciler) calculateHashValue(ctx context.Context, pr 
 	//
 	//return rand.SafeEncodeString(fmt.Sprint(hashValue.Sum32())), nil
 	////////////////////////////////////////////////
-
 
 	appSet := applicationset.ApplicationSet{}
 	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: "argocd", Name: latest.Spec.SourceRef.Name}, &appSet); err != nil {
