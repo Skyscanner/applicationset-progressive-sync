@@ -3,6 +3,7 @@ module github.com/Skyscanner/applicationset-progressive-sync
 go 1.15
 
 require (
+	github.com/argoproj-labs/applicationset v0.2.0
 	github.com/argoproj/argo-cd v0.8.1-0.20210218100039-a4ee25b59d8d
 	github.com/argoproj/gitops-engine v0.2.1-0.20210129183711-c5b7114c501f
 	github.com/go-logr/logr v0.3.0

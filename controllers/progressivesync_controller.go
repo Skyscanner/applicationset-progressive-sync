@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"strings"
 	"time"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/scheduler"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
@@ -35,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/kubernetes/pkg/util/hash"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -97,6 +101,15 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		// Requeue after adding the finalizer
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	hashValue, err := r.calculateHashValue(ctx, &ps)
+	if err != nil {
+		log.Info("Failed to generate the hash value from the ApplicationSet spec")
+	} else {
+		if err := r.updatePsHashAnnotation(ctx, &ps, hashValue); err != nil {
+			log.Info("Failed to update the hash value inside the ProgressiveSync object")
+		}
 	}
 
 	latest := ps
@@ -265,6 +278,68 @@ func (r *ProgressiveSyncReconciler) getClustersFromSelector(ctx context.Context,
 	utils.SortSecretsByName(&secrets)
 
 	return secrets, nil
+}
+
+// Calculate the hash value from the the source ref object (Spec of the ApplicationSet)
+// Store hash value inside the progressive sync annotation map
+
+func (r * ProgressiveSyncReconciler) updatePsHashAnnotation(ctx context.Context, pr *syncv1alpha1.ProgressiveSync, newHashValue string) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+
+		key := client.ObjectKeyFromObject(pr)
+		latest := syncv1alpha1.ProgressiveSync{}
+		if err := r.Client.Get(ctx, key, &latest); err != nil {
+			return err
+		}
+
+		if len(latest.Annotations) == 0 {
+			latest.Annotations = make(map[string]string)
+		}
+
+		val, _ := latest.Annotations["specHashValue"]
+		if val != newHashValue {
+			r.Log.Info("Setting the annotation for the new hash value")
+			latest.Annotations["specHashValue"] = newHashValue
+			if err := r.Client.Update(ctx, &latest); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return retryErr
+}
+
+func (r * ProgressiveSyncReconciler) calculateHashValue(ctx context.Context, pr *syncv1alpha1.ProgressiveSync) (string, error) {
+	key := client.ObjectKeyFromObject(pr)
+	latest := syncv1alpha1.ProgressiveSync{}
+	if err := r.Client.Get(ctx, key, &latest); err != nil {
+		return "", err
+	}
+
+	////////////////////////////////////////////////
+	// Using a unstructured object.
+	//u := unstructured.Unstructured{}
+	//_ = r.Client.Get(ctx, client.ObjectKey{
+	//	Namespace: "argocd",
+	//	Name:      latest.Spec.SourceRef.Name,
+	//}, &u)
+	//
+	//hashValue := fnv.New32a()
+	//hash.DeepHashObject(hashValue, u)
+	//
+	//return rand.SafeEncodeString(fmt.Sprint(hashValue.Sum32())), nil
+	////////////////////////////////////////////////
+
+
+	appSet := applicationset.ApplicationSet{}
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: "argocd", Name: latest.Spec.SourceRef.Name}, &appSet); err != nil {
+		r.Log.Info("Failed to retrieve the ApplicationSet object")
+	}
+
+	hashValue := fnv.New32a()
+	hash.DeepHashObject(hashValue, appSet.Spec)
+
+	return rand.SafeEncodeString(fmt.Sprint(hashValue.Sum32())), nil
 }
 
 // getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveSync
