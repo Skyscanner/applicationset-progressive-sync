@@ -217,3 +217,5 @@ Delve can be used to debug tests as well. See `Test` launch configuration in `.v
 Because of [https://github.com/argoproj/argo-cd/issues/4055](https://github.com/argoproj/argo-cd/issues/4055) we can't just run `go get github.com/argoproj/argo-cd`.
 
 Use `hack/install-argocd-application.sh` to install the correct version of the Application API.
+
+some changes
