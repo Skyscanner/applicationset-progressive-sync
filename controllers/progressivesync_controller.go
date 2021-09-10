@@ -105,10 +105,10 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	hashValue, err := r.calculateHashValue(ctx, &ps)
 	if err != nil {
-		log.Info("Failed to generate the hash value from the ApplicationSet spec")
+		log.Error(err, "Failed to generate the hash value from the ApplicationSet spec")
 	} else {
 		if err := r.updatePsHashAnnotation(ctx, &ps, hashValue); err != nil {
-			log.Info("Failed to update the hash value inside the ProgressiveSync object")
+			log.Error(err, "Failed to update the hash value inside the ProgressiveSync object")
 		}
 	}
 
@@ -289,6 +289,7 @@ func (r *ProgressiveSyncReconciler) updatePsHashAnnotation(ctx context.Context, 
 		key := client.ObjectKeyFromObject(pr)
 		latest := syncv1alpha1.ProgressiveSync{}
 		if err := r.Client.Get(ctx, key, &latest); err != nil {
+			r.Log.Error(err, "Failed to retrieve the ProgressiveSync object while updating the hashSpec value")
 			return err
 		}
 
@@ -301,6 +302,7 @@ func (r *ProgressiveSyncReconciler) updatePsHashAnnotation(ctx context.Context, 
 			r.Log.Info("Setting the annotation for the new hash value")
 			latest.Annotations["specHashValue"] = newHashValue
 			if err := r.Client.Update(ctx, &latest); err != nil {
+				r.Log.Error(err, "Failed to update the ProgressiveSync object with the new hashSpec value")
 				return err
 			}
 		}
@@ -313,6 +315,7 @@ func (r *ProgressiveSyncReconciler) calculateHashValue(ctx context.Context, pr *
 	key := client.ObjectKeyFromObject(pr)
 	latest := syncv1alpha1.ProgressiveSync{}
 	if err := r.Client.Get(ctx, key, &latest); err != nil {
+		r.Log.Error(err, "Failed to retrieve the ProgressiveSync object while calculating the hash value")
 		return "", err
 	}
 
@@ -332,7 +335,8 @@ func (r *ProgressiveSyncReconciler) calculateHashValue(ctx context.Context, pr *
 
 	appSet := applicationset.ApplicationSet{}
 	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: "argocd", Name: latest.Spec.SourceRef.Name}, &appSet); err != nil {
-		r.Log.Info("Failed to retrieve the ApplicationSet object")
+		r.Log.Error(err, "Failed to retrieve the ApplicationSet object while calculating the hash value")
+		return "", err
 	}
 
 	hashValue := fnv.New32a()
