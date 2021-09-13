@@ -31,6 +31,13 @@ rules:
   - list
   - watch
 - apiGroups:
+  - argoproj.io
+  resources:
+  - applicationsets
+  verbs:
+  - get
+  - list
+- apiGroups:
   - argoproj.skyscanner.net
   resources:
   - progressivesyncs
