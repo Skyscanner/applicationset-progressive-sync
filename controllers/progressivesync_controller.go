@@ -344,8 +344,6 @@ func (r *ProgressiveSyncReconciler) getCurrentPsHashAnnotation(ctx context.Conte
 	if !ok {
 		err := errors.New("`specHashValue` is missing from the annotations")
 		r.Log.Error(err, "Missing value from annotations map")
-
-		return "", errors.New("`specHashValue` is missing from the annotations")
 	}
 
 	return val, nil
