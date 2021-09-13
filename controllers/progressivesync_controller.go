@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	"hash/fnv"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"strings"
@@ -28,7 +29,6 @@ import (
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/scheduler"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
-	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
