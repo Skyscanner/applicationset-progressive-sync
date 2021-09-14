@@ -21,11 +21,12 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"strings"
+	"time"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"strings"
-	"time"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
@@ -119,9 +120,15 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 					log.Error(err, "Failed to update the hash value of the ProgressiveSync object")
 				}
 			} else {
-				log.Info("Hash value is the same as nothing has changed in the ApplicationSet spec")
+				log.Info("Hash value is the same as nothing has changed in the ApplicationSet spec", "service", ps.Name)
 			}
 		}
+	}
+
+	// Get the updated ProgressiveSync object
+	if err := r.Get(ctx, req.NamespacedName, &ps); err != nil {
+		log.Error(err, "unable to fetch progressivesync object")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	latest := ps

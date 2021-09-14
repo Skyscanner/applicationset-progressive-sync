@@ -12,6 +12,7 @@ import (
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	"github.com/Skyscanner/applicationset-progressive-sync/mocks"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
 	. "github.com/onsi/ginkgo"
@@ -339,6 +340,16 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(clusters).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 
+			By("creating an ApplicationSet")
+			applicationSet, err := createApplicationSet(
+				ctx,
+				appSet,
+				"argocd",
+				map[string]string{"foo": "bar"},
+			)
+			Expect(applicationSet).To(Not(BeNil()))
+			Expect(err).To(BeNil())
+
 			By("creating one application targeting each cluster")
 			apps, err := createApplications(ctx, targets)
 			var appsMap map[string]argov1alpha1.Application = make(map[string]argov1alpha1.Application)
@@ -437,6 +448,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: "one cluster as canary in eu-west-1 stage in progress",
 			}))
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
+
+			// Check the hashValue
 
 			By("completing account1-eu-west-1a-1 sync")
 
@@ -756,6 +769,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Phase:   syncv1alpha1.PhaseSucceeded,
 				Message: message,
 			}))
+
+			// Check the hashValue again
 
 		})
 
@@ -1125,6 +1140,31 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 	}
 
 	return apps, nil
+}
+
+func createApplicationSet(ctx context.Context, name string, namespace string, labels map[string]string) (applicationset.ApplicationSet, error) {
+	applicationSet := applicationset.ApplicationSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: applicationset.ApplicationSetSpec{
+			Template: applicationset.ApplicationSetTemplate{
+				ApplicationSetTemplateMeta: applicationset.ApplicationSetTemplateMeta{
+					Name:      name,
+					Namespace: namespace,
+					Labels:    labels,
+				},
+			},
+			Generators: []applicationset.ApplicationSetGenerator{{}},
+		},
+	}
+
+	if err := k8sClient.Create(ctx, &applicationSet); err != nil {
+		return applicationset.ApplicationSet{}, err
+	}
+
+	return applicationSet, nil
 }
 
 // createSyncedAndHealthyApplications is a helper function that creates an ArgoCD application given a prefix and a cluster
