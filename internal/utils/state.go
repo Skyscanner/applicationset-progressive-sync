@@ -14,6 +14,8 @@ type ProgressiveSyncState interface {
 	IsAppMarkedInStage(app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool
 	GetMaxTargets(stage syncv1alpha1.ProgressiveSyncStage) int
 	GetMaxParallel(stage syncv1alpha1.ProgressiveSyncStage) int
+	SetHashedSpec(hashedSpec string)
+	GetHashedSpec() string
 }
 
 type ProgressiveSyncStateManager interface {
@@ -22,6 +24,7 @@ type ProgressiveSyncStateManager interface {
 
 type InMemorySyncState struct {
 	Name                string
+	HashedSpec          string
 	SyncedAtStage       map[string]string // Key: App name, Value: Stage name
 	SyncedAppsPerStage  map[string]int    // Key: Stage name, Value: Number of Apps synced in this stage
 	MaxTargetsPerStage  map[string]int
@@ -38,6 +41,7 @@ type ProgressiveSyncStateManagerImpl struct {
 func newProgressiveSyncState(name string) ProgressiveSyncState {
 	return &InMemorySyncState{
 		Name:                name,
+		HashedSpec:          "",
 		SyncedAtStage:       make(map[string]string),
 		SyncedAppsPerStage:  make(map[string]int),
 		MaxTargetsPerStage:  make(map[string]int),
@@ -183,4 +187,17 @@ func (s *InMemorySyncState) GetMaxParallel(stage syncv1alpha1.ProgressiveSyncSta
 	defer s.Mutex.Unlock()
 
 	return s.MaxParallelPerStage[stage.Name]
+}
+
+//SetHashedSpec sets the value of the hashed ApplicationSet spec
+func (s *InMemorySyncState) SetHashedSpec(hashedSpec string) {
+	s.Mutex.Lock()
+	defer s.Mutex.Unlock()
+
+	s.HashedSpec = hashedSpec
+}
+
+//GetHashedSpec gets the value of the hashed ApplicationSet spec
+func (s *InMemorySyncState) GetHashedSpec() string {
+	return s.HashedSpec
 }
