@@ -1100,7 +1100,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 
 			By("calculate current hash value")
-			hashedSpec, err := reconciler.calculateHashValue(ctx, &ps)
+			hashedSpec, err := reconciler.calculateHashedSpec(ctx, &ps)
 			Expect(hashedSpec).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 
@@ -1114,7 +1114,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 
 			By("calculate the new hash value")
-			newHashedSpec, err := reconciler.calculateHashValue(ctx, &ps)
+			newHashedSpec, err := reconciler.calculateHashedSpec(ctx, &ps)
 			Expect(hashedSpec).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 

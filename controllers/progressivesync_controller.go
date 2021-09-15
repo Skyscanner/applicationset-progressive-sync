@@ -107,47 +107,24 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	//newHashValue, err := r.calculateHashValue(ctx, &ps)
-	//if err != nil {
-	//	log.Error(err, "Failed to generate the hash value from the ApplicationSet spec")
-	//} else {
-	//	currentHashValue, err := r.getCurrentPsHashAnnotation(ctx, &ps)
-	//	if err != nil {
-	//		log.Error(err, "Failed to get the current hash value of the ProgressiveSync object")
-	//	} else {
-	//		if currentHashValue != newHashValue {
-	//			if err := r.updatePsHashAnnotation(ctx, &ps, newHashValue); err != nil {
-	//				log.Error(err, "Failed to update the hash value of the ProgressiveSync object")
-	//			}
-	//		} else {
-	//			log.Info("Hash value is the same as nothing has changed in the ApplicationSet spec", "service", ps.Name)
-	//		}
-	//	}
-	//}
-	//
-	//// Get the updated ProgressiveSync object
-	//if err := r.Get(ctx, req.NamespacedName, &ps); err != nil {
-	//	log.Error(err, "unable to fetch progressivesync object")
-	//	return ctrl.Result{}, client.IgnoreNotFound(err)
-	//}
-
-	latest := ps
-	var result reconcile.Result
-	var reconcileErr error
-
 	pss, _ := r.StateManager.Get(ps.Name)
 
-	newHash, err := r.calculateHashValue(ctx, &ps)
+	newHash, err := r.calculateHashedSpec(ctx, &ps)
 	if err != nil {
 		log.Error(err, "Failed to generate the hash value from the ApplicationSet spec")
 	} else {
 		currentHash := pss.GetHashedSpec()
 		if currentHash != newHash {
 			pss.SetHashedSpec(newHash)
+			log.Info("Successfully updated the hash value of the ApplicationSet spec", "service", ps.Name)
 		} else {
 			log.Info("Hash value is the same as nothing has changed in the ApplicationSet spec", "service", ps.Name)
 		}
 	}
+
+	latest := ps
+	var result reconcile.Result
+	var reconcileErr error
 
 	for _, stage := range ps.Spec.Stages {
 		log = log.WithValues("stage", stage.Name)
@@ -313,7 +290,7 @@ func (r *ProgressiveSyncReconciler) getClustersFromSelector(ctx context.Context,
 }
 
 // calculateHashValue returns a hash value string for the ApplicationSet spec
-func (r *ProgressiveSyncReconciler) calculateHashValue(ctx context.Context, ps *syncv1alpha1.ProgressiveSync) (string, error) {
+func (r *ProgressiveSyncReconciler) calculateHashedSpec(ctx context.Context, ps *syncv1alpha1.ProgressiveSync) (string, error) {
 	key := client.ObjectKeyFromObject(ps)
 	latest := syncv1alpha1.ProgressiveSync{}
 	if err := r.Client.Get(ctx, key, &latest); err != nil {
@@ -345,53 +322,6 @@ func (r *ProgressiveSyncReconciler) calculateHashValue(ctx context.Context, ps *
 	r.Log.Info("Successfully calculate the hash value of the Spec")
 
 	return rand.SafeEncodeString(fmt.Sprint(hashValue.Sum32())), nil
-}
-
-// getCurrentPsHashAnnotation returns the current hash value string of the ApplicationSet spec stored inside the ProgressiveSync obj
-func (r *ProgressiveSyncReconciler) getCurrentPsHashAnnotation(ctx context.Context, ps *syncv1alpha1.ProgressiveSync) (string, error) {
-	key := client.ObjectKeyFromObject(ps)
-	latest := syncv1alpha1.ProgressiveSync{}
-	if err := r.Client.Get(ctx, key, &latest); err != nil {
-		r.Log.Error(err, "Failed to retrieve the ProgressiveSync object")
-		return "", err
-	}
-
-	if len(latest.Annotations) == 0 {
-		latest.Annotations = make(map[string]string)
-	}
-
-	val, ok := latest.Annotations["specHashValue"]
-	if !ok {
-		err := errors.New("`specHashValue` is missing from the annotations")
-		r.Log.Error(err, "Missing value from annotations map")
-	}
-
-	return val, nil
-}
-
-// updatePsHashAnnotation updates the ProgressiveSync obj with the new hash value string
-func (r *ProgressiveSyncReconciler) updatePsHashAnnotation(ctx context.Context, ps *syncv1alpha1.ProgressiveSync, newHashValue string) error {
-	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		key := client.ObjectKeyFromObject(ps)
-		latest := syncv1alpha1.ProgressiveSync{}
-		if err := r.Client.Get(ctx, key, &latest); err != nil {
-			r.Log.Error(err, "Failed to retrieve the ProgressiveSync object while updating the hashSpec value")
-			return err
-		}
-
-		if len(latest.Annotations) == 0 {
-			latest.Annotations = make(map[string]string)
-		}
-		latest.Annotations["specHashValue"] = newHashValue
-		if err := r.Client.Update(ctx, &latest); err != nil {
-			r.Log.Error(err, "Failed to update the ProgressiveSync object with the new hashSpec value")
-			return err
-		}
-		r.Log.Info("Successfully updated the hashSpec annotation")
-
-		return nil
-	})
-	return retryErr
 }
 
 // getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveSync
