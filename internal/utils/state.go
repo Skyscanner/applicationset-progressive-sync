@@ -59,7 +59,7 @@ func NewProgressiveSyncManager() ProgressiveSyncStateManager {
 
 }
 
-//Get returns the progressive sync state object for the specified progresive sync
+//Get returns the progressive sync state object for the specified progressive sync
 func (p *ProgressiveSyncStateManagerImpl) Get(name string) (ProgressiveSyncState, error) {
 
 	p.Mutex.Lock()

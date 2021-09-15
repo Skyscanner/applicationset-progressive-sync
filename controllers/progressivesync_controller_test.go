@@ -449,7 +449,8 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}))
 			ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
 
-			// Check the hashValue
+			// Get and store the current hash value of the ApplicationSet spec
+			hashedSpec := getHashedSpec(ps)
 
 			By("completing account1-eu-west-1a-1 sync")
 
@@ -770,8 +771,9 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				Message: message,
 			}))
 
-			// Check the hashValue again
-
+			// Check the hashValue at the end to ensure it is still the same one
+			hashedSpecAtEnd := getHashedSpec(ps)
+			Expect(hashedSpec).To(Equal(hashedSpecAtEnd))
 		})
 
 		It("should fail if unable to sync an application", func() {
@@ -1064,6 +1066,61 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}).Should(ContainElement(testAppName))
 		})
 	})
+
+	Describe("calculate hash for applicationSet spec", func() {
+		It("should have a different hash value when spec changes", func() {
+			testPrefix := "hash-should-chage"
+			psName := fmt.Sprintf("%s-ps", testPrefix)
+			appSetName := fmt.Sprintf("%s-appset", testPrefix)
+
+			By("creating a ProgressiveSync obj")
+			ps := syncv1alpha1.ProgressiveSync{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      psName,
+					Namespace: ctrlNamespace,
+				},
+				Spec: syncv1alpha1.ProgressiveSyncSpec{
+					SourceRef: corev1.TypedLocalObjectReference{
+						APIGroup: &appSetAPIRef,
+						Kind:     consts.AppSetKind,
+						Name:     appSetName,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
+
+			By("creating an ApplicationSet obj")
+			appSet, err := createApplicationSet(
+				ctx,
+				appSetName,
+				"argocd",
+				map[string]string{"foo": "bar"},
+			)
+			Expect(appSet).To(Not(BeNil()))
+			Expect(err).To(BeNil())
+
+			By("calculate current hash value")
+			hashedSpec, err := reconciler.calculateHashValue(ctx, &ps)
+			Expect(hashedSpec).To(Not(BeNil()))
+			Expect(err).To(BeNil())
+
+			By("update the spec of the ApplicationSet obj")
+			err = updateApplicationSetLabels(
+				ctx,
+				appSetName,
+				"argocd",
+				map[string]string{"new_label": "mock_value"},
+			)
+			Expect(err).To(BeNil())
+
+			By("calculate the new hash value")
+			newHashedSpec, err := reconciler.calculateHashValue(ctx, &ps)
+			Expect(hashedSpec).To(Not(BeNil()))
+			Expect(err).To(BeNil())
+
+			Expect(hashedSpec).ToNot(Equal(newHashedSpec))
+		})
+	})
 })
 
 // createClusters is a helper function that creates N clusters in a given namespace with a common name prefix
@@ -1165,6 +1222,30 @@ func createApplicationSet(ctx context.Context, name string, namespace string, la
 	}
 
 	return applicationSet, nil
+}
+
+// updateApplicationSetAnnotations updates the labels of the ApplicationSet spec
+func updateApplicationSetLabels(ctx context.Context, appSetName string, namespace string, labels map[string]string) error {
+	appSet := applicationset.ApplicationSet{}
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      appSetName,
+	}, &appSet)
+
+	if err != nil {
+		return err
+	}
+
+	appSet.Spec.Template.Labels = labels
+
+	return k8sClient.Update(ctx, &appSet)
+}
+
+// getHashedSpec returns the value of the hashed spec
+func getHashedSpec(ps syncv1alpha1.ProgressiveSync) string {
+	pss, _ := reconciler.StateManager.Get(ps.Name)
+
+	return pss.GetHashedSpec()
 }
 
 // createSyncedAndHealthyApplications is a helper function that creates an ArgoCD application given a prefix and a cluster
