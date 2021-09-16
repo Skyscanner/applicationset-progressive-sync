@@ -802,6 +802,16 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 			Expect(clusters).To(Not(BeNil()))
 
+			By("creating an ApplicationSet")
+			applicationSet, err := createApplicationSet(
+				ctx,
+				appSet,
+				"argocd",
+				map[string]string{"foo": "bar"},
+			)
+			Expect(applicationSet).To(Not(BeNil()))
+			Expect(err).To(BeNil())
+
 			By("creating one application targeting each cluster")
 			apps, err := createApplications(ctx, targets)
 			Expect(err).To(BeNil())
@@ -923,6 +933,16 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 			Expect(clusters).To(Not(BeNil()))
 
+			By("creating an ApplicationSet")
+			applicationSet, err := createApplicationSet(
+				ctx,
+				appSet,
+				"argocd",
+				map[string]string{"foo": "bar"},
+			)
+			Expect(applicationSet).To(Not(BeNil()))
+			Expect(err).To(BeNil())
+
 			By("creating one healthy and synced application targeting each cluster")
 			apps, err := createSyncedAndHealthyApplications(ctx, targets)
 			Expect(err).To(BeNil())
@@ -1009,6 +1029,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			mockedArgoCDAppClient := mocks.MockArgoCDAppClientCalledWith{}
 			reconciler.ArgoCDAppClient = &mockedArgoCDAppClient
 			testAppName := "single-stage-app"
+			appSet := "single-stage-appset"
 
 			By("creating an ArgoCD cluster")
 			cluster := corev1.Secret{
@@ -1019,6 +1040,16 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &cluster)).To(Succeed())
 
+			By("creating an ApplicationSet")
+			applicationSet, err := createApplicationSet(
+				ctx,
+				appSet,
+				"argocd",
+				map[string]string{"foo": "bar"},
+			)
+			Expect(applicationSet).To(Not(BeNil()))
+			Expect(err).To(BeNil())
+
 			By("creating an application targeting the cluster")
 			singleStageApp := argov1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1027,7 +1058,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: consts.AppSetAPIGroup,
 						Kind:       consts.AppSetKind,
-						Name:       "single-stage-appset",
+						Name:       appSet,
 						UID:        uuid.NewUUID(),
 					}},
 				},
@@ -1047,7 +1078,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					SourceRef: corev1.TypedLocalObjectReference{
 						APIGroup: &appSetAPIRef,
 						Kind:     consts.AppSetKind,
-						Name:     "single-stage-appset",
+						Name:     appSet,
 					},
 					Stages: []syncv1alpha1.ProgressiveSyncStage{{
 						Name:        "stage 1",

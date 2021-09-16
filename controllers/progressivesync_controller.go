@@ -112,6 +112,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	newHash, err := r.calculateHashedSpec(ctx, &ps)
 	if err != nil {
 		log.Error(err, "Failed to generate the hash value from the ApplicationSet spec")
+		return ctrl.Result{}, err
 	} else {
 		currentHash := pss.GetHashedSpec()
 		if currentHash != newHash {
