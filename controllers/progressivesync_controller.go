@@ -18,20 +18,20 @@ package controllers
 
 import (
 	"context"
-	"errors"
+	"crypto/md5"
+	"encoding/hex"
+
 	"fmt"
-	"hash/fnv"
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/json"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/scheduler"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
@@ -41,7 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/kubernetes/pkg/util/hash"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -300,30 +300,24 @@ func (r *ProgressiveSyncReconciler) calculateHashedSpec(ctx context.Context, ps 
 		return "", err
 	}
 
-	apiMetadata := strings.Split(*latest.Spec.SourceRef.APIGroup, "/")
-	genericObj := unstructured.Unstructured{}
-	genericObj.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   apiMetadata[0],
-		Kind:    latest.Spec.SourceRef.Kind,
-		Version: apiMetadata[1],
-	})
-	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: r.ArgoNamespace, Name: latest.Spec.SourceRef.Name}, &genericObj); err != nil {
-		r.Log.Error(err, "Failed to retrieve the unstruct object")
+	appSet := applicationset.ApplicationSet{}
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: r.ArgoNamespace, Name: latest.Spec.SourceRef.Name}, &appSet); err != nil {
+		r.Log.Error(err, "Failed to retrieve the ApplicationSet object")
 		return "", err
 	}
 
-	objectToHash, ok := genericObj.UnstructuredContent()["spec"]
-	if !ok {
-		err := errors.New("`spec` missing from generic object")
-		r.Log.Error(err, "Missing value from map")
-
+	appSetSpec := appSet.Spec
+	appSetSpecInBytes, err := json.Marshal(appSetSpec)
+	if err != nil {
+		r.Log.Error(err, "Failed to encode the ApplicanSet spec")
 		return "", err
 	}
-	hashValue := fnv.New32a()
-	hash.DeepHashObject(hashValue, objectToHash)
+
+	hashedSpecInBytes := md5.Sum(appSetSpecInBytes)
+	hashedSpec := hex.EncodeToString(hashedSpecInBytes[:])
+
 	r.Log.Info("Successfully calculate the hash value of the Spec")
-
-	return rand.SafeEncodeString(fmt.Sprint(hashValue.Sum32())), nil
+	return hashedSpec, nil
 }
 
 // getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveSync

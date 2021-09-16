@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -1144,6 +1145,28 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				map[string]string{"new_label": "mock_value"},
 			)
 			Expect(err).To(BeNil())
+
+			Eventually(func() error {
+				appSet := applicationset.ApplicationSet{}
+				err := k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: argoNamespace,
+					Name:      appSetName,
+				}, &appSet)
+				if err != nil {
+					return err
+				}
+				value, ok := appSet.Spec.Template.ApplicationSetTemplateMeta.Labels["new_label"]
+
+				if !ok {
+					return errors.New("The updated ApplicationSet spec is missing the new label")
+				}
+
+				if value != "mock_value" {
+					return errors.New("The updated ApplicationSet spec is missing the new label value")
+				}
+
+				return nil
+			}).Should(Succeed())
 
 			By("calculate the new hash value")
 			newHashedSpec, err := reconciler.calculateHashedSpec(ctx, &ps)
