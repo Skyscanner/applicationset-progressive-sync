@@ -306,8 +306,7 @@ func (r *ProgressiveSyncReconciler) calculateHashedSpec(ctx context.Context, ps 
 		return "", err
 	}
 
-	appSetSpec := appSet.Spec
-	appSetSpecInBytes, err := json.Marshal(appSetSpec)
+	appSetSpecInBytes, err := json.Marshal(appSet.Spec)
 	if err != nil {
 		r.Log.Error(err, "Failed to encode the ApplicanSet spec")
 		return "", err
