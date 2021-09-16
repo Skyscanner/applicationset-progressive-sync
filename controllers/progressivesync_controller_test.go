@@ -343,7 +343,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 
 			By("creating an ApplicationSet")
-			applicationSet, err := createApplicationSet(
+			applicationSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSet,
 				argoNamespace,
@@ -805,7 +805,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(clusters).To(Not(BeNil()))
 
 			By("creating an ApplicationSet")
-			applicationSet, err := createApplicationSet(
+			applicationSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSet,
 				argoNamespace,
@@ -936,7 +936,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(clusters).To(Not(BeNil()))
 
 			By("creating an ApplicationSet")
-			applicationSet, err := createApplicationSet(
+			applicationSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSet,
 				argoNamespace,
@@ -1043,7 +1043,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, &cluster)).To(Succeed())
 
 			By("creating an ApplicationSet")
-			applicationSet, err := createApplicationSet(
+			applicationSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSet,
 				argoNamespace,
@@ -1123,7 +1123,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
 
 			By("creating an ApplicationSet obj")
-			appSet, err := createApplicationSet(
+			appSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSetName,
 				argoNamespace,
