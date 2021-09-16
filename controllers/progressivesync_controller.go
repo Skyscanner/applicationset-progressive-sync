@@ -61,6 +61,7 @@ type ProgressiveSyncReconciler struct {
 	Scheme          *runtime.Scheme
 	ArgoCDAppClient utils.ArgoCDAppClient
 	StateManager    utils.ProgressiveSyncStateManager
+	ArgoNamespace   string
 }
 
 // +kubebuilder:rbac:groups=argoproj.skyscanner.net,resources=progressivesyncs,verbs=get;list;watch;create;update;patch;delete
@@ -306,7 +307,7 @@ func (r *ProgressiveSyncReconciler) calculateHashedSpec(ctx context.Context, ps 
 		Kind:    latest.Spec.SourceRef.Kind,
 		Version: apiMetadata[1],
 	})
-	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: "argocd", Name: latest.Spec.SourceRef.Name}, &genericObj); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: r.ArgoNamespace, Name: latest.Spec.SourceRef.Name}, &genericObj); err != nil {
 		r.Log.Error(err, "Failed to retrieve the unstruct object")
 		return "", err
 	}

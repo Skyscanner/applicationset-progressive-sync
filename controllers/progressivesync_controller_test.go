@@ -105,6 +105,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Log:             ctrl.Log.WithName("controllers").WithName("progressivesync"),
 			ArgoCDAppClient: &mockAcdClient,
 			StateManager:    utils.NewProgressiveSyncManager(),
+			ArgoNamespace:   argoNamespace,
 		}
 		err = reconciler.SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
@@ -344,7 +345,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			applicationSet, err := createApplicationSet(
 				ctx,
 				appSet,
-				"argocd",
+				argoNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(applicationSet).To(Not(BeNil()))
@@ -806,7 +807,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			applicationSet, err := createApplicationSet(
 				ctx,
 				appSet,
-				"argocd",
+				argoNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(applicationSet).To(Not(BeNil()))
@@ -937,7 +938,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			applicationSet, err := createApplicationSet(
 				ctx,
 				appSet,
-				"argocd",
+				argoNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(applicationSet).To(Not(BeNil()))
@@ -1044,7 +1045,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			applicationSet, err := createApplicationSet(
 				ctx,
 				appSet,
-				"argocd",
+				argoNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(applicationSet).To(Not(BeNil()))
@@ -1124,7 +1125,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			appSet, err := createApplicationSet(
 				ctx,
 				appSetName,
-				"argocd",
+				argoNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(appSet).To(Not(BeNil()))
@@ -1139,7 +1140,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			err = updateApplicationSetLabels(
 				ctx,
 				appSetName,
-				"argocd",
+				argoNamespace,
 				map[string]string{"new_label": "mock_value"},
 			)
 			Expect(err).To(BeNil())
