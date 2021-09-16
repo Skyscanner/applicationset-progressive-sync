@@ -1254,6 +1254,7 @@ func createApplications(ctx context.Context, targets []Target) ([]argov1alpha1.A
 	return apps, nil
 }
 
+// createApplicationSet creates an ApplicationSet object with labels for the Application template
 func createApplicationSet(ctx context.Context, name string, namespace string, labels map[string]string) (applicationset.ApplicationSet, error) {
 	applicationSet := applicationset.ApplicationSet{
 		ObjectMeta: metav1.ObjectMeta{
