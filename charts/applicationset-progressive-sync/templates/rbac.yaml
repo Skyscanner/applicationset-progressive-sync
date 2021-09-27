@@ -51,6 +51,13 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applicationsets
+  verbs:
+  - get
+  - list
 {{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
 - apiGroups:
   - ''

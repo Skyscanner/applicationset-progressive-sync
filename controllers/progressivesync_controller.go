@@ -18,14 +18,20 @@ package controllers
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
+
 	"fmt"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/json"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/scheduler"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/go-logr/logr"
@@ -35,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,6 +61,7 @@ type ProgressiveSyncReconciler struct {
 	Scheme          *runtime.Scheme
 	ArgoCDAppClient utils.ArgoCDAppClient
 	StateManager    utils.ProgressiveSyncStateManager
+	ArgoNamespace   string
 }
 
 // +kubebuilder:rbac:groups=argoproj.skyscanner.net,resources=progressivesyncs,verbs=get;list;watch;create;update;patch;delete
@@ -62,6 +70,7 @@ type ProgressiveSyncReconciler struct {
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications,verbs=get;list;watch
 // +kubebuilder:rbac:groups="argoproj.io",resources=applications/status,verbs=get;list;watch
+// +kubebuilder:rbac:groups="argoproj.io",resources=applicationsets,verbs=get;list
 
 // Reconcile performs the reconciling for a single named ProgressiveSync object
 func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -99,11 +108,25 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	pss, _ := r.StateManager.Get(ps.Name)
+
+	newHash, err := r.calculateHashedSpec(ctx, &ps)
+	if err != nil {
+		log.Error(err, "Failed to generate the hash value from the ApplicationSet spec")
+		return ctrl.Result{}, err
+	}
+	currentHash := pss.GetHashedSpec()
+	if currentHash != newHash {
+		pss.SetHashedSpec(newHash)
+		log.Info("Successfully updated the hash value of the ApplicationSet spec", "service", ps.Name)
+	} else {
+		log.Info("Hash value is the same as nothing has changed in the ApplicationSet spec", "service", ps.Name)
+	}
+
 	latest := ps
 	var result reconcile.Result
 	var reconcileErr error
 
-	pss, _ := r.StateManager.Get(ps.Name)
 	for _, stage := range ps.Spec.Stages {
 		log = log.WithValues("stage", stage.Name)
 
@@ -265,6 +288,34 @@ func (r *ProgressiveSyncReconciler) getClustersFromSelector(ctx context.Context,
 	utils.SortSecretsByName(&secrets)
 
 	return secrets, nil
+}
+
+// calculateHashValue returns a hash value string for the ApplicationSet spec
+func (r *ProgressiveSyncReconciler) calculateHashedSpec(ctx context.Context, ps *syncv1alpha1.ProgressiveSync) (string, error) {
+	key := client.ObjectKeyFromObject(ps)
+	latest := syncv1alpha1.ProgressiveSync{}
+	if err := r.Client.Get(ctx, key, &latest); err != nil {
+		r.Log.Error(err, "Failed to retrieve the ProgressiveSync object while calculating the hash value")
+		return "", err
+	}
+
+	appSet := applicationset.ApplicationSet{}
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: r.ArgoNamespace, Name: latest.Spec.SourceRef.Name}, &appSet); err != nil {
+		r.Log.Error(err, "Failed to retrieve the ApplicationSet object")
+		return "", err
+	}
+
+	appSetSpecInBytes, err := json.Marshal(appSet.Spec)
+	if err != nil {
+		r.Log.Error(err, "Failed to encode the ApplicanSet spec")
+		return "", err
+	}
+
+	hashedSpecInBytes := md5.Sum(appSetSpecInBytes)
+	hashedSpec := hex.EncodeToString(hashedSpecInBytes[:])
+
+	r.Log.Info("Successfully calculate the hash value of the Spec")
+	return hashedSpec, nil
 }
 
 // getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveSync

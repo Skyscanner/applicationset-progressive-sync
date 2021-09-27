@@ -30,6 +30,7 @@ import (
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/controllers"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
@@ -44,6 +45,7 @@ func init() {
 
 	_ = syncv1alpha1.AddToScheme(scheme)
 	_ = argov1alpha1.AddToScheme(scheme)
+	_ = applicationset.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -92,6 +94,7 @@ func main() {
 		Scheme:          mgr.GetScheme(),
 		ArgoCDAppClient: utils.GetArgoCDAppClient(c),
 		StateManager:    utils.NewProgressiveSyncManager(),
+		ArgoNamespace:   argoNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveSync")
 		os.Exit(1)
