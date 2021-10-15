@@ -1,0 +1,7 @@
+apiVersion: argoproj.skyscanner.net/v1alpha1
+kind: ProgressiveSync
+metadata:
+  name: progressivesync-sample
+spec:
+  # Add fields here
+  foo: bar
