@@ -52,7 +52,7 @@ shftm: shfmt ## Run shfmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-tools: controller-gen ginkgo ## Install the tools to run tests and generate manifests.
+tools: controller-gen ginkgo shfmt ## Install the tools to run tests and generate manifests.
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: manifests generate fmt shfmt vet ginkgo ## Run tests.
@@ -62,10 +62,10 @@ test: manifests generate fmt shfmt vet ginkgo ## Run tests.
 
 ##@ Build
 
-build: generate fmt vet ## Build manager binary.
+build: generate fmt fmt-sh vet ## Build manager binary.
 	go build -o bin/manager main.go
 
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests generate fmt fmt-sh vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
