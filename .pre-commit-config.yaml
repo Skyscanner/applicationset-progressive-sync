@@ -1,0 +1,30 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.4.0
+  hooks:
+  - id: trailing-whitespace
+  - id: end-of-file-fixer
+- repo: https://github.com/golangci/golangci-lint
+  rev: v1.36.0
+  hooks:
+    - id: golangci-lint
+- repo: https://github.com/norwoodj/helm-docs
+  rev: v1.5.0
+  hooks:
+    - id: helm-docs
+      args:
+        - --chart-search-root=charts
+- repo: https://github.com/shellcheck-py/shellcheck-py
+  rev: v0.7.1.1
+  hooks:
+  - id: shellcheck
+    args:
+      - -x
+- repo: local
+  hooks:
+  - id: shell-format
+    name: shell-format
+    entry: shfmt -l -d -w .
+    language: system
+    types: [shell]
+    pass_filenames: false
