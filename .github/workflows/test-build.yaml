@@ -23,9 +23,6 @@ jobs:
           chmod +x kubebuilder
           mv kubebuilder /usr/local/bin/
 
-      - name: Get tools
-        run: make tools
-
       - name: Test
         run: make test
 

@@ -21,9 +21,6 @@ jobs:
         with:
           languages: go
 
-      - name: Get tools
-        run: make tools
-
       - name: Build
         run: make build
 

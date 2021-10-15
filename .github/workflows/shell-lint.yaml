@@ -25,4 +25,4 @@ jobs:
           shellcheck -x **/*.sh
 
       - name: shfmt
-        run: make fmt-sh 
+        run: make shftm 

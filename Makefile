@@ -46,26 +46,24 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
-fmt-sh: shfmt ## Run shfmt against code.
+shftm: shfmt ## Run shfmt against code.
 	$(SHFMT) -l -d hack/.
 
 vet: ## Run go vet against code.
 	go vet ./...
 
-tools: controller-gen ginkgo shfmt ## Install the tools to run tests and generate manifests.
-
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet ginkgo ## Run tests.
+test: manifests generate fmt shfmt vet ginkgo ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
 ##@ Build
 
-build: generate fmt fmt-sh vet ## Build manager binary.
+build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
-run: manifests generate fmt fmt-sh vet ## Run a controller from your host.
+run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
