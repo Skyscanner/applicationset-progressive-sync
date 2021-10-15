@@ -20,7 +20,7 @@ jobs:
       - name: Install kubebuilder
         run: |
           set -x
-          version=2.3.1
+          version=3.0.1
           os=$(go env GOOS)
           arch=$(go env GOARCH)
           curl -Ls https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${version}/kubebuilder_${version}_${os}_${arch}.tar.gz -o /tmp/kubebuilder_${version}.tar.gz
