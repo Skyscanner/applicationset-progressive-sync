@@ -14,14 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.3.4
+
       - uses: actions/setup-go@v2
         with:
           go-version: ^1.16
+
       - name: shellcheck
         run: |
           pip install shellcheck-py
           shellcheck -x **/*.sh
-      - name: Install tools
-        run: make tools
+
       - name: shfmt
         run: make fmt-sh 
