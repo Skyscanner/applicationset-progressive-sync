@@ -1,2 +1,0 @@
-*  @Skyscanner/argo
-*  @Skyscanner/catalyst

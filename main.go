@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	argoprojskyscannernetv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/controllers"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
@@ -55,7 +55,7 @@ func init() {
 }
 
 func main() {
-	var metricsAddr, ctrlNamespace, argoNamespace string
+	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -73,10 +73,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	namespaces := []string{ctrlNamespace}
-	if ctrlNamespace != argoNamespace {
-		namespaces = append(namespaces, argoNamespace)
-	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -89,12 +86,6 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-
-	c, err := utils.ReadConfiguration()
-	if err != nil {
-		setupLog.Error(err, "unable to read configuration")
 		os.Exit(1)
 	}
 
