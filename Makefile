@@ -46,7 +46,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
-fmt-sh: ## Run shfmt against code.
+fmt-sh: shfmt ## Run shfmt against code.
 	$(SHFMT) -l -d hack/.
 
 vet: ## Run go vet against code.
