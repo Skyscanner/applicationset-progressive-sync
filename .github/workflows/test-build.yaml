@@ -19,15 +19,9 @@ jobs:
 
       - name: Install kubebuilder
         run: |
-          set -x
-          version=3.0.1
-          os=$(go env GOOS)
-          arch=$(go env GOARCH)
-          curl -Ls https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${version}/kubebuilder_${version}_${os}_${arch}.tar.gz -o /tmp/kubebuilder_${version}.tar.gz
-          shasum -a 256 -c kubebuilder_sha256.txt
-          tar -xzf /tmp/kubebuilder_${version}.tar.gz -C /tmp/
-          sudo mv /tmp/kubebuilder_${version}_${os}_${arch} /usr/local/kubebuilder
-          export PATH=$PATH:/usr/local/kubebuilder/bin
+          curl -L -o kubebuilder https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)
+          chmod +x kubebuilder
+          mv kubebuilder /usr/local/bin/
 
       - name: Get tools
         run: make tools
