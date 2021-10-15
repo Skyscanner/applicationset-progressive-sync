@@ -46,10 +46,13 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
+fmt-sh: ## Run shfmt against code.
+	$(SHFMT) -l -d hack/.
+
 vet: ## Run go vet against code.
 	go vet ./...
 
-tools: controller-gen ginkgo ## Install the tools to run tests and generate manifests.
+tools: controller-gen ginkgo shfmt ## Install the tools to run tests and generate manifests.
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: manifests generate fmt vet ginkgo ## Run tests.
@@ -59,10 +62,10 @@ test: manifests generate fmt vet ginkgo ## Run tests.
 
 ##@ Build
 
-build: generate fmt vet ## Build manager binary.
+build: generate fmt fmt-sh vet ## Build manager binary.
 	go build -o bin/manager main.go
 
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests generate fmt fmt-sh vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
@@ -98,6 +101,10 @@ kustomize: ## Download kustomize locally if necessary.
 GINKGO = $(shell pwd)/bin/ginkgo
 ginkgo: ## Download ginkgo locally if necessary.
 	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo@v1.16.5)
+
+SHFMT = $(shell pwd)/bin/shfmt
+shfmt: ## Download shfmt locally if necessary.
+	$(call go-get-tool,$(SHFMT),mvdan.cc/sh/v3/cmd/shfmt@v3.4.0)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
