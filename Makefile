@@ -49,6 +49,8 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+tools: controller-gen ginkgo ## Install the tools to run tests and generate manifests.
+
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: manifests generate fmt vet ginkgo ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
