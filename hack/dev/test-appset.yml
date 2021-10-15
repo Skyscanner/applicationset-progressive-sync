@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-goinfra
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+        - cluster: control-plane
+          url: https://kubernetes.default.svc
+        - cluster: kind-prc-cluster-1
+          url: https://prc-cluster-1-control-plane:6443
+        - cluster: kind-prc-cluster-2
+          url: https://prc-cluster-2-control-plane:6443
+  template:
+    metadata:
+      name: 'goinfra-{{cluster}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/maruina/appset-poc.git
+        targetRevision: HEAD
+        path: goinfra
+        helm:
+          releaseName: "goinfra"
+          valueFiles:
+            - "values.yaml"
+            - "values-in-cluster.yaml"
+          parameters:
+            - name: go-infrabin.podAnnotations.gitsha #mshell-service.deployment.image.tag
+              value: ${ARGOCD_APP_REVISION}
+      destination:
+        server: '{{url}}'
+        namespace: infrabin

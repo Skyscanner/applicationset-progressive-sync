@@ -1,0 +1,97 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "applicationset-progressive-sync.fullname" . }}
+  labels:
+    {{- include "applicationset-progressive-sync.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.skyscanner.net
+  resources:
+  - progressivesyncs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - argoproj.skyscanner.net
+  resources:
+  - progressivesyncs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applicationsets
+  verbs:
+  - get
+  - list
+{{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - configmaps/status
+  verbs:
+  - get
+  - update
+  - patch
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "applicationset-progressive-sync.fullname" . }}
+  labels:
+    {{- include "applicationset-progressive-sync.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "applicationset-progressive-sync.fullname" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "applicationset-progressive-sync.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
