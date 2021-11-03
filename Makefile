@@ -96,7 +96,7 @@ KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
 
-GINKGO = $(shell pwd)/bin/ginkgo
+GINKGO = "$(shell pwd)/bin/ginkgo -r --failOnPending --cover -coverprofile=../coverage.out --trace --race"
 ginkgo: ## Download ginkgo locally if necessary.
 	$(call go-install-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo@v1.16.5)
 

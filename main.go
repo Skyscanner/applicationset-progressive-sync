@@ -33,6 +33,9 @@ import (
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/controllers"
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
+	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -45,15 +48,19 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(syncv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(argov1alpha1.AddToScheme(scheme))
+	utilruntime.Must(applicationset.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
 func main() {
-	var metricsAddr string
+	var metricsAddr, ctrlNamespace, argoNamespace string
 	var enableLeaderElection bool
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&ctrlNamespace, "ctrl-namespace", "argocd", "The controller namespace")
+	flag.StringVar(&argoNamespace, "argo-namespace", "argocd", "The namespace where ArgoCD and the ApplicationSet controller are deployed to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -64,6 +71,11 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	namespaces := []string{ctrlNamespace}
+	if ctrlNamespace != argoNamespace {
+		namespaces = append(namespaces, argoNamespace)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -78,9 +90,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	c, err := utils.ReadConfiguration()
+	if err != nil {
+		setupLog.Error(err, "unable to read configuration")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.ProgressiveSyncReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		ArgoCDAppClient: utils.GetArgoCDAppClient(c),
+		StateManager:    utils.NewProgressiveSyncManager(),
+		ArgoNamespace:   argoNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProgressiveSync")
 		os.Exit(1)
