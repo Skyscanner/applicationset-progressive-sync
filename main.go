@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	argoprojskyscannernetv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/controllers"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"

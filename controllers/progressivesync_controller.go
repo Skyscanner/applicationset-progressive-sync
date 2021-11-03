@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	argoprojskyscannernetv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
+	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 )
 
 // ProgressiveSyncReconciler reconciles a ProgressiveSync object
@@ -57,6 +57,6 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProgressiveSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&argoprojskyscannernetv1alpha1.ProgressiveSync{}).
+		For(&syncv1alpha1.ProgressiveSync{}).
 		Complete(r)
 }
