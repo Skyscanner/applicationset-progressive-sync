@@ -55,7 +55,7 @@ func init() {
 }
 
 func main() {
-	var metricsAddr string
+	var metricsAddr, ctrlNamespace, argoNamespace string
 	var enableLeaderElection bool
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -86,6 +86,12 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	c, err := utils.ReadConfiguration()
+	if err != nil {
+		setupLog.Error(err, "unable to read configuration")
 		os.Exit(1)
 	}
 
