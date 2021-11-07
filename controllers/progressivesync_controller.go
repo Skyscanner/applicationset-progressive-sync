@@ -104,8 +104,6 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			log.Error(err, "failed to update object when adding finalizer")
 			return ctrl.Result{}, err
 		}
-		// Requeue after adding the finalizer
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	pss, _ := r.StateManager.Get(ps.Name)
