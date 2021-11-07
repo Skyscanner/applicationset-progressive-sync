@@ -34,7 +34,6 @@ import (
 	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -57,7 +57,6 @@ const RequeueDelayOnError = time.Minute * 5
 // ProgressiveSyncReconciler reconciles a ProgressiveSync object
 type ProgressiveSyncReconciler struct {
 	client.Client
-	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	ArgoCDAppClient utils.ArgoCDAppClient
 	StateManager    utils.ProgressiveSyncStateManager
@@ -74,7 +73,8 @@ type ProgressiveSyncReconciler struct {
 
 // Reconcile performs the reconciling for a single named ProgressiveSync object
 func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("progressivesync", req.NamespacedName)
+	log := log.FromContext(ctx)
+	log = log.WithValues("progressivesync", req.NamespacedName)
 	log.Info("reconciliation loop started")
 
 	// Get the ProgressiveSync object
