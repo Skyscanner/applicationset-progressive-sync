@@ -77,10 +77,8 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log = log.WithValues("progressivesync", req.NamespacedName)
 	log.Info("reconciliation loop started")
 
-	// Get the ProgressiveSync object
 	var ps syncv1alpha1.ProgressiveSync
 	if err := r.Get(ctx, req.NamespacedName, &ps); err != nil {
-		log.Error(err, "unable to fetch progressivesync object")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
