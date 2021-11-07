@@ -82,17 +82,9 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	log = log.WithValues("applicationset", ps.Spec.SourceRef.Name)
-
 	// If the object is being deleted, remove finalizer and don't requeue it
 	if !ps.ObjectMeta.DeletionTimestamp.IsZero() {
-		controllerutil.RemoveFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer)
-		if err := r.Update(ctx, &ps); err != nil {
-			log.Error(err, "failed to update object when removing finalizer")
-			return ctrl.Result{}, err
-		}
-		// Stop reconciliation as the item is being deleted
-		return ctrl.Result{}, nil
+		return r.reconcileDelete(ctx, ps)
 	}
 
 	// Add finalizer if it doesn't exist
@@ -501,4 +493,20 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	message := fmt.Sprintf("%s is in an unknown state!", stage.Name)
 	log.Info(message)
 	return ps, ctrl.Result{Requeue: true}, nil
+}
+
+//reconcileDelete deletes the ConfigMap holding the ProgressiveSync object state
+// before removing the finalizer
+func (r *ProgressiveSyncReconciler) reconcileDelete(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
+	//TODO: remove configmap
+
+	controllerutil.RemoveFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer)
+	if err := r.Update(ctx, &ps); err != nil {
+		log.Error(err, "failed to update object when removing finalizer")
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
 }
