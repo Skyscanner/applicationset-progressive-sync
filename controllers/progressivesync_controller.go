@@ -96,49 +96,59 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	pss, _ := r.StateManager.Get(ps.Name)
+	reconcilePs, reconcileResult, reconcileError := r.reconcile(ctx, ps)
 
-	newHash, err := r.calculateHashedSpec(ctx, &ps)
-	if err != nil {
-		log.Error(err, "Failed to generate the hash value from the ApplicationSet spec")
-		return ctrl.Result{}, err
-	}
-	currentHash := pss.GetHashedSpec()
-	if currentHash != newHash {
-		pss.SetHashedSpec(newHash)
-		log.Info("Successfully updated the hash value of the ApplicationSet spec", "service", ps.Name)
-	} else {
-		log.Info("Hash value is the same as nothing has changed in the ApplicationSet spec", "service", ps.Name)
+	// Update status after reconciliation.
+	if updateStatusErr := r.patchStatus(ctx, reconcilePs); updateStatusErr != nil {
+		log.Error(updateStatusErr, "unable to update status after reconciliation")
+		return ctrl.Result{Requeue: true}, updateStatusErr
 	}
 
-	latest := ps
-	var result reconcile.Result
-	var reconcileErr error
+	return reconcileResult, reconcileError
 
-	for _, stage := range ps.Spec.Stages {
-		log = log.WithValues("stage", stage.Name)
+	// pss, _ := r.StateManager.Get(ps.Name)
 
-		latest, result, reconcileErr = r.reconcileStage(ctx, latest, stage, pss)
-		if err := r.updateStatusWithRetry(ctx, &latest); err != nil {
-			return ctrl.Result{}, err
-		}
+	// newHash, err := r.calculateHashedSpec(ctx, &ps)
+	// if err != nil {
+	// 	log.Error(err, "Failed to generate the hash value from the ApplicationSet spec")
+	// 	return ctrl.Result{}, err
+	// }
+	// currentHash := pss.GetHashedSpec()
+	// if currentHash != newHash {
+	// 	pss.SetHashedSpec(newHash)
+	// 	log.Info("Successfully updated the hash value of the ApplicationSet spec", "service", ps.Name)
+	// } else {
+	// 	log.Info("Hash value is the same as nothing has changed in the ApplicationSet spec", "service", ps.Name)
+	// }
 
-		if result.Requeue || reconcileErr != nil {
-			log.Info("requeuing stage")
-			return result, reconcileErr
-		}
+	// latest := ps
+	// var result reconcile.Result
+	// var reconcileErr error
 
-	}
+	// for _, stage := range ps.Spec.Stages {
+	// 	log = log.WithValues("stage", stage.Name)
 
-	// Progressive sync completed
-	completed := latest.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-	apimeta.SetStatusCondition(latest.GetStatusConditions(), completed)
-	if err := r.updateStatusWithRetry(ctx, &latest); err != nil {
-		log.Error(err, "failed to update object status")
-		return ctrl.Result{}, err
-	}
-	log.Info("sync completed")
-	return ctrl.Result{}, nil
+	// 	latest, result, reconcileErr = r.reconcileStage(ctx, latest, stage, pss)
+	// 	if err := r.updateStatusWithRetry(ctx, &latest); err != nil {
+	// 		return ctrl.Result{}, err
+	// 	}
+
+	// 	if result.Requeue || reconcileErr != nil {
+	// 		log.Info("requeuing stage")
+	// 		return result, reconcileErr
+	// 	}
+
+	// }
+
+	// // Progressive sync completed
+	// completed := latest.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
+	// apimeta.SetStatusCondition(latest.GetStatusConditions(), completed)
+	// if err := r.updateStatusWithRetry(ctx, &latest); err != nil {
+	// 	log.Error(err, "failed to update object status")
+	// 	return ctrl.Result{}, err
+	// }
+	// log.Info("sync completed")
+	// return ctrl.Result{}, nil
 }
 
 // SetupWithManager adds the reconciler to the manager, so that it gets started when the manager is started.
@@ -381,6 +391,16 @@ func (r *ProgressiveSyncReconciler) markAppAsSynced(ctx context.Context, app arg
 	return nil
 }
 
+// reconcile performs the actual reconciliation logic
+func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (syncv1alpha1.ProgressiveSync, ctrl.Result, error) {
+
+	log := log.FromContext(ctx)
+
+	// TODO: create ConfigMap for holding state
+
+	return ps, ctrl.Result{}, nil
+}
+
 // reconcileStage reconcile a ProgressiveSyncStage
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {
 	log := r.Log.WithValues("progressivesync", fmt.Sprintf("%s/%s", ps.Namespace, ps.Name), "applicationset", ps.Spec.SourceRef.Name, "stage", stage.Name, "syncedAtStage", pss)
@@ -509,4 +529,16 @@ func (r *ProgressiveSyncReconciler) reconcileDelete(ctx context.Context, ps sync
 	}
 
 	return ctrl.Result{}, nil
+}
+
+//patchStatus updates the ProgressiveSync object using a MergeFrom strategy
+func (r *ProgressiveSyncReconciler) patchStatus(ctx context.Context, ps syncv1alpha1.ProgressiveSync) error {
+	key := client.ObjectKeyFromObject(&ps)
+	latest := syncv1alpha1.ProgressiveSync{}
+
+	if err := r.Client.Get(ctx, key, &latest); err != nil {
+		return err
+	}
+
+	return r.Client.Status().Patch(ctx, &ps, client.MergeFrom(&latest))
 }
