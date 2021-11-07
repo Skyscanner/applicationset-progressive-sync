@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"strings"
 
 	"fmt"
 	"time"
@@ -32,6 +33,7 @@ import (
 	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
+	"github.com/argoproj/gitops-engine/pkg/health"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -240,15 +242,14 @@ func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []r
 		for _, app := range appList.Items {
 			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.Owns(app.GetOwnerReferences()) {
 				/*
-						Consider the following scenario:
-						- two Applications
-						- owned by the same ApplicationSet
-						- referenced by the same ProgressiveSync
-						- targeting the same cluster
+					Consider the following scenario:
+					- two Applications
+					- owned by the same ApplicationSet
+					- referenced by the same ProgressiveSync
+					- targeting the same cluster
 
-						In this scenario, we would trigger the reconciliation loop twice.
-						To avoid that, we use a map to store for which ProgressiveSync object
-					    we already triggered the reconciliation loop.
+					In this scenario, we would trigger the reconciliation loop twice.
+					To avoid that, we use a map to store for which ProgressiveSync object we already triggered the reconciliation loop.
 				*/
 
 				namespacedName := types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}
@@ -314,18 +315,20 @@ func (r *ProgressiveSyncReconciler) calculateHashedSpec(ctx context.Context, ps 
 }
 
 // getOwnedAppsFromClusters returns a list of Applications targeting the specified clusters and owned by the specified ProgressiveSync
-func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context, clusters corev1.SecretList, pr *syncv1alpha1.ProgressiveSync) ([]argov1alpha1.Application, error) {
+func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context, clusters corev1.SecretList, ps syncv1alpha1.ProgressiveSync) ([]argov1alpha1.Application, error) {
+	log := log.FromContext(ctx)
+
 	var apps []argov1alpha1.Application
-	appList := argov1alpha1.ApplicationList{}
+	var appList argov1alpha1.ApplicationList
 
 	if err := r.List(ctx, &appList); err != nil {
-		r.Log.Error(err, "failed to list Application")
+		log.Error(err, "failed to list Application")
 		return apps, err
 	}
 
-	for _, c := range clusters.Items {
+	for _, cluster := range clusters.Items {
 		for _, app := range appList.Items {
-			if pr.Owns(app.GetOwnerReferences()) && string(c.Data["server"]) == app.Spec.Destination.Server {
+			if ps.Owns(app.GetOwnerReferences()) && string(cluster.Data["server"]) == app.Spec.Destination.Server {
 				apps = append(apps, app)
 			}
 		}
@@ -348,12 +351,17 @@ func (r *ProgressiveSyncReconciler) updateStageStatus(ctx context.Context, name,
 }
 
 // syncApp sends a sync request for the target app
-func (r *ProgressiveSyncReconciler) syncApp(ctx context.Context, appName string) (*argov1alpha1.Application, error) {
+func (r *ProgressiveSyncReconciler) syncApp(ctx context.Context, app argov1alpha1.Application) error {
 	syncReq := applicationpkg.ApplicationSyncRequest{
-		Name: &appName,
+		Name: &app.Name,
 	}
 
-	return r.ArgoCDAppClient.Sync(ctx, &syncReq)
+	_, err := r.ArgoCDAppClient.Sync(ctx, &syncReq)
+	if err != nil && !strings.Contains(err.Error(), "another operation is already in progress") {
+		return err
+	}
+
+	return nil
 }
 
 // updateStatusWithRetry updates the progressive sync object status with backoff
@@ -397,26 +405,112 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	//TODO: update Observed generation
 
+	//TODO: calculate hash to check if it's a new progressive sync or an old one
+
 	for _, stage := range ps.Spec.Stages {
 
 		stageStatus, err := r.reconcileStage(ctx, ps, stage)
 
 		switch {
+		case stageStatus.Phase == syncv1alpha1.PhaseSucceeded:
+			{
+				// TODO: Update the ProgressiveSync object status
+				// and move to the next stage
 
-		//TODO: look at the stage status and update the PS conditions and StageStatus
-
+			}
+		case stageStatus.Phase == syncv1alpha1.PhaseProgressing:
+			{
+				// TODO: Update the ProgressiveSync object status and requeue
+				return ps, ctrl.Result{}, nil
+			}
+		case stageStatus.Phase == syncv1alpha1.PhaseFailed:
+			{
+				//TODO: Update the ProgressiveSync object status and requeue
+				return ps, ctrl.Result{}, err
+			}
 		}
 
 	}
 
-	// All stages completed
+	//TODO: All stages are synced correctly, update the ProgressiveSync object
+	// and don't requeue
 
 	return ps, ctrl.Result{}, nil
 }
 
-// reconcileStage reconcile a ProgressiveSyncStage
+// reconcileStage observes the state of the world and sync the desired number of apps
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.StageStatus, error) {
+	// A cluster is represented in ArgoCD by a secret
+	// Get the ArgoCD secrets selected by the label selector
+	selectedCluster, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
+	if err != nil {
+		//TODO: Stage status failed
+		return syncv1alpha1.StageStatus{}, err
+	}
 
+	// Get the ArgoCD apps targeting the selected clusters
+	selectedApps, err := r.getOwnedAppsFromClusters(ctx, selectedCluster, ps)
+	if err != nil {
+		//TODO: Stage status failed
+		return syncv1alpha1.StageStatus{}, err
+	}
+
+	outOfSyncApps := utils.GetAppsBySyncStatusCode(selectedApps, argov1alpha1.SyncStatusCodeOutOfSync)
+
+	// If there are no OutOfSync apps then the Stage in completed
+	if len(outOfSyncApps) == 0 {
+		//TODO: Stage status completed
+		return syncv1alpha1.StageStatus{}, nil
+	}
+
+	// TODO: calculate maxTargets and maxParallel as percentage
+
+	progressingApps := utils.GetAppsByHealthStatusCode(selectedApps, health.HealthStatusProgressing)
+
+	// If we reached the maximum number of progressing apps for the stage
+	// then the Stage is progressing
+	if len(progressingApps) == stage.MaxTargets.IntValue() {
+		//TODO: Stage status progressing
+		return syncv1alpha1.StageStatus{}, nil
+	}
+
+	// If there is an external process triggering a sync,
+	// maxParallel - len(progressingApps) might actually be greater than len(outOfSyncApps)
+	// causing the runtime to panic
+	maxSync := stage.MaxParallel.IntValue() - len(progressingApps)
+	if maxSync > len(outOfSyncApps) {
+		maxSync = len(outOfSyncApps)
+	}
+
+	//TODO: read the configmap to calculate syncedInCurrentStage
+	var syncedInCurrentStage []argov1alpha1.Application
+
+	// Consider the following scenario
+	//
+	// maxTargets = 3
+	// maxParallel = 3
+	// outOfSyncApps = 4
+	// syncedInCurrentStage = 2
+	// progressingApps = 1
+	//
+	// This scenario makes maxSync = 2
+	//
+	// Without the following logic we would end up
+	// with a total of 4 applications synced in the stage
+	if maxSync+len(syncedInCurrentStage) > stage.MaxTargets.IntValue() {
+		maxSync = stage.MaxTargets.IntValue() - len(syncedInCurrentStage)
+	}
+
+	// Sync the desired number of apps
+	for i := 0; i < maxSync; i++ {
+		err := r.syncApp(ctx, outOfSyncApps[i])
+		if err != nil {
+			//TODO: Set failed stage
+			return syncv1alpha1.StageStatus{}, err
+		}
+	}
+
+	//TODO: Stage status progressing
 	return syncv1alpha1.StageStatus{}, nil
 }
 
