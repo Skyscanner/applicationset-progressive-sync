@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/fluxcd/pkg/apis/meta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -84,20 +85,20 @@ type ProgressiveSyncStatus struct {
 	// +kubebuilder:validation:Optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Conditions holds the condition for the ProgressiveSync
+	// Conditions holds the condition for the ProgressiveSync.
 	// +kubebuilder:validation:Optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// LastSyncedStage is the name of the last synced stage
+	// LastSyncedStage is the name of the last synced stage.
 	// +kubebuilder:validation:Optional
 	LastSyncedStage string `json:"lastSyncedStage,omitempty"`
 
-	// LastSyncedStageStatus is the status of the last synced stage
+	// LastSyncedStageStatus is the status of the last synced stage.
 	// +kubebuilder:validation:Optional
 	LastSyncedStageStatus StageStatus `json:"lastSyncedStageStatus,omitempty"`
 }
 
-// Owns returns true if the ProgressiveSync object has a reference to one of the owners
+// Owns returns true if the ProgressiveSync object has a reference to one of the owners.
 func (in *ProgressiveSync) Owns(owners []metav1.OwnerReference) bool {
 	for _, owner := range owners {
 		if owner.Kind == in.Spec.SourceRef.Kind && owner.APIVersion == *in.Spec.SourceRef.APIGroup && owner.Name == in.Spec.SourceRef.Name {
@@ -105,6 +106,37 @@ func (in *ProgressiveSync) Owns(owners []metav1.OwnerReference) bool {
 		}
 	}
 	return false
+}
+
+// ProgressiveSyncProgressing resets any previous information and registers progress toward
+// reconciling the given ProgressiveSync by setting the meta.ReadyCondition to
+// 'Unknown' for meta.ProgressingReason.
+func ProgressiveSyncProgressing(ps ProgressiveSync) ProgressiveSync {
+	ps.Status.Conditions = []metav1.Condition{}
+	meta.SetResourceCondition(&ps, meta.ReadyCondition, metav1.ConditionUnknown, meta.ProgressingReason,
+		"Reconciliation in progress")
+
+	return ps
+}
+
+// ProgressiveSyncNotReady registers a failed reconciliation of the given ProgressiveSync.
+func ProgressiveSyncNotReady(ps ProgressiveSync, reason, message string) ProgressiveSync {
+	meta.SetResourceCondition(&ps, meta.ReadyCondition, metav1.ConditionFalse, reason, message)
+
+	return ps
+}
+
+// ProgressiveSyncReady registers a successful reconciliation of the given ProgressiveSync.
+func ProgressiveSyncReady(ps ProgressiveSync) ProgressiveSync {
+	meta.SetResourceCondition(&ps, meta.ReadyCondition, metav1.ConditionTrue, meta.ReconciliationSucceededReason,
+		"Progressive sync reconciliation succeeded")
+
+	return ps
+}
+
+// GetStatusConditions returns a pointer to the Status.Conditions slice
+func (in *ProgressiveSync) GetStatusConditions() *[]metav1.Condition {
+	return &in.Status.Conditions
 }
 
 // +kubebuilder:object:root=true

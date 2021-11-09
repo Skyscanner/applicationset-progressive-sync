@@ -6,9 +6,12 @@ require (
 	github.com/argoproj-labs/applicationset v0.2.0
 	github.com/argoproj/argo-cd v0.8.1-0.20210218100039-a4ee25b59d8d
 	github.com/argoproj/gitops-engine v0.3.1-0.20210709004906-a4c77d5c70fb
+	github.com/fluxcd/pkg/apis/meta v0.10.0
 	github.com/go-logr/logr v0.4.0
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
+	github.com/prometheus/client_golang v1.11.0 // indirect
+	go.uber.org/zap v1.17.0 // indirect
 	google.golang.org/grpc v1.33.1
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
