@@ -45,3 +45,31 @@ func FindStageStatus(ss []StageStatus, statusName string) *StageStatus {
 
 	return nil
 }
+
+// SetStageStatus sets the corresponding StageStatus in stageStatus to newStatus
+// - If a stage doesn't exist, it will be added to StageStatus slice
+// - If a stage already exists it will be updated
+func (in *ProgressiveSync) SetStageStatus(newStatus StageStatus, updateTime *metav1.Time) {
+	// If StartedAt is not set and the stage is in progress, assign StartedAt
+	if newStatus.Phase == PhaseProgressing && newStatus.StartedAt.IsZero() {
+		newStatus.StartedAt = updateTime
+	}
+	// If the stage is not progressing it is either completed or failed.
+	// If FinishedAt is not set we assign it.
+	if (newStatus.Phase == PhaseFailed || newStatus.Phase == PhaseSucceeded) && newStatus.FinishedAt.IsZero() {
+		newStatus.FinishedAt = updateTime
+	}
+
+	// Get the status if it already exists
+	existingStatus := FindStageStatus(in.Status.Stages, newStatus.Name)
+
+	if existingStatus == nil {
+		in.Status.Stages = append(in.Status.Stages, newStatus)
+		return
+	}
+
+	existingStatus.Phase = newStatus.Phase
+	existingStatus.Message = newStatus.Message
+	existingStatus.StartedAt = newStatus.StartedAt
+	existingStatus.FinishedAt = newStatus.FinishedAt
+}

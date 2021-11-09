@@ -14,11 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.3.4
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ^1.16
+
       - name: shellcheck
         run: |
           pip install shellcheck-py
-          GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt
           shellcheck -x **/*.sh
-          $(go env GOPATH)/bin/shfmt -l -d . 
 
-
+      - name: shfmt
+        run: make shftm 
