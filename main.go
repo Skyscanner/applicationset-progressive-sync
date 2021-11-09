@@ -73,7 +73,10 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	namespaces := []string{ctrlNamespace}
+	if ctrlNamespace != argoNamespace {
+		namespaces = append(namespaces, argoNamespace)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
