@@ -411,13 +411,17 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	for _, stage := range ps.Spec.Stages {
 
+		ps.Status.LastSyncedStage = stage.Name
+
 		stageStatus, err := r.reconcileStage(ctx, ps, stage)
+		if err != nil {
+			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed)
+			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StagesFailedReason, err.Error()), ctrl.Result{}, err
+		}
 
 		switch {
 		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted):
 			{
-				// TODO: Update the ProgressiveSync object status
-				// and move to the next stage
 
 			}
 		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing):
@@ -431,13 +435,9 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 				return ps, ctrl.Result{}, err
 			}
 		}
-
 	}
 
-	//TODO: All stages are synced correctly, update the ProgressiveSync object
-	// and don't requeue
-
-	return ps, ctrl.Result{}, nil
+	return syncv1alpha1.ProgressiveSyncReady(ps), ctrl.Result{}, nil
 }
 
 // reconcileStage observes the state of the world and sync the desired number of apps
