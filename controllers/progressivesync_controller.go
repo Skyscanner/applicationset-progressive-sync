@@ -174,16 +174,17 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 	var requests []reconcile.Request
 	var list syncv1alpha1.ProgressiveSyncList
 	ctx := context.Background()
+	log := log.FromContext(ctx)
 
 	app, ok := o.(*argov1alpha1.Application)
 	if !ok {
 		err := fmt.Errorf("expected application, got %T", o)
-		r.Log.Error(err, "failed to convert object to application")
+		log.Error(err, "failed to convert object to application")
 		return nil
 	}
 
 	if err := r.List(ctx, &list); err != nil {
-		r.Log.Error(err, "failed to list ProgressiveSync")
+		log.Error(err, "failed to list ProgressiveSync")
 		return nil
 	}
 
@@ -193,7 +194,7 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 				Namespace: pr.Namespace,
 				Name:      pr.Name,
 			}})
-			r.Log.Info("application changed", "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
+			log.Info("application changed", "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name), "sync.status", app.Status.Sync.Status, "health.status", app.Status.Health.Status)
 		}
 	}
 
@@ -215,26 +216,27 @@ func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []r
 	var appList argov1alpha1.ApplicationList
 	requestsMap := make(map[types.NamespacedName]bool)
 	ctx := context.Background()
+	log := log.FromContext(ctx)
 
 	s, ok := o.(*corev1.Secret)
 	if !ok {
 		err := fmt.Errorf("expected secret, got %T", o)
-		r.Log.Error(err, "failed to convert object to secret")
+		log.Error(err, "failed to convert object to secret")
 		return nil
 	}
 
-	r.Log.Info("received secret event", "name", s.Name, "Namespace", s.Namespace)
+	log.Info("received secret event", "name", s.Name, "Namespace", s.Namespace)
 
 	if !utils.IsArgoCDCluster(s.GetLabels()) {
 		return nil
 	}
 
 	if err := r.List(ctx, &prList); err != nil {
-		r.Log.Error(err, "failed to list ProgressiveSync")
+		log.Error(err, "failed to list ProgressiveSync")
 		return nil
 	}
 	if err := r.List(ctx, &appList); err != nil {
-		r.Log.Error(err, "failed to list Application")
+		log.Error(err, "failed to list Application")
 		return nil
 	}
 
@@ -412,18 +414,18 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		stageStatus, err := r.reconcileStage(ctx, ps, stage)
 
 		switch {
-		case stageStatus.Phase == syncv1alpha1.PhaseSucceeded:
+		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted):
 			{
 				// TODO: Update the ProgressiveSync object status
 				// and move to the next stage
 
 			}
-		case stageStatus.Phase == syncv1alpha1.PhaseProgressing:
+		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing):
 			{
 				// TODO: Update the ProgressiveSync object status and requeue
 				return ps, ctrl.Result{}, nil
 			}
-		case stageStatus.Phase == syncv1alpha1.PhaseFailed:
+		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed):
 			{
 				//TODO: Update the ProgressiveSync object status and requeue
 				return ps, ctrl.Result{}, err
@@ -444,23 +446,20 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// Get the ArgoCD secrets selected by the label selector
 	selectedCluster, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
 	if err != nil {
-		//TODO: Stage status failed
-		return syncv1alpha1.StageStatus{}, err
+		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 	}
 
 	// Get the ArgoCD apps targeting the selected clusters
 	selectedApps, err := r.getOwnedAppsFromClusters(ctx, selectedCluster, ps)
 	if err != nil {
-		//TODO: Stage status failed
-		return syncv1alpha1.StageStatus{}, err
+		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 	}
 
 	outOfSyncApps := utils.GetAppsBySyncStatusCode(selectedApps, argov1alpha1.SyncStatusCodeOutOfSync)
 
 	// If there are no OutOfSync apps then the Stage in completed
 	if len(outOfSyncApps) == 0 {
-		//TODO: Stage status completed
-		return syncv1alpha1.StageStatus{}, nil
+		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted), nil
 	}
 
 	// TODO: calculate maxTargets and maxParallel as percentage
@@ -470,8 +469,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// If we reached the maximum number of progressing apps for the stage
 	// then the Stage is progressing
 	if len(progressingApps) == stage.MaxTargets.IntValue() {
-		//TODO: Stage status progressing
-		return syncv1alpha1.StageStatus{}, nil
+		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
 	}
 
 	// If there is an external process triggering a sync,
@@ -505,13 +503,11 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	for i := 0; i < maxSync; i++ {
 		err := r.syncApp(ctx, outOfSyncApps[i])
 		if err != nil {
-			//TODO: Set failed stage
-			return syncv1alpha1.StageStatus{}, err
+			return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 		}
 	}
 
-	//TODO: Stage status progressing
-	return syncv1alpha1.StageStatus{}, nil
+	return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
 }
 
 // func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) (syncv1alpha1.ProgressiveSync, reconcile.Result, error) {

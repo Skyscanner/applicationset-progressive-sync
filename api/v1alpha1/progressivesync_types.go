@@ -26,12 +26,10 @@ const ProgressiveSyncFinalizer = "finalizers.argoproj.skyscanner.net"
 
 // ProgressiveSyncSpec defines the desired state of ProgressiveSync
 type ProgressiveSyncSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// SourceRef defines the resource, example an ApplicationSet, which owns ArgoCD Applications
 	//+kubebuilder:validation:Required
 	SourceRef corev1.TypedLocalObjectReference `json:"sourceRef"`
+
 	// Stages defines a list of Progressive Rollout stages
 	//+kubebuilder:validation:Optional
 	Stages []ProgressiveSyncStage `json:"stages,omitempty"`
@@ -42,12 +40,15 @@ type ProgressiveSyncStage struct {
 	// Name is a human friendly name for the stage
 	//+kubebuilder:validation:Required
 	Name string `json:"name"`
+
 	// MaxParallel is how many selected targets to update in parallel
 	//+kubebuilder:validation:Minimum:1
 	MaxParallel intstr.IntOrString `json:"maxParallel"`
+
 	// MaxTargets is the maximum number of selected targets to update
 	//+kubebuilder:validation:Minimum:1
 	MaxTargets intstr.IntOrString `json:"maxTargets"`
+
 	// Targets is the targets to update in the stage
 	//+kubebuilder:validation:Optional
 	Targets ProgressiveSyncTargets `json:"targets,omitempty"`
@@ -67,28 +68,33 @@ type Clusters struct {
 	Selector metav1.LabelSelector `json:"selector"`
 }
 
+type StageStatus string
+
+const (
+	StageStatusCompleted string = "StageCompleted"
+
+	StageStatusProgressing string = "StageProgressing"
+
+	StageStatusFailed string = "StageFailed"
+)
+
 // ProgressiveSyncStatus defines the observed state of ProgressiveSync
 type ProgressiveSyncStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// ObservedGeneration is the last observed generation.
+	// +kubebuilder:validation:Optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Conditions holds the condition for the ProgressiveSync
+	// +kubebuilder:validation:Optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	Stages     []StageStatus      `json:"stages,omitempty"`
-}
 
-// GetStatusConditions returns a pointer to the Status.Conditions slice
-func (in *ProgressiveSync) GetStatusConditions() *[]metav1.Condition {
-	return &in.Status.Conditions
-}
+	// LastSyncedStage is the name of the last synced stage
+	// +kubebuilder:validation:Optional
+	LastSyncedStage string `json:"lastSyncedStage,omitempty"`
 
-// NewStatusCondition adds a new Condition
-func (in *ProgressiveSync) NewStatusCondition(t string, s metav1.ConditionStatus, r string, m string) metav1.Condition {
-	return metav1.Condition{
-		Type:               t,
-		Status:             s,
-		LastTransitionTime: metav1.Now(),
-		Reason:             r,
-		Message:            m,
-	}
+	// LastSyncedStageStatus is the status of the last synced stage
+	// +kubebuilder:validation:Optional
+	LastSyncedStageStatus StageStatus `json:"lastSyncedStageStatus,omitempty"`
 }
 
 // Owns returns true if the ProgressiveSync object has a reference to one of the owners
