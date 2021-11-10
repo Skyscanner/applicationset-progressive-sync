@@ -387,7 +387,7 @@ func (r *ProgressiveSyncReconciler) updateStatusWithRetry(ctx context.Context, p
 }
 
 // markAppAsSynced marks the app as synced in the specified stage
-func (r *ProgressiveSyncReconciler) markAppAsSynced(ctx context.Context, app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss utils.ProgressiveSyncState) error {
+func (r *ProgressiveSyncReconciler) markAppAsSynced(ctx context.Context, app argov1alpha1.Application, stage syncv1alpha1.Stage, pss utils.ProgressiveSyncState) error {
 
 	log := r.Log.WithValues("stage", stage.Name, "app", fmt.Sprintf("%s/%s", app.Namespace, app.Name))
 
@@ -458,7 +458,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 }
 
 // reconcileStage observes the state of the world and sync the desired number of apps
-func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.ProgressiveSyncStage) (syncv1alpha1.StageStatus, error) {
+func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.Stage) (syncv1alpha1.StageStatus, error) {
 	// A cluster is represented in ArgoCD by a secret
 	// Get the ArgoCD secrets selected by the label selector
 	selectedCluster, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)

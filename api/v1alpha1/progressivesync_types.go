@@ -33,11 +33,11 @@ type ProgressiveSyncSpec struct {
 
 	// Stages defines a list of Progressive Rollout stages
 	//+kubebuilder:validation:Optional
-	Stages []ProgressiveSyncStage `json:"stages,omitempty"`
+	Stages []Stage `json:"stages,omitempty"`
 }
 
-// ProgressiveSyncStage defines a rollout stage
-type ProgressiveSyncStage struct {
+// Stage defines a rollout stage
+type Stage struct {
 	// Name is a human friendly name for the stage
 	//+kubebuilder:validation:Required
 	Name string `json:"name"`
@@ -52,11 +52,11 @@ type ProgressiveSyncStage struct {
 
 	// Targets is the targets to update in the stage
 	//+kubebuilder:validation:Optional
-	Targets ProgressiveSyncTargets `json:"targets,omitempty"`
+	Targets Targets `json:"targets,omitempty"`
 }
 
-// ProgressiveSyncTargets defines the target of the Progressive Rollout
-type ProgressiveSyncTargets struct {
+// Targets defines the targets of the progressive sync operation
+type Targets struct {
 	// Clusters is the a cluster type of targets
 	//+kubebuilder:validation:Optional
 	Clusters Clusters `json:"clusters"`
