@@ -405,7 +405,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	log := log.FromContext(ctx)
 
 	// Initialize the ConfigMap holding the ProgressiveSync status
-	cmName := fmt.Sprintf("%s-ps-state", ps.Name)
+	cmName := fmt.Sprintf("progressive-sync-%s-state", ps.Name)
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cmName,
@@ -658,7 +658,19 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 func (r *ProgressiveSyncReconciler) reconcileDelete(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	//TODO: remove configmap
+	cmName := fmt.Sprintf("progressive-sync-%s-state", ps.Name)
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cmName,
+			Namespace: ps.Namespace,
+		},
+		Data: make(map[string]string, 0),
+	}
+
+	if err := r.Client.Delete(ctx, &cm); err != nil {
+		log.Error(err, "unable to delete the state configmap", "configmap", cmName)
+		return ctrl.Result{Requeue: true}, err
+	}
 
 	controllerutil.RemoveFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer)
 	if err := r.Update(ctx, &ps); err != nil {
