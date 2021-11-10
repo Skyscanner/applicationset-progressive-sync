@@ -405,6 +405,18 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	// TODO: create ConfigMap for holding state
 
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-state", ps.Name),
+			Namespace: ps.Namespace,
+		},
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(&cm), &cm); client.IgnoreNotFound(err) != nil {
+		// TODO: Add error
+
+	}
+	// TODO: Initiliaze the CM
+
 	if ps.Status.ObservedGeneration != ps.Generation {
 		ps.Status.ObservedGeneration = ps.Generation
 		ps = syncv1alpha1.ProgressiveSyncProgressing(ps)
