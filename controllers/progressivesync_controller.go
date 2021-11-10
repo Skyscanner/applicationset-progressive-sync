@@ -401,38 +401,43 @@ func (r *ProgressiveSyncReconciler) markAppAsSynced(ctx context.Context, app arg
 // reconcile performs the actual reconciliation logic
 func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (syncv1alpha1.ProgressiveSync, ctrl.Result, error) {
 
-	//log := log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	//TODO: create ConfigMap for holding state
+	// TODO: create ConfigMap for holding state
 
-	//TODO: update Observed generation
+	if ps.Status.ObservedGeneration != ps.Generation {
+		ps.Status.ObservedGeneration = ps.Generation
+		ps = syncv1alpha1.ProgressiveSyncProgressing(ps)
+		if updateStatusErr := r.patchStatus(ctx, ps); updateStatusErr != nil {
+			log.Error(updateStatusErr, "unable to update status after generation update")
+			return ps, ctrl.Result{Requeue: true}, updateStatusErr
+		}
+	}
 
-	//TODO: calculate hash to check if it's a new progressive sync or an old one
+	// TODO #63:  Calculate hash to check if it's a new progressive sync or an old one
 
 	for _, stage := range ps.Spec.Stages {
 
 		ps.Status.LastSyncedStage = stage.Name
 
 		stageStatus, err := r.reconcileStage(ctx, ps, stage)
+
+		// An error indicates the stage failed the reconciliation
 		if err != nil {
+			log.Error(err, "unable to reconcile stage", "stage", stage.Name)
 			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed)
-			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StagesFailedReason, err.Error()), ctrl.Result{}, err
+			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StagesFailedReason, err.Error()), ctrl.Result{Requeue: true}, err
 		}
 
 		switch {
 		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted):
 			{
-
+				ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted)
 			}
 		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing):
 			{
-				// TODO: Update the ProgressiveSync object status and requeue
-				return ps, ctrl.Result{}, nil
-			}
-		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed):
-			{
-				//TODO: Update the ProgressiveSync object status and requeue
-				return ps, ctrl.Result{}, err
+				ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing)
+				return syncv1alpha1.ProgressiveSyncProgressing(ps), ctrl.Result{Requeue: true}, nil
 			}
 		}
 	}
