@@ -59,22 +59,17 @@ spec:
               stages:
                 description: Stages defines a list of Progressive Rollout stages
                 items:
-                  description: ProgressiveSyncStage defines a rollout stage
+                  description: Stage defines a rollout stage
                   properties:
                     maxParallel:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: MaxParallel is how many selected targets to update
-                        in parallel
-                      x-kubernetes-int-or-string: true
+                      description: MaxParallel is how many targets to update in parallel
+                      format: int64
+                      type: integer
                     maxTargets:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: MaxTargets is the maximum number of selected targets
-                        to update
-                      x-kubernetes-int-or-string: true
+                      description: MaxTargets is the maximum number of targets to
+                        update
+                      format: int64
+                      type: integer
                     name:
                       description: Name is a human friendly name for the stage
                       type: string
@@ -82,11 +77,11 @@ spec:
                       description: Targets is the targets to update in the stage
                       properties:
                         clusters:
-                          description: Clusters is the a cluster type of targets
+                          description: Clusters is a type of Target
                           properties:
                             selector:
                               description: Selector is a label selector to get the
-                                clusters for the update
+                                target clusters
                               properties:
                                 matchExpressions:
                                   description: matchExpressions is a list of label
@@ -148,9 +143,7 @@ spec:
             description: ProgressiveSyncStatus defines the observed state of ProgressiveSync
             properties:
               conditions:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "make" to regenerate code after modifying
-                  this file'
+                description: Conditions holds the condition for the ProgressiveSync.
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -219,32 +212,17 @@ spec:
                   - type
                   type: object
                 type: array
-              stages:
-                items:
-                  description: StageStatus defines the observed stage status
-                  properties:
-                    finishedAt:
-                      format: date-time
-                      type: string
-                    message:
-                      type: string
-                    name:
-                      type: string
-                    phase:
-                      description: StageStatusPhase defines the observed stage phase
-                      enum:
-                      - Progressing
-                      - Succeeded
-                      - Failed
-                      - Unknown
-                      type: string
-                    startedAt:
-                      format: date-time
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
+              lastSyncedStage:
+                description: LastSyncedStage is the name of the last synced stage.
+                type: string
+              lastSyncedStageStatus:
+                description: LastSyncedStageStatus is the status of the last synced
+                  stage.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the last observed generation.
+                format: int64
+                type: integer
             type: object
         type: object
     served: true

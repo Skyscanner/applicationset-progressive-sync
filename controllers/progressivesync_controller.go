@@ -494,16 +494,19 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	progressingApps := utils.GetAppsByHealthStatusCode(selectedApps, health.HealthStatusProgressing)
 
+	maxTargets := int(stage.MaxTargets)
+	maxParallel := int(stage.MaxParallel)
+
 	// If we reached the maximum number of progressing apps for the stage
 	// then the Stage is progressing
-	if len(progressingApps) == stage.MaxTargets.IntValue() {
+	if len(progressingApps) == maxTargets {
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
 	}
 
 	// If there is an external process triggering a sync,
 	// maxParallel - len(progressingApps) might actually be greater than len(outOfSyncApps)
 	// causing the runtime to panic
-	maxSync := stage.MaxParallel.IntValue() - len(progressingApps)
+	maxSync := maxParallel - len(progressingApps)
 	if maxSync > len(outOfSyncApps) {
 		maxSync = len(outOfSyncApps)
 	}
@@ -523,8 +526,8 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	//
 	// Without the following logic we would end up
 	// with a total of 4 applications synced in the stage
-	if maxSync+len(syncedInCurrentStage) > stage.MaxTargets.IntValue() {
-		maxSync = stage.MaxTargets.IntValue() - len(syncedInCurrentStage)
+	if maxSync+len(syncedInCurrentStage) > maxTargets {
+		maxSync = maxTargets - len(syncedInCurrentStage)
 	}
 
 	// Sync the desired number of apps

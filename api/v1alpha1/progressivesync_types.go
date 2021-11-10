@@ -20,7 +20,6 @@ import (
 	"github.com/fluxcd/pkg/apis/meta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const ProgressiveSyncFinalizer = "finalizers.argoproj.skyscanner.net"
@@ -42,13 +41,15 @@ type Stage struct {
 	//+kubebuilder:validation:Required
 	Name string `json:"name"`
 
-	// MaxParallel is how many selected targets to update in parallel
+	// MaxParallel is how many targets to update in parallel
+	//+kubebuilder:validation:Required
 	//+kubebuilder:validation:Minimum:1
-	MaxParallel intstr.IntOrString `json:"maxParallel"`
+	MaxParallel int64 `json:"maxParallel"`
 
-	// MaxTargets is the maximum number of selected targets to update
+	// MaxTargets is the maximum number of targets to update
+	//+kubebuilder:validation:Required
 	//+kubebuilder:validation:Minimum:1
-	MaxTargets intstr.IntOrString `json:"maxTargets"`
+	MaxTargets int64 `json:"maxTargets"`
 
 	// Targets is the targets to update in the stage
 	//+kubebuilder:validation:Optional
@@ -57,14 +58,14 @@ type Stage struct {
 
 // Targets defines the targets of the progressive sync operation
 type Targets struct {
-	// Clusters is the a cluster type of targets
+	// Clusters is a type of Target
 	//+kubebuilder:validation:Optional
 	Clusters Clusters `json:"clusters"`
 }
 
 // Clusters defines a target of type clusters
 type Clusters struct {
-	// Selector is a label selector to get the clusters for the update
+	// Selector is a label selector to get the target clusters
 	//+kubebuilder:validation:Required
 	Selector metav1.LabelSelector `json:"selector"`
 }
