@@ -269,16 +269,17 @@ func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []r
 // getClustersFromSelector returns a list of ArgoCD clusters matching the provided label selector
 func (r *ProgressiveSyncReconciler) getClustersFromSelector(ctx context.Context, selector metav1.LabelSelector) (corev1.SecretList, error) {
 	secrets := corev1.SecretList{}
+	log := log.FromContext(ctx)
 
 	argoSelector := metav1.AddLabelToSelector(&selector, consts.ArgoCDSecretTypeLabel, consts.ArgoCDSecretTypeCluster)
 	labels, err := metav1.LabelSelectorAsSelector(argoSelector)
 	if err != nil {
-		r.Log.Error(err, "unable to convert selector into labels")
+		log.Error(err, "unable to convert clusters selector into labels")
 		return corev1.SecretList{}, err
 	}
 
 	if err = r.List(ctx, &secrets, client.MatchingLabelsSelector{Selector: labels}); err != nil {
-		r.Log.Error(err, "failed to select targets using labels selector")
+		log.Error(err, "unable to select clusters using labels selector")
 		return corev1.SecretList{}, err
 	}
 
@@ -324,7 +325,7 @@ func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context
 	var appList argov1alpha1.ApplicationList
 
 	if err := r.List(ctx, &appList); err != nil {
-		log.Error(err, "failed to list Application")
+		log.Error(err, "unable to list argov1alpha1.ApplicationList")
 		return apps, err
 	}
 
@@ -470,6 +471,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 // reconcileStage observes the state of the world and sync the desired number of apps
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.Stage) (syncv1alpha1.StageStatus, error) {
+
 	// A cluster is represented in ArgoCD by a secret
 	// Get the ArgoCD secrets selected by the label selector
 	selectedCluster, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
@@ -490,10 +492,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted), nil
 	}
 
-	// TODO: calculate maxTargets and maxParallel as percentage
-
 	progressingApps := utils.GetAppsByHealthStatusCode(selectedApps, health.HealthStatusProgressing)
-
 	maxTargets := int(stage.MaxTargets)
 	maxParallel := int(stage.MaxParallel)
 
@@ -663,7 +662,7 @@ func (r *ProgressiveSyncReconciler) reconcileDelete(ctx context.Context, ps sync
 
 	controllerutil.RemoveFinalizer(&ps, syncv1alpha1.ProgressiveSyncFinalizer)
 	if err := r.Update(ctx, &ps); err != nil {
-		log.Error(err, "failed to update object when removing finalizer")
+		log.Error(err, "unable to update object when removing finalizer")
 		return ctrl.Result{}, err
 	}
 
