@@ -9,11 +9,11 @@ import (
 )
 
 type ProgressiveSyncState interface {
-	MarkAppAsSynced(app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage)
-	RefreshState(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage)
-	IsAppMarkedInStage(app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool
-	GetMaxTargets(stage syncv1alpha1.ProgressiveSyncStage) int
-	GetMaxParallel(stage syncv1alpha1.ProgressiveSyncStage) int
+	MarkAppAsSynced(app argov1alpha1.Application, stage syncv1alpha1.Stage)
+	RefreshState(apps []argov1alpha1.Application, stage syncv1alpha1.Stage)
+	IsAppMarkedInStage(app argov1alpha1.Application, stage syncv1alpha1.Stage) bool
+	GetMaxTargets(stage syncv1alpha1.Stage) int
+	GetMaxParallel(stage syncv1alpha1.Stage) int
 	SetHashedSpec(hashedSpec string)
 	GetHashedSpec() string
 }
@@ -75,7 +75,7 @@ func (p *ProgressiveSyncStateManagerImpl) Get(name string) (ProgressiveSyncState
 }
 
 //MarkAppAsSynced marks the specified app as synced in the specified stage
-func (s *InMemorySyncState) MarkAppAsSynced(app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) {
+func (s *InMemorySyncState) MarkAppAsSynced(app argov1alpha1.Application, stage syncv1alpha1.Stage) {
 
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
@@ -96,7 +96,7 @@ func (s *InMemorySyncState) MarkAppAsSynced(app argov1alpha1.Application, stage 
 }
 
 //getUnmarkedApps queries against sync state in order to return apps that are not yet marked as synced
-func (s *InMemorySyncState) getUnmarkedApps(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) []argov1alpha1.Application {
+func (s *InMemorySyncState) getUnmarkedApps(apps []argov1alpha1.Application, stage syncv1alpha1.Stage) []argov1alpha1.Application {
 
 	unmarkedApps := make([]argov1alpha1.Application, 0)
 	for _, app := range apps {
@@ -109,7 +109,7 @@ func (s *InMemorySyncState) getUnmarkedApps(apps []argov1alpha1.Application, sta
 }
 
 //IsAppMarkedInStage returns whether the application is marked in the specified stage
-func (s *InMemorySyncState) IsAppMarkedInStage(app argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) bool {
+func (s *InMemorySyncState) IsAppMarkedInStage(app argov1alpha1.Application, stage syncv1alpha1.Stage) bool {
 
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
@@ -124,7 +124,7 @@ func (s *InMemorySyncState) IsAppMarkedInStage(app argov1alpha1.Application, sta
 }
 
 //RefreshState makes sure that we update our representation of the state of the world to match the latest observation
-func (s *InMemorySyncState) RefreshState(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage) {
+func (s *InMemorySyncState) RefreshState(apps []argov1alpha1.Application, stage syncv1alpha1.Stage) {
 
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
@@ -172,7 +172,7 @@ func (s *InMemorySyncState) RefreshState(apps []argov1alpha1.Application, stage 
 }
 
 //GetMaxTargets gets the maximum number of targets to be synced in the specified stage
-func (s *InMemorySyncState) GetMaxTargets(stage syncv1alpha1.ProgressiveSyncStage) int {
+func (s *InMemorySyncState) GetMaxTargets(stage syncv1alpha1.Stage) int {
 
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
@@ -181,7 +181,7 @@ func (s *InMemorySyncState) GetMaxTargets(stage syncv1alpha1.ProgressiveSyncStag
 }
 
 //GetMaxParallel gets the maximum level of parallelism to be applied when syncing/scheduling apps in the specified stage
-func (s *InMemorySyncState) GetMaxParallel(stage syncv1alpha1.ProgressiveSyncStage) int {
+func (s *InMemorySyncState) GetMaxParallel(stage syncv1alpha1.Stage) int {
 
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()

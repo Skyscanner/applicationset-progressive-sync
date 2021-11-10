@@ -403,19 +403,30 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	log := log.FromContext(ctx)
 
-	// TODO: create ConfigMap for holding state
-
+	// Initialize the ConfigMap holding the ProgressiveSync status
+	cmName := fmt.Sprintf("%s-ps-state", ps.Name)
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-state", ps.Name),
+			Name:      cmName,
 			Namespace: ps.Namespace,
 		},
+		Data: make(map[string]string, 0),
 	}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(&cm), &cm); client.IgnoreNotFound(err) != nil {
-		// TODO: Add error
 
+	// Get the current state ConfigMap
+	err := r.Get(ctx, client.ObjectKeyFromObject(&cm), &cm)
+	if client.IgnoreNotFound(err) != nil {
+		log.Error(err, "unable to retrieve the state configmap", "configmap", cmName)
+		return ps, ctrl.Result{Requeue: true}, err
 	}
-	// TODO: Initiliaze the CM
+
+	// Create a state ConfigMap if it doesn't exist
+	if client.IgnoreNotFound(err) == nil {
+		if createErr := r.Client.Create(ctx, &cm, &client.CreateOptions{}); createErr != nil {
+			log.Error(createErr, "unable to create the state configmap", "configmap", cmName)
+			return ps, ctrl.Result{Requeue: true}, createErr
+		}
+	}
 
 	if ps.Status.ObservedGeneration != ps.Generation {
 		ps.Status.ObservedGeneration = ps.Generation
@@ -438,7 +449,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		if err != nil {
 			log.Error(err, "unable to reconcile stage", "stage", stage.Name)
 			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed)
-			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StagesFailedReason, err.Error()), ctrl.Result{Requeue: true}, err
+			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StageFailedReason, err.Error()), ctrl.Result{Requeue: true}, err
 		}
 
 		switch {

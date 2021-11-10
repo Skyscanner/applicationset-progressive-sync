@@ -17,5 +17,7 @@ limitations under the License.
 package v1alpha1
 
 const (
-	StagesFailedReason string = "StageFailed"
+
+	// StageFailedReason rapresents the fact the stage reconciliation failed
+	StageFailedReason string = "StageFailed"
 )
