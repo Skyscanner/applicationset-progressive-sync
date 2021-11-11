@@ -25,10 +25,12 @@ import (
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/state"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -419,17 +421,13 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 func (r *ProgressiveSyncReconciler) reconcileDelete(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	cmName := fmt.Sprintf("progressive-sync-%s-state", ps.Name)
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
-			Namespace: ps.Namespace,
-		},
-		Data: make(map[string]string, 0),
+	key := types.NamespacedName{
+		Name:      fmt.Sprintf("progressive-sync-%s-state", ps.Name),
+		Namespace: ps.Namespace,
 	}
 
-	if err := r.Client.Delete(ctx, &cm); err != nil {
-		log.Error(err, "unable to delete the state configmap", "configmap", cmName)
+	if err := r.deleteStateMap(ctx, key); err != nil {
+		log.Error(err, "unable to delete the state configmap", "configmap", key.Name)
 		return ctrl.Result{Requeue: true}, err
 	}
 
@@ -452,4 +450,89 @@ func (r *ProgressiveSyncReconciler) patchStatus(ctx context.Context, ps syncv1al
 	}
 
 	return r.Client.Status().Patch(ctx, &ps, client.MergeFrom(&latest))
+}
+
+// CreateStateMap creates the state configmap
+func (r *ProgressiveSyncReconciler) createStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, key client.ObjectKey) error {
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+		},
+	}
+
+	// Set the ownership
+	if err := ctrl.SetControllerReference(&ps, &cm, r.Scheme); err != nil {
+		return err
+	}
+
+	if err := r.Create(ctx, &cm); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteStateMap deletes the state configmap
+func (r *ProgressiveSyncReconciler) deleteStateMap(ctx context.Context, key client.ObjectKey) error {
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+		},
+	}
+	if err := r.Delete(ctx, &cm, &client.DeleteOptions{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReadStateMap reads the state configmap and returns the state data structure
+func (r *ProgressiveSyncReconciler) readStateMap(ctx context.Context, key client.ObjectKey) (state.StateData, error) {
+	var stateData state.StateData
+	var cm corev1.ConfigMap
+
+	if err := r.Get(ctx, key, &cm); err != nil {
+		return stateData, err
+	}
+
+	if err := yaml.Unmarshal([]byte(cm.Data["appSetHash"]), &stateData.AppSetHash); err != nil {
+		return stateData, err
+	}
+
+	if err := yaml.Unmarshal([]byte(cm.Data["clusters"]), &stateData.Clusters); err != nil {
+		return stateData, err
+	}
+
+	return stateData, nil
+}
+
+// UpdateStateMap writes the state data structure into the state configmap
+func (r *ProgressiveSyncReconciler) updateStateMap(ctx context.Context, key client.ObjectKey, state state.StateData) error {
+
+	appSetHash, err := yaml.Marshal(state.AppSetHash)
+	if err != nil {
+		return err
+	}
+
+	clusters, err := yaml.Marshal(state.Clusters)
+	if err != nil {
+		return err
+	}
+
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+		},
+		Data: map[string]string{
+			"appSetHash": string(appSetHash),
+			"clusters":   string(clusters),
+		},
+	}
+
+	if err := r.Update(ctx, &cm, &client.UpdateOptions{}); err != nil {
+		return err
+	}
+
+	return nil
 }
