@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
@@ -47,19 +46,6 @@ func GetAppsByHealthStatusCode(apps []argov1alpha1.Application, code health.Heal
 
 	for _, app := range apps {
 		if app.Status.Health.Status == code {
-			result = append(result, app)
-		}
-	}
-
-	return result
-}
-
-// GetSyncedAppsByStage returns the Applications that synced during the given stage
-func GetSyncedAppsByStage(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss ProgressiveSyncState) []argov1alpha1.Application {
-	var result []argov1alpha1.Application
-
-	for _, app := range apps {
-		if app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced && pss.IsAppMarkedInStage(app, stage) {
 			result = append(result, app)
 		}
 	}

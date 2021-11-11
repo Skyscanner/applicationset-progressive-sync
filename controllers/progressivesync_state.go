@@ -26,8 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // StateData holds a state for the stage reconciliation
@@ -51,7 +51,7 @@ func (r *ProgressiveSyncReconciler) createStateMap(ctx context.Context, ps syncv
 	}
 
 	// Set the ownership
-	if err := ctrl.SetControllerReference(&ps, &cm, r.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(&ps, &cm, r.Scheme); err != nil {
 		return err
 	}
 

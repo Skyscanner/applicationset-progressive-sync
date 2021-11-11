@@ -101,6 +101,28 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 // SetupWithManager adds the reconciler to the manager, so that it gets started when the manager is started.
 func (r *ProgressiveSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	mapOwnerKey := ".metadata.controller"
+	apiGVStr := syncv1alpha1.GroupVersion.String()
+
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.ConfigMap{}, mapOwnerKey, func(rawObj client.Object) []string {
+		// Get the object and extract the owner
+		cm := rawObj.(*corev1.ConfigMap)
+		owner := metav1.GetControllerOf(cm)
+		if owner == nil {
+			return nil
+		}
+		// Make sure it's a ProgressiveSync
+		if owner.APIVersion != apiGVStr || owner.Kind != "ProgressiveSync" {
+			return nil
+		}
+
+		// If so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&syncv1alpha1.ProgressiveSync{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(
@@ -280,11 +302,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	log := log.FromContext(ctx)
 
 	// Create the progressive sync state configmap if it doesn't exist
-	cmKey := types.NamespacedName{
-		Name:      fmt.Sprintf("progressive-sync-%s-state", ps.Name),
-		Namespace: ps.Namespace,
-	}
-	if err := r.createStateMap(ctx, ps, cmKey); err != nil {
+	if err := r.createStateMap(ctx, ps, getStateMapNamespacedName(ps)); err != nil {
 		log.Error(err, "unable to create state map")
 		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 	}
@@ -437,13 +455,8 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 func (r *ProgressiveSyncReconciler) reconcileDelete(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	key := types.NamespacedName{
-		Name:      fmt.Sprintf("progressive-sync-%s-state", ps.Name),
-		Namespace: ps.Namespace,
-	}
-
-	if err := r.deleteStateMap(ctx, key); err != nil {
-		log.Error(err, "unable to delete the state configmap", "configmap", key.Name)
+	if err := r.deleteStateMap(ctx, getStateMapNamespacedName(ps)); err != nil {
+		log.Error(err, "unable to delete the state configmap")
 		return ctrl.Result{Requeue: true}, err
 	}
 
