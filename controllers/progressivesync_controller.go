@@ -32,6 +32,7 @@ import (
 	"github.com/argoproj/gitops-engine/pkg/health"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -281,30 +282,12 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	log := log.FromContext(ctx)
 
-	// Initialize the configmap holding the ProgressiveSync state
-	cmName := fmt.Sprintf("progressive-sync-%s-state", ps.Name)
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
-			Namespace: ps.Namespace,
-		},
-		Data: make(map[string]string, 0),
+	cmKey := types.NamespacedName{
+		Name:      fmt.Sprintf("progressive-sync-%s-state", ps.Name),
+		Namespace: ps.Namespace,
 	}
-
-	// Get the current ProgressiveSync state configmap
-	err := r.Get(ctx, client.ObjectKeyFromObject(&cm), &cm)
-	if client.IgnoreNotFound(err) != nil {
-		log.Error(err, "unable to retrieve the state configmap", "configmap", cmName)
-		return ps, ctrl.Result{Requeue: true}, err
-	}
-
-	// Create a configmap to hold the ProgressiveSync state
-	// if it doesn't exist
-	if client.IgnoreNotFound(err) == nil {
-		if createErr := r.Client.Create(ctx, &cm, &client.CreateOptions{}); createErr != nil {
-			log.Error(createErr, "unable to create the state configmap", "configmap", cmName)
-			return ps, ctrl.Result{Requeue: true}, createErr
-		}
+	if err := r.createStateMap(ctx, ps, cmKey); err != nil {
+		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 	}
 
 	if ps.Status.ObservedGeneration != ps.Generation {
@@ -467,7 +450,9 @@ func (r *ProgressiveSyncReconciler) createStateMap(ctx context.Context, ps syncv
 	}
 
 	if err := r.Create(ctx, &cm); err != nil {
-		return err
+		if !errors.IsAlreadyExists(err) {
+			return err
+		}
 	}
 	return nil
 }
