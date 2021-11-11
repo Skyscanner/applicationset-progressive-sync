@@ -13,6 +13,7 @@ require (
 	github.com/prometheus/client_golang v1.11.0 // indirect
 	go.uber.org/zap v1.17.0 // indirect
 	google.golang.org/grpc v1.33.1
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
