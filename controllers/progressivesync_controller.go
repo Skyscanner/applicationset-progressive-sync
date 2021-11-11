@@ -25,14 +25,11 @@ import (
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
-	"github.com/Skyscanner/applicationset-progressive-sync/internal/state"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
-	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -282,6 +279,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	log := log.FromContext(ctx)
 
+	// Create the progressive sync state configmap if it doesn't exist
 	cmKey := types.NamespacedName{
 		Name:      fmt.Sprintf("progressive-sync-%s-state", ps.Name),
 		Namespace: ps.Namespace,
@@ -361,6 +359,12 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
 	}
 
+	// Load the state map
+	state, err := r.readStateMap(ctx, getStateMapNamespacedName(ps))
+	if err != nil {
+		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
+	}
+
 	// If there is an external process triggering a sync,
 	// maxParallel - len(progressingApps) might actually be greater than len(outOfSyncApps)
 	// causing the runtime to panic
@@ -369,8 +373,27 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		maxSync = len(outOfSyncApps)
 	}
 
-	//TODO: read the configmap to calculate syncedInCurrentStage
+	// Consider the scenario where we have 5 apps - 4 OutOfSync and 1 Synced - and a stage with MaxTargets = 3.
+	// Without keeping track at which stage the app synced, we can't compute how many applications we have to update in the current stage.
 	var syncedInCurrentStage []argov1alpha1.Application
+
+	syncedApps := utils.GetAppsBySyncStatusCode(selectedApps, argov1alpha1.SyncStatusCodeSynced)
+
+forLoop:
+	for _, app := range syncedApps {
+		appState, ok := state.Apps[app.Name]
+
+		// If we don't have a state for a synced app
+		// it means it was synced by an external process.
+		// Take ownership by setting the stage.
+		if !ok {
+			state.Apps[app.Name].SyncedAtStage = stage.Name
+			break forLoop
+		}
+		if appState.SyncedAtStage == stage.Name {
+			syncedInCurrentStage = append(syncedInCurrentStage, app)
+		}
+	}
 
 	// Consider the following scenario
 	//
@@ -390,10 +413,15 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	// Sync the desired number of apps
 	for i := 0; i < maxSync; i++ {
-		err := r.syncApp(ctx, outOfSyncApps[i])
-		if err != nil {
+		if err := r.syncApp(ctx, outOfSyncApps[i]); err != nil {
 			return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 		}
+		state.Apps[outOfSyncApps[i].Name].SyncedAtStage = stage.Name
+	}
+
+	// Update the state map
+	if err := r.updateStateMap(ctx, getStateMapNamespacedName(ps), state); err != nil {
+		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 	}
 
 	return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
@@ -433,91 +461,4 @@ func (r *ProgressiveSyncReconciler) patchStatus(ctx context.Context, ps syncv1al
 	}
 
 	return r.Client.Status().Patch(ctx, &ps, client.MergeFrom(&latest))
-}
-
-// CreateStateMap creates the state configmap
-func (r *ProgressiveSyncReconciler) createStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, key client.ObjectKey) error {
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-	}
-
-	// Set the ownership
-	if err := ctrl.SetControllerReference(&ps, &cm, r.Scheme); err != nil {
-		return err
-	}
-
-	if err := r.Create(ctx, &cm); err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return err
-		}
-	}
-	return nil
-}
-
-// DeleteStateMap deletes the state configmap
-func (r *ProgressiveSyncReconciler) deleteStateMap(ctx context.Context, key client.ObjectKey) error {
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-	}
-	if err := r.Delete(ctx, &cm, &client.DeleteOptions{}); err != nil {
-		return err
-	}
-	return nil
-}
-
-// ReadStateMap reads the state configmap and returns the state data structure
-func (r *ProgressiveSyncReconciler) readStateMap(ctx context.Context, key client.ObjectKey) (state.StateData, error) {
-	var stateData state.StateData
-	var cm corev1.ConfigMap
-
-	if err := r.Get(ctx, key, &cm); err != nil {
-		return stateData, err
-	}
-
-	if err := yaml.Unmarshal([]byte(cm.Data["appSetHash"]), &stateData.AppSetHash); err != nil {
-		return stateData, err
-	}
-
-	if err := yaml.Unmarshal([]byte(cm.Data["clusters"]), &stateData.Clusters); err != nil {
-		return stateData, err
-	}
-
-	return stateData, nil
-}
-
-// UpdateStateMap writes the state data structure into the state configmap
-func (r *ProgressiveSyncReconciler) updateStateMap(ctx context.Context, key client.ObjectKey, state state.StateData) error {
-
-	appSetHash, err := yaml.Marshal(state.AppSetHash)
-	if err != nil {
-		return err
-	}
-
-	clusters, err := yaml.Marshal(state.Clusters)
-	if err != nil {
-		return err
-	}
-
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-		Data: map[string]string{
-			"appSetHash": string(appSetHash),
-			"clusters":   string(clusters),
-		},
-	}
-
-	if err := r.Update(ctx, &cm, &client.UpdateOptions{}); err != nil {
-		return err
-	}
-
-	return nil
 }
