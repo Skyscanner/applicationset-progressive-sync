@@ -409,7 +409,9 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		// it means it was synced by an external process.
 		// Take ownership by setting the stage.
 		if !ok {
-			state.Apps[app.Name].SyncedAtStage = stage.Name
+			state.Apps[app.Name] = AppState{
+				SyncedAtStage: stage.Name,
+			}
 			break
 		}
 		if appState.SyncedAtStage == stage.Name {
@@ -438,7 +440,9 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		if err := r.syncApp(ctx, outOfSyncApps[i]); err != nil {
 			return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 		}
-		state.Apps[outOfSyncApps[i].Name].SyncedAtStage = stage.Name
+		state.Apps[outOfSyncApps[i].Name] = AppState{
+			SyncedAtStage: stage.Name,
+		}
 	}
 
 	// Update the state map
@@ -471,12 +475,14 @@ func (r *ProgressiveSyncReconciler) reconcileDelete(ctx context.Context, ps sync
 
 //patchStatus updates the ProgressiveSync object using a MergeFrom strategy
 func (r *ProgressiveSyncReconciler) patchStatus(ctx context.Context, ps syncv1alpha1.ProgressiveSync) error {
-	key := client.ObjectKeyFromObject(&ps)
-	latest := syncv1alpha1.ProgressiveSync{}
+	var latest syncv1alpha1.ProgressiveSync
 
-	if err := r.Client.Get(ctx, key, &latest); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(&ps), &latest); err != nil {
 		return err
 	}
 
-	return r.Client.Status().Patch(ctx, &ps, client.MergeFrom(&latest))
+	patch := client.MergeFrom(latest.DeepCopy())
+	latest.Status = ps.Status
+
+	return r.Client.Status().Patch(ctx, &latest, patch)
 }

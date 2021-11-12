@@ -32,8 +32,8 @@ import (
 
 // StateData holds a state for the stage reconciliation
 type StateData struct {
-	AppSetHash string               `yaml:"appSetHash"`
-	Apps       map[string]*AppState `yaml:"apps"`
+	AppSetHash string              `yaml:"appSetHash"`
+	Apps       map[string]AppState `yaml:"apps"`
 }
 
 // AppState holds the state for a cluster
@@ -92,6 +92,11 @@ func (r *ProgressiveSyncReconciler) readStateMap(ctx context.Context, key client
 
 	if err := yaml.Unmarshal([]byte(cm.Data["apps"]), &stateData.Apps); err != nil {
 		return stateData, err
+	}
+
+	// Make sure we initiliaze the map before adding any element to it
+	if stateData.Apps == nil {
+		stateData.Apps = make(map[string]AppState)
 	}
 
 	return stateData, nil
