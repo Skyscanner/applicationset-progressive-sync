@@ -66,8 +66,7 @@ type ProgressiveSyncReconciler struct {
 // Reconcile performs the reconciling for a single named ProgressiveSync object
 func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
-	log = log.WithValues("progressivesync", req.NamespacedName)
-	log.Info("reconciliation loop started")
+	log.Info("progressive sync started")
 
 	var ps syncv1alpha1.ProgressiveSync
 	if err := r.Get(ctx, req.NamespacedName, &ps); err != nil {
@@ -318,9 +317,8 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	for _, stage := range ps.Spec.Stages {
 
-		ps.Status.LastSyncedStage = stage.Name
-
 		stageStatus, err := r.reconcileStage(ctx, ps, stage)
+		ps.Status.LastSyncedStage = stage.Name
 
 		// An error indicates the stage failed the reconciliation
 		if err != nil {
@@ -342,13 +340,13 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		}
 	}
 
+	log.Info("progressive sync completed")
 	return syncv1alpha1.ProgressiveSyncReady(ps), ctrl.Result{}, nil
 }
 
 // reconcileStage observes the state of the world and sync the desired number of apps
 func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv1alpha1.ProgressiveSync, stage syncv1alpha1.Stage) (syncv1alpha1.StageStatus, error) {
 	log := log.FromContext(ctx)
-	log = log.WithValues("stage", stage.Name)
 
 	// A cluster is represented in ArgoCD by a secret
 	// Get the ArgoCD secrets selected by the label selector
@@ -356,7 +354,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	if err != nil {
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 	}
-
 	// Get the ArgoCD apps targeting the selected clusters
 	selectedApps, err := r.getOwnedAppsFromClusters(ctx, selectedCluster, ps)
 	if err != nil {
@@ -401,7 +398,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	var syncedInCurrentStage []argov1alpha1.Application
 
 	syncedApps := utils.GetAppsBySyncStatusCode(selectedApps, argov1alpha1.SyncStatusCodeSynced)
-
 	for _, app := range syncedApps {
 		appState, ok := state.Apps[app.Name]
 
@@ -412,11 +408,18 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			state.Apps[app.Name] = AppState{
 				SyncedAtStage: stage.Name,
 			}
+			syncedInCurrentStage = append(syncedInCurrentStage, app)
 			break
 		}
 		if appState.SyncedAtStage == stage.Name {
 			syncedInCurrentStage = append(syncedInCurrentStage, app)
 		}
+	}
+
+	// If the apps synced in the current stage
+	// are equals to the desired number, the stage is completed
+	if len(syncedInCurrentStage) == maxTargets {
+		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted), nil
 	}
 
 	// Consider the following scenario
@@ -450,6 +453,8 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		log.Error(err, "unabled to update the state map")
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 	}
+
+	// log.Info("stage summary", "stage", stage.Name, "outOfSync", utils.GetAppsName(outOfSyncApps), "synced", utils.GetAppsName(syncedApps), "syncedInStage", utils.GetAppsName(syncedInCurrentStage), "progressing", utils.GetAppsName(progressingApps), "maxSync", maxSync, "state.apps", state.Apps)
 
 	return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
 }
