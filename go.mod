@@ -6,6 +6,7 @@ require (
 	github.com/argoproj-labs/applicationset v0.2.0
 	github.com/argoproj/argo-cd v0.8.1-0.20210218100039-a4ee25b59d8d
 	github.com/argoproj/gitops-engine v0.3.1-0.20210709004906-a4c77d5c70fb
+	github.com/davecgh/go-spew v1.1.1
 	github.com/fluxcd/pkg/apis/meta v0.10.0
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0

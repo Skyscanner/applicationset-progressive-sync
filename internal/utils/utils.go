@@ -2,13 +2,16 @@ package utils
 
 import (
 	"fmt"
+	"hash/fnv"
 	"sort"
 	"strings"
 
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
+	"github.com/davecgh/go-spew/spew"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 // IsArgoCDCluster returns true if one of the labels is the ArgoCD secret label with the secret type cluster as value
@@ -69,4 +72,20 @@ func GetClustersName(clusters []corev1.Secret) string {
 		names = append(names, c.GetName())
 	}
 	return fmt.Sprint(strings.Join(names, ", "))
+}
+
+// ComputeHash returns a hash value calculated from a spec using the spew library
+// which follows pointers and prints actual values of the nested objects
+// ensuring the hash does not change when a pointer changes.
+func ComputeHash(spec interface{}) string {
+	hasher := fnv.New32a()
+	printer := spew.ConfigState{
+		Indent:         " ",
+		SortKeys:       true,
+		DisableMethods: true,
+		SpewKeys:       true,
+	}
+	printer.Fprintf(hasher, "%#v", spec)
+
+	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32()))
 }
