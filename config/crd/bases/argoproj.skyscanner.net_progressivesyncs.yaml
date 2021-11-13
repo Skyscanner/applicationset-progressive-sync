@@ -62,19 +62,19 @@ spec:
                   description: Stage defines a rollout stage
                   properties:
                     maxParallel:
-                      description: MaxParallel is how many targets to update in parallel
+                      description: MaxParallel is how many targets to sync in parallel
                       format: int64
                       type: integer
                     maxTargets:
                       description: MaxTargets is the maximum number of targets to
-                        update
+                        sync
                       format: int64
                       type: integer
                     name:
                       description: Name is a human friendly name for the stage
                       type: string
                     targets:
-                      description: Targets is the targets to update in the stage
+                      description: Targets is the targets to sync in the stage
                       properties:
                         clusters:
                           description: Clusters is a type of Target

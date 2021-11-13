@@ -583,7 +583,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Expect(err).To(BeNil())
 			Expect(apps).To(Not(BeNil()))
 
-			By("creating a progressive sync")
+			By("creating a progressive sync object")
 			failedStagePS := syncv1alpha1.ProgressiveSync{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-ps", testPrefix), Namespace: ctrlNamespace},
 				Spec: syncv1alpha1.ProgressiveSyncSpec{
@@ -615,37 +615,38 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &failedStagePS)).To(Succeed())
 
-			// psKey := client.ObjectKey{
-			// 	Namespace: ctrlNamespace,
-			// 	Name:      fmt.Sprintf("%s-ps", testPrefix),
-			// }
-
 			By("progressing the first application")
 			Eventually(func() error {
 				return setAppStatusProgressing(ctx, "account5-us-west-1a-1", argoNamespace)
 			}).Should(Succeed())
-
-			// ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
-			// 	Name:    "stage 0",
-			// 	Phase:   syncv1alpha1.PhaseProgressing,
-			// 	Message: "stage 0 stage in progress",
-			// }))
-			// ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
 
 			By("failing syncing the first application")
 			Eventually(func() error {
 				return setAppStatusFailed(ctx, "account5-us-west-1a-1", argoNamespace)
 			}).Should(Succeed())
 
-			// ExpectStageStatus(ctx, psKey, "stage 0").Should(MatchStage(syncv1alpha1.StageStatus{
-			// 	Name:    "stage 0",
-			// 	Phase:   syncv1alpha1.PhaseFailed,
-			// 	Message: "stage 0 stage failed",
-			// }))
-			// ExpectStagesInStatus(ctx, psKey).Should(Equal(1))
+			Eventually(func() bool {
+				var latest syncv1alpha1.ProgressiveSync
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&failedStagePS), &latest); err != nil {
+					return false
+				}
+				return latest.Status.LastSyncedStage == "stage 0" && latest.Status.LastSyncedStageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed)
+			}).Should(BeTrue())
 
-			// expected := failedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionFalse, syncv1alpha1.StagesFailedReason, "stage 0 stage failed")
-			// ExpectCondition(&failedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
+			Eventually(func() bool {
+				var latest syncv1alpha1.ProgressiveSync
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&failedStagePS), &latest); err != nil {
+					return false
+				}
+				readyCondition := meta.FindStatusCondition(latest.Status.Conditions, pkgmeta.ReadyCondition)
+				if readyCondition == nil {
+					return false
+				}
+				if readyCondition.Type == pkgmeta.ReadyCondition && readyCondition.Status == metav1.ConditionFalse && readyCondition.Reason == syncv1alpha1.StageFailedReason {
+					return true
+				}
+				return false
+			}).Should(BeTrue())
 		})
 
 		It("should set conditions when apps already synced - empty stage", func() {
@@ -655,7 +656,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			By("creating two ArgoCD clusters")
 			targets := []Target{
 				{
-					Name:           "cells-1-eu-west-1a-1",
+					Name:           "account-6-eu-west-1a-1",
 					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
@@ -663,7 +664,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					AZ:             "eu-west-1a",
 				},
 				{
-					Name:           "cells-1-eu-west-1b-2",
+					Name:           "account-6-eu-west-1b-2",
 					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
@@ -671,7 +672,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					AZ:             "eu-west-1b-2",
 				},
 				{
-					Name:           "cells-1-eu-west-1c-1",
+					Name:           "account-6-eu-west-1c-1",
 					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
@@ -679,7 +680,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					AZ:             "eu-west-1c-1",
 				},
 				{
-					Name:           "cellsdev-1-eu-west-1a-1",
+					Name:           "account-7-eu-west-1a-1",
 					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
@@ -687,7 +688,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 					AZ:             "eu-west-1a-1",
 				},
 				{
-					Name:           "cellsdev-1-eu-west-1b-1",
+					Name:           "account-7-eu-west-1b-1",
 					Namespace:      argoNamespace,
 					ApplicationSet: appSet,
 					Area:           "emea",
@@ -1115,6 +1116,10 @@ func setAppStatusProgressing(ctx context.Context, appName string, namespace stri
 
 	if err != nil {
 		return err
+	}
+
+	app.Status.Sync = argov1alpha1.SyncStatus{
+		Status: argov1alpha1.SyncStatusCodeSynced,
 	}
 
 	app.Status.Health = argov1alpha1.HealthStatus{

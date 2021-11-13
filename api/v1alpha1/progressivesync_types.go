@@ -41,17 +41,17 @@ type Stage struct {
 	//+kubebuilder:validation:Required
 	Name string `json:"name"`
 
-	// MaxParallel is how many targets to update in parallel
+	// MaxParallel is how many targets to sync in parallel
 	//+kubebuilder:validation:Required
 	//+kubebuilder:validation:Minimum:1
 	MaxParallel int64 `json:"maxParallel"`
 
-	// MaxTargets is the maximum number of targets to update
+	// MaxTargets is the maximum number of targets to sync
 	//+kubebuilder:validation:Required
 	//+kubebuilder:validation:Minimum:1
 	MaxTargets int64 `json:"maxTargets"`
 
-	// Targets is the targets to update in the stage
+	// Targets is the targets to sync in the stage
 	//+kubebuilder:validation:Optional
 	Targets Targets `json:"targets,omitempty"`
 }
