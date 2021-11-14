@@ -341,7 +341,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			applicationSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSet,
-				argoNamespace,
+				ctrlNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(applicationSet).To(Not(BeNil()))
@@ -569,7 +569,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			applicationSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSet,
-				argoNamespace,
+				ctrlNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(applicationSet).To(Not(BeNil()))

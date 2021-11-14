@@ -26,6 +26,7 @@ import (
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/utils"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	applicationpkg "github.com/argoproj/argo-cd/pkg/apiclient/application"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
@@ -70,6 +71,7 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	var ps syncv1alpha1.ProgressiveSync
 	if err := r.Get(ctx, req.NamespacedName, &ps); err != nil {
+		log.Error(err, "unable to get the progressive sync object")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -306,6 +308,39 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 	}
 
+	// Read the latest state
+	stateData, err := r.readStateMap(ctx, getStateMapNamespacedName(ps))
+	if err != nil {
+		log.Error(err, "unabled to read state map")
+		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
+	}
+
+	// Calculate the referenced ApplicationSet hash
+	var appSet applicationset.ApplicationSet
+	if err := r.Client.Get(ctx, types.NamespacedName{
+		Name:      ps.Spec.SourceRef.Name,
+		Namespace: ps.Namespace,
+	}, &appSet); err != nil {
+		log.Error(err, "unable to get the referenced application set")
+		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
+	}
+
+	// Observe ApplicationSet hash
+	currentAppSetHash := utils.ComputeHash(appSet.Spec)
+	if currentAppSetHash != stateData.AppSetHash {
+		stateData.AppSetHash = currentAppSetHash
+		ps = syncv1alpha1.ProgressiveSyncProgressing(ps)
+		if updateStatusErr := r.patchStatus(ctx, ps); updateStatusErr != nil {
+			log.Error(updateStatusErr, "unable to update status after appset hash update")
+			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateStatusErr
+		}
+		if updateMapErr := r.updateStateMap(ctx, getStateMapNamespacedName(ps), stateData); err != nil {
+			log.Error(updateMapErr, "unabled to update state map after appset hash update")
+			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateMapErr
+		}
+	}
+
+	// Observe ProgressiveSync generation
 	if ps.Status.ObservedGeneration != ps.Generation {
 		ps.Status.ObservedGeneration = ps.Generation
 		ps = syncv1alpha1.ProgressiveSyncProgressing(ps)
