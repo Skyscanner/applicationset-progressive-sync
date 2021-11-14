@@ -360,6 +360,11 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 	}
 
+	// Consider the scenario where we have 5 apps - 4 OutOfSync and 1 Synced - and a stage with MaxTargets = 3.
+	// Without keeping track at which stage the app synced, we can't compute how many applications we have to update in the current stage
+	// because it would not be possible to know if the app synced at this stage or in the previous one.
+	var syncedInCurrentStage []argov1alpha1.Application
+
 	// Load the state map
 	state, err := r.readStateMap(ctx, getStateMapNamespacedName(ps))
 	if err != nil {
@@ -367,13 +372,22 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
 	}
 
-	// Consider the scenario where we have 5 apps - 4 OutOfSync and 1 Synced - and a stage with MaxTargets = 3.
-	// Without keeping track at which stage the app synced, we can't compute how many applications we have to update in the current stage
-	// because it would not be possible to know if the app synced at this stage or in the previous one.
-	var syncedInCurrentStage []argov1alpha1.Application
-
+	// During normal operations, the controller assumes
+	// that is the only entity in charge of syncing apps.
+	//
+	// This mean the controller expect to get out-of-sync apps,
+	// triggering a sync and watch for the apps status.
+	//
+	// There might be situation where this is not true, for example if:
+	// - we're missing a kubernetes events,
+	//   so for example we missed a out-of-sync -> synced transition
+	// - there is an external entity, for example a user, triggering the sync via ArgoCD
+	//
+	// To recover against those scenarios, we need to adopt any synced apps
+	// missing from the state configmap and assign the current stage to it.
 	syncedApps := utils.GetAppsBySyncStatusCode(selectedApps, argov1alpha1.SyncStatusCodeSynced)
 	for _, app := range syncedApps {
+		// Check if there is an entry in the state map for the synced app
 		appState, ok := state.Apps[app.Name]
 
 		// If we don't have a state for a synced app
@@ -386,16 +400,16 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 			syncedInCurrentStage = append(syncedInCurrentStage, app)
 			break
 		}
+		// If the synced app has an entry in the state map,
+		// check if it was synced at the current stage
 		if appState.SyncedAtStage == stage.Name {
 			syncedInCurrentStage = append(syncedInCurrentStage, app)
 		}
 	}
 
 	// If any adopted app is failed, fail the stage
-	for _, app := range syncedInCurrentStage {
-		if app.Status.Health.Status == health.HealthStatusDegraded {
-			return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), fmt.Errorf("app %s failed", app.Name)
-		}
+	if len(utils.GetAppsByHealthStatusCode(syncedInCurrentStage, health.HealthStatusDegraded)) > 0 {
+		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), fmt.Errorf("app %s failed", utils.GetAppsName(utils.GetAppsByHealthStatusCode(syncedInCurrentStage, health.HealthStatusDegraded)))
 	}
 
 	outOfSyncApps := utils.GetAppsBySyncStatusCode(selectedApps, argov1alpha1.SyncStatusCodeOutOfSync)
@@ -411,7 +425,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	// If we reached the maximum number of progressing apps for the stage
 	// then the stage is progressing
-	if len(progressingApps) == maxTargets {
+	if len(progressingApps) >= maxTargets {
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
 	}
 
@@ -423,10 +437,10 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		maxSync = len(outOfSyncApps)
 	}
 
-	// If the number of apps synced in the current stage is equal
-	// the maximum number of targets to sync, there is nothing else to do.
-	// If any on those apps is failed, fail the stage,
-	if len(syncedInCurrentStage) == maxTargets {
+	// If the number of apps synced in the current stage
+	// is equal or greater than the maximum number of targets to sync,
+	// there is nothing else to do.
+	if len(syncedInCurrentStage) >= maxTargets {
 		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted), nil
 	}
 
