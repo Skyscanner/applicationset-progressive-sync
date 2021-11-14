@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/Skyscanner/applicationset-progressive-sync/mocks"
@@ -20,14 +18,13 @@ import (
 	"github.com/onsi/gomega/format"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
-
-	//"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -648,147 +645,6 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				return false
 			}).Should(BeTrue())
 		})
-
-		It("should set conditions when apps already synced - empty stage", func() {
-			testPrefix := "synced-stage-empty"
-			appSet := fmt.Sprintf("%s-appset", testPrefix)
-
-			By("creating two ArgoCD clusters")
-			targets := []Target{
-				{
-					Name:           "account-6-eu-west-1a-1",
-					Namespace:      argoNamespace,
-					ApplicationSet: appSet,
-					Area:           "emea",
-					Region:         "eu-west-1",
-					AZ:             "eu-west-1a",
-				},
-				{
-					Name:           "account-6-eu-west-1b-2",
-					Namespace:      argoNamespace,
-					ApplicationSet: appSet,
-					Area:           "emea",
-					Region:         "eu-west-1",
-					AZ:             "eu-west-1b-2",
-				},
-				{
-					Name:           "account-6-eu-west-1c-1",
-					Namespace:      argoNamespace,
-					ApplicationSet: appSet,
-					Area:           "emea",
-					Region:         "eu-west-1",
-					AZ:             "eu-west-1c-1",
-				},
-				{
-					Name:           "account-7-eu-west-1a-1",
-					Namespace:      argoNamespace,
-					ApplicationSet: appSet,
-					Area:           "emea",
-					Region:         "eu-west-1",
-					AZ:             "eu-west-1a-1",
-				},
-				{
-					Name:           "account-7-eu-west-1b-1",
-					Namespace:      argoNamespace,
-					ApplicationSet: appSet,
-					Area:           "emea",
-					Region:         "eu-west-1",
-					AZ:             "eu-west-1b-1",
-				},
-			}
-			clusters, err := createClusters(ctx, targets)
-			Expect(err).To(BeNil())
-			Expect(clusters).To(Not(BeNil()))
-
-			By("creating an ApplicationSet")
-			applicationSet, err := createApplicationSetWithLabels(
-				ctx,
-				appSet,
-				argoNamespace,
-				map[string]string{"foo": "bar"},
-			)
-			Expect(applicationSet).To(Not(BeNil()))
-			Expect(err).To(BeNil())
-
-			By("creating one healthy and synced application targeting each cluster")
-			apps, err := createSyncedAndHealthyApplications(ctx, targets)
-			Expect(err).To(BeNil())
-			Expect(apps).To(Not(BeNil()))
-
-			By("creating a progressive sync")
-			syncedStagePS := syncv1alpha1.ProgressiveSync{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-ps", testPrefix),
-					Namespace: ctrlNamespace,
-				},
-				Spec: syncv1alpha1.ProgressiveSyncSpec{
-					SourceRef: corev1.TypedLocalObjectReference{
-						APIGroup: &appSetAPIRef,
-						Kind:     consts.AppSetKind,
-						Name:     appSet,
-					},
-					Stages: []syncv1alpha1.Stage{{
-						Name:        "one cluster as canary in eu-west-1",
-						MaxParallel: 1,
-						MaxTargets:  1,
-						Targets: syncv1alpha1.Targets{
-							Clusters: syncv1alpha1.Clusters{
-								Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-									"region": "eu-west-1",
-								}},
-							}},
-					}, {
-						Name:        "one cluster as canary in every other region",
-						MaxParallel: 3,
-						MaxTargets:  3,
-						Targets: syncv1alpha1.Targets{
-							Clusters: syncv1alpha1.Clusters{
-								Selector: metav1.LabelSelector{
-									MatchExpressions: []metav1.LabelSelectorRequirement{{
-										Key:      "region",
-										Operator: metav1.LabelSelectorOpNotIn,
-										Values:   []string{"eu-west-1"},
-									}},
-								},
-							}},
-					}, {
-						Name:        "rollout to remaining clusters",
-						MaxParallel: 2,
-						MaxTargets:  8,
-						Targets: syncv1alpha1.Targets{
-							Clusters: syncv1alpha1.Clusters{
-								Selector: metav1.LabelSelector{},
-							}},
-					}},
-				},
-			}
-			Expect(k8sClient.Create(ctx, &syncedStagePS)).To(Succeed())
-
-			// psKey := client.ObjectKey{
-			// 	Namespace: ctrlNamespace,
-			// 	Name:      fmt.Sprintf("%s-ps", testPrefix),
-			// }
-			// ExpectStageStatus(ctx, psKey, "one cluster as canary in eu-west-1").Should(MatchStage(syncv1alpha1.StageStatus{
-			// 	Name:    "one cluster as canary in eu-west-1",
-			// 	Phase:   syncv1alpha1.PhaseSucceeded,
-			// 	Message: "one cluster as canary in eu-west-1 stage completed",
-			// }))
-			// ExpectStageStatus(ctx, psKey, "one cluster as canary in every other region").Should(MatchStage(syncv1alpha1.StageStatus{
-			// 	Name:    "one cluster as canary in every other region",
-			// 	Phase:   syncv1alpha1.PhaseSucceeded,
-			// 	Message: "one cluster as canary in every other region stage completed",
-			// }))
-			// ExpectStageStatus(ctx, psKey, "rollout to remaining clusters").Should(MatchStage(syncv1alpha1.StageStatus{
-			// 	Name:    "rollout to remaining clusters",
-			// 	Phase:   syncv1alpha1.PhaseSucceeded,
-			// 	Message: "rollout to remaining clusters stage completed",
-			// }))
-			// ExpectStagesInStatus(ctx, psKey).Should(Equal(3))
-
-			// expected := syncedStagePS.NewStatusCondition(syncv1alpha1.CompletedCondition, metav1.ConditionTrue, syncv1alpha1.StagesCompleteReason, "All stages completed")
-			// ExpectCondition(&syncedStagePS, expected.Type).Should(HaveStatus(expected.Status, expected.Reason, expected.Message))
-
-		})
 	})
 
 	Describe("sync application", func() {
@@ -1060,50 +916,6 @@ func updateApplicationSetLabels(ctx context.Context, appSetName string, namespac
 	appSet.Spec.Template.Labels = labels
 
 	return k8sClient.Update(ctx, &appSet)
-}
-
-// createSyncedAndHealthyApplications is a helper function that creates an ArgoCD application given a prefix and a cluster
-func createSyncedAndHealthyApplications(ctx context.Context, targets []Target) ([]argov1alpha1.Application, error) {
-	var apps []argov1alpha1.Application
-
-	for _, t := range targets {
-
-		app := argov1alpha1.Application{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      t.Name,
-				Namespace: t.Namespace,
-				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion: consts.AppSetAPIGroup,
-					Kind:       consts.AppSetKind,
-					Name:       t.ApplicationSet,
-					UID:        uuid.NewUUID(),
-				}},
-			},
-			Spec: argov1alpha1.ApplicationSpec{
-				Destination: argov1alpha1.ApplicationDestination{
-					Server:    fmt.Sprintf("https://%s.kubernetes.io", t.Name),
-					Namespace: t.Namespace,
-					Name:      t.Name,
-				}},
-			Status: argov1alpha1.ApplicationStatus{
-				Sync: argov1alpha1.SyncStatus{
-					Status: argov1alpha1.SyncStatusCodeSynced,
-				},
-				Health: argov1alpha1.HealthStatus{
-					Status: health.HealthStatusHealthy,
-				},
-			},
-		}
-
-		err := k8sClient.Create(ctx, &app)
-		if err != nil {
-			return nil, err
-		}
-
-		apps = append(apps, app)
-	}
-
-	return apps, nil
 }
 
 // setAppStatusProgressing set the application health status to progressing given an application name and its namespace
