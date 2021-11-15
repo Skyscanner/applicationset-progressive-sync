@@ -8,6 +8,18 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   - get
@@ -21,8 +33,6 @@ rules:
   - get
   - list
   - watch
-  - update
-  - patch
 - apiGroups:
   - argoproj.io
   resources:
@@ -31,6 +41,13 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applicationsets
+  verbs:
+  - get
+  - list
 - apiGroups:
   - argoproj.skyscanner.net
   resources:
@@ -46,40 +63,17 @@ rules:
 - apiGroups:
   - argoproj.skyscanner.net
   resources:
+  - progressivesyncs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - argoproj.skyscanner.net
+  resources:
   - progressivesyncs/status
   verbs:
   - get
   - patch
   - update
-- apiGroups:
-  - argoproj.io
-  resources:
-  - applicationsets
-  verbs:
-  - get
-  - list
-{{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
-- apiGroups:
-  - ''
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - ''
-  resources:
-  - configmaps/status
-  verbs:
-  - get
-  - update
-  - patch
-{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
