@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
-	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -987,35 +986,6 @@ func setAppStatusFailed(ctx context.Context, appName string, namespace string) e
 	}
 
 	return k8sClient.Update(ctx, &app)
-}
-
-// statusString returns a formatted string with a condition status, reason and message
-func statusString(status metav1.ConditionStatus, reason string, message string) string {
-	return fmt.Sprintf("Status: %s, Reason: %s, Message: %s", status, reason, message)
-}
-
-// HaveStatus is a gomega matcher for a condition status, reason and message
-func HaveStatus(status metav1.ConditionStatus, reason string, message string) gomegatypes.GomegaMatcher {
-	return Equal(statusString(status, reason, message))
-}
-
-// ExpectCondition take a condition type and returns its status, reason and message
-func ExpectCondition(
-	ps *syncv1alpha1.ProgressiveSync, ct string,
-) AsyncAssertion {
-	return Eventually(func() string {
-		_ = k8sClient.Get(
-			context.Background(),
-			types.NamespacedName{Name: ps.Name, Namespace: ps.Namespace},
-			ps,
-		)
-		for _, c := range ps.Status.Conditions {
-			if c.Type == ct {
-				return statusString(c.Status, c.Reason, c.Message)
-			}
-		}
-		return ""
-	})
 }
 
 // ExpectStageStatus returns an AsyncAssertion for a StageStatus, given a ProgressiveSync object key and a stage name
