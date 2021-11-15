@@ -53,6 +53,7 @@ type ProgressiveSyncReconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
 	ArgoCDAppClient utils.ArgoCDAppClient
+	ArgoNamespace   string
 }
 
 // +kubebuilder:rbac:groups=argoproj.skyscanner.net,resources=progressivesyncs,verbs=get;list;watch;create;update;patch;delete
@@ -319,7 +320,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	var appSet applicationset.ApplicationSet
 	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name:      ps.Spec.SourceRef.Name,
-		Namespace: ps.Namespace,
+		Namespace: r.ArgoNamespace,
 	}, &appSet); err != nil {
 		log.Error(err, "unable to get the referenced application set")
 		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err

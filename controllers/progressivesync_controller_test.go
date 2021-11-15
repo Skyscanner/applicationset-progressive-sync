@@ -102,6 +102,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			Client:          k8sManager.GetClient(),
 			Scheme:          k8sManager.GetScheme(),
 			ArgoCDAppClient: &mockAcdClient,
+			ArgoNamespace:   argoNamespace,
 		}
 		err = reconciler.SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
@@ -341,7 +342,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			applicationSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSet,
-				ctrlNamespace,
+				argoNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(applicationSet).To(Not(BeNil()))
@@ -569,7 +570,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 			applicationSet, err := createApplicationSetWithLabels(
 				ctx,
 				appSet,
-				ctrlNamespace,
+				argoNamespace,
 				map[string]string{"foo": "bar"},
 			)
 			Expect(applicationSet).To(Not(BeNil()))
