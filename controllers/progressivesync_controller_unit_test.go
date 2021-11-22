@@ -75,7 +75,7 @@ func TestProgressiveSyncReconciler_reconcileStage(t *testing.T) {
 				MaxTargets:  2,
 				MaxParallel: 2,
 			},
-			wantStageStatus: syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing),
+			wantStageStatus: syncv1alpha1.StageStatusProgressing,
 			wantStageErr:    false,
 		},
 	}
@@ -93,7 +93,7 @@ func TestProgressiveSyncReconciler_reconcileStage(t *testing.T) {
 			r := &ProgressiveSyncReconciler{
 				Client:          client,
 				Scheme:          scheme,
-				ArgoCDAppClient: &mocks.ArgoCDAppClientStub{},
+				ArgoCDAppClient: &mocks.MockArgoCDAppClientCalledWith{},
 				ArgoNamespace:   namespace,
 			}
 

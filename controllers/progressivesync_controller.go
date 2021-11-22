@@ -330,14 +330,15 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	currentAppSetHash := utils.ComputeHash(appSet.Spec)
 	if currentAppSetHash != stateData.AppSetHash {
 		stateData.AppSetHash = currentAppSetHash
+		if updateMapErr := r.updateStateMap(ctx, getStateMapNamespacedName(ps), stateData); err != nil {
+			log.Error(updateMapErr, "unabled to update state map after appset hash update")
+			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateMapErr
+		}
+
 		ps = syncv1alpha1.ProgressiveSyncProgressing(ps)
 		if updateStatusErr := r.patchStatus(ctx, ps); updateStatusErr != nil {
 			log.Error(updateStatusErr, "unable to update status after appset hash update")
 			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateStatusErr
-		}
-		if updateMapErr := r.updateStateMap(ctx, getStateMapNamespacedName(ps), stateData); err != nil {
-			log.Error(updateMapErr, "unabled to update state map after appset hash update")
-			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateMapErr
 		}
 	}
 
@@ -359,20 +360,17 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		// An error indicates the stage failed the reconciliation
 		if err != nil {
 			log.Error(err, "stage reconciliation failed", "stage", stage.Name)
-			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed)
+			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusFailed
 			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StageFailedReason, err.Error()), ctrl.Result{Requeue: true}, err
 		}
 
-		switch {
-		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted):
-			{
-				ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted)
-			}
-		case stageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing):
-			{
-				ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing)
-				return syncv1alpha1.ProgressiveSyncProgressing(ps), ctrl.Result{Requeue: true}, nil
-			}
+		switch stageStatus {
+		case syncv1alpha1.StageStatusCompleted:
+			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusCompleted
+
+		case syncv1alpha1.StageStatusProgressing:
+			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusProgressing
+			return syncv1alpha1.ProgressiveSyncProgressing(ps), ctrl.Result{Requeue: true}, nil
 		}
 	}
 
@@ -388,12 +386,12 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// Get the ArgoCD secrets selected by the label selector
 	selectedCluster, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
 	if err != nil {
-		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
+		return syncv1alpha1.StageStatusFailed, err
 	}
 	// Get the ArgoCD apps targeting the selected clusters
 	selectedApps, err := r.getOwnedAppsFromClusters(ctx, selectedCluster, ps)
 	if err != nil {
-		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
+		return syncv1alpha1.StageStatusFailed, err
 	}
 
 	// Consider the scenario where we have 5 apps - 4 OutOfSync and 1 Synced - and a stage with MaxTargets = 3.
@@ -405,7 +403,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	state, err := r.readStateMap(ctx, getStateMapNamespacedName(ps))
 	if err != nil {
 		log.Error(err, "unabled to load the state map")
-		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
+		return syncv1alpha1.StageStatusFailed, err
 	}
 
 	// During normal operations, the controller assumes
@@ -445,14 +443,16 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	// If any adopted app is failed, fail the stage
 	if len(utils.GetAppsByHealthStatusCode(syncedInCurrentStage, health.HealthStatusDegraded)) > 0 {
-		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), fmt.Errorf("app %s failed", utils.GetAppsName(utils.GetAppsByHealthStatusCode(syncedInCurrentStage, health.HealthStatusDegraded)))
+		return syncv1alpha1.StageStatusFailed,
+			fmt.Errorf("app %s failed",
+				utils.GetAppsName(utils.GetAppsByHealthStatusCode(syncedInCurrentStage, health.HealthStatusDegraded)))
 	}
 
 	outOfSyncApps := utils.GetAppsBySyncStatusCode(selectedApps, argov1alpha1.SyncStatusCodeOutOfSync)
 
 	// If there are no out-of-sync apps then the stage is completed
 	if len(outOfSyncApps) == 0 {
-		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted), nil
+		return syncv1alpha1.StageStatusCompleted, nil
 	}
 
 	progressingApps := utils.GetAppsByHealthStatusCode(selectedApps, health.HealthStatusProgressing)
@@ -462,7 +462,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// If we reached the maximum number of progressing apps for the stage
 	// then the stage is progressing
 	if len(progressingApps) >= maxTargets {
-		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
+		return syncv1alpha1.StageStatusProgressing, nil
 	}
 
 	// If there is an external process triggering a sync,
@@ -477,7 +477,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// is equal or greater than the maximum number of targets to sync,
 	// there is nothing else to do.
 	if len(syncedInCurrentStage) >= maxTargets {
-		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted), nil
+		return syncv1alpha1.StageStatusCompleted, nil
 	}
 
 	// Consider the following scenario
@@ -499,7 +499,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// Sync the desired number of apps
 	for i := 0; i < maxSync; i++ {
 		if err := r.syncApp(ctx, outOfSyncApps[i]); err != nil {
-			return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
+			return syncv1alpha1.StageStatusFailed, err
 		}
 		state.Apps[outOfSyncApps[i].Name] = AppState{
 			SyncedAtStage: stage.Name,
@@ -509,12 +509,10 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// Update the state map
 	if err := r.updateStateMap(ctx, getStateMapNamespacedName(ps), state); err != nil {
 		log.Error(err, "unabled to update the state map")
-		return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusFailed), err
+		return syncv1alpha1.StageStatusFailed, err
 	}
 
-	// log.Info("stage summary", "stage", stage.Name, "outOfSync", utils.GetAppsName(outOfSyncApps), "synced", utils.GetAppsName(syncedApps), "syncedInStage", utils.GetAppsName(syncedInCurrentStage), "progressing", utils.GetAppsName(progressingApps), "maxSync", maxSync, "state.apps", state.Apps)
-
-	return syncv1alpha1.StageStatus(syncv1alpha1.StageStatusProgressing), nil
+	return syncv1alpha1.StageStatusProgressing, nil
 }
 
 //reconcileDelete deletes the configmap holding the ProgressiveSync object state

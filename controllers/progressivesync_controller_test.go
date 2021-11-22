@@ -520,7 +520,7 @@ var _ = Describe("ProgressiveRollout Controller", func() {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &latest); err != nil {
 					return false
 				}
-				return latest.Status.LastSyncedStage == "rollout to remaining clusters" && latest.Status.LastSyncedStageStatus == syncv1alpha1.StageStatus(syncv1alpha1.StageStatusCompleted)
+				return latest.Status.LastSyncedStage == "rollout to remaining clusters" && latest.Status.LastSyncedStageStatus == syncv1alpha1.StageStatusCompleted
 			}).Should(BeTrue())
 
 			Eventually(func() bool {

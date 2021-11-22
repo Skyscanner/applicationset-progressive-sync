@@ -73,11 +73,11 @@ type Clusters struct {
 type StageStatus string
 
 const (
-	StageStatusCompleted string = "StageCompleted"
+	StageStatusCompleted StageStatus = "StageCompleted"
 
-	StageStatusProgressing string = "StageProgressing"
+	StageStatusProgressing StageStatus = "StageProgressing"
 
-	StageStatusFailed string = "StageFailed"
+	StageStatusFailed StageStatus = "StageFailed"
 )
 
 // ProgressiveSyncStatus defines the observed state of ProgressiveSync
