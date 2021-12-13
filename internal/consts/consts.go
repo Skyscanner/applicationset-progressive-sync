@@ -7,6 +7,7 @@ const (
 	AppSetAPIGroup          = "argoproj.io/v1alpha1"
 	ArgoCDAuthTokenKey      = "ARGOCD_AUTH_TOKEN"
 	ArgoCDInsecureKey       = "ARGOCD_INSECURE"
+	ArgoCDPlaintextKey      = "ARGOCD_PLAINTEXT"
 	ArgoCDServerAddrKey     = "ARGOCD_SERVER_ADDR"
 	ConfigDirectory         = "/etc/prcconfig/"
 )

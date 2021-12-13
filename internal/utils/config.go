@@ -13,6 +13,7 @@ type Configuration struct {
 	ArgoCDAuthToken  string
 	ArgoCDServerAddr string
 	ArgoCDInsecure   bool
+	ArgoCDPlaintext  bool
 }
 
 // readFromFile returns the content of a file
@@ -67,7 +68,7 @@ func isFlagSet(paramName string) (bool, error) {
 func ReadConfiguration() (Configuration, error) {
 	var err error
 	var acdAuthToken, acdServerAddr string
-	var acdInsecure bool
+	var acdInsecure, acdPlaintext bool
 
 	acdAuthToken, err = readFromEnvOrFile(consts.ArgoCDAuthTokenKey)
 	if err != nil {
@@ -84,10 +85,16 @@ func ReadConfiguration() (Configuration, error) {
 		return Configuration{}, err
 	}
 
+	acdPlaintext, err = isFlagSet(consts.ArgoCDPlaintextKey)
+	if err != nil {
+		return Configuration{}, err
+	}
+
 	c := Configuration{
 		ArgoCDAuthToken:  acdAuthToken,
 		ArgoCDServerAddr: acdServerAddr,
 		ArgoCDInsecure:   acdInsecure,
+		ArgoCDPlaintext:  acdPlaintext,
 	}
 
 	return c, nil
