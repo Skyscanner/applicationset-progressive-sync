@@ -1,8 +1,9 @@
 package v1alpha1
 
 import (
-	. "github.com/onsi/gomega"
 	"testing"
+
+	. "github.com/onsi/gomega"
 )
 
 func TestFindStageStatus(t *testing.T) {

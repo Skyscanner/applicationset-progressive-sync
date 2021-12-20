@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: progressiverollout-viewer-role
+  name: progressivesync-viewer-role
 rules:
 - apiGroups:
   - argoproj.skyscanner.net
