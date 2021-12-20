@@ -36,7 +36,7 @@ type StateData struct {
 	Apps       map[string]AppState `yaml:"apps"`
 }
 
-// AppState holds the state for a cluster
+// AppState holds the state for an application
 type AppState struct {
 	SyncedAtStage string `yaml:"syncedAtStage"`
 }

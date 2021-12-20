@@ -90,10 +90,10 @@ func (r *ProgressiveSyncReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	reconcilePs, result, err := r.reconcile(ctx, ps)
+	reconciledPs, result, err := r.reconcile(ctx, ps)
 
 	// Update status after reconciliation.
-	if updateStatusErr := r.patchStatus(ctx, reconcilePs); updateStatusErr != nil {
+	if updateStatusErr := r.patchStatus(ctx, reconciledPs); updateStatusErr != nil {
 		log.Error(updateStatusErr, "unable to update status after reconciliation")
 		return ctrl.Result{Requeue: true}, updateStatusErr
 	}
@@ -140,10 +140,8 @@ func (r *ProgressiveSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // requestsForApplicationChange returns a reconcile request when an Application changes
 func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object) []reconcile.Request {
 
-	/*
-		We trigger a reconciliation loop on an Application event if:
-		- the Application owner is referenced by a ProgressiveSync object
-	*/
+	// We trigger a reconciliation loop on an Application event if:
+	// the Application owner is referenced by a ProgressiveSync object
 
 	var requests []reconcile.Request
 	var list syncv1alpha1.ProgressiveSyncList
@@ -177,12 +175,10 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 // requestsForSecretChange returns a reconcile request when a Secret changes
 func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []reconcile.Request {
 
-	/*
-		We trigger a reconciliation loop on a Secret event if:
-		- the Secret is an ArgoCD cluster, AND
-		- there is an Application targeting that secret/cluster, AND
-		- that Application owner is referenced by a ProgressiveSync object
-	*/
+	// We trigger a reconciliation loop on a Secret event if:
+	// - the Secret is an ArgoCD cluster, AND
+	// - there is an Application targeting that secret/cluster, AND
+	// - that Application owner is referenced by a ProgressiveSync object
 
 	var requests []reconcile.Request
 	var psList syncv1alpha1.ProgressiveSyncList
@@ -211,21 +207,20 @@ func (r *ProgressiveSyncReconciler) requestsForSecretChange(o client.Object) []r
 		return nil
 	}
 
-	for _, pr := range psList.Items {
+	for _, ps := range psList.Items {
 		for _, app := range appList.Items {
-			if app.Spec.Destination.Server == string(s.Data["server"]) && pr.Owns(app.GetOwnerReferences()) {
-				/*
-					Consider the following scenario:
-					- two Applications
-					- owned by the same ApplicationSet
-					- referenced by the same ProgressiveSync
-					- targeting the same cluster
+			if app.Spec.Destination.Server == string(s.Data["server"]) && ps.Owns(app.GetOwnerReferences()) {
 
-					In this scenario, we would trigger the reconciliation loop twice.
-					To avoid that, we use a map to store for which ProgressiveSync object we already triggered the reconciliation loop.
-				*/
-
-				namespacedName := types.NamespacedName{Name: pr.Name, Namespace: pr.Namespace}
+				// Consider the following scenario:
+				// - two Applications
+				// - owned by the same ApplicationSet
+				// - referenced by the same ProgressiveSync
+				// - targeting the same cluster
+				//
+				// In this scenario, we would trigger the reconciliation loop twice.
+				// To avoid that, we use a map to store
+				// for which ProgressiveSync object we already triggered the reconciliation loop.
+				namespacedName := types.NamespacedName{Name: ps.Name, Namespace: ps.Namespace}
 				if _, ok := requestsMap[namespacedName]; !ok {
 					requestsMap[namespacedName] = true
 					requests = append(requests, reconcile.Request{NamespacedName: namespacedName})
@@ -304,6 +299,12 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	log := log.FromContext(ctx)
 
+	// Observe ProgressiveSync generation
+	if ps.Status.ObservedGeneration != ps.Generation {
+		ps.Status.ObservedGeneration = ps.Generation
+		return syncv1alpha1.ProgressiveSyncProgressing(ps), ctrl.Result{Requeue: true}, nil
+	}
+
 	// Create the progressive sync state configmap if it doesn't exist
 	if err := r.createStateMap(ctx, ps, getStateMapNamespacedName(ps)); err != nil {
 		log.Error(err, "unable to create state map")
@@ -332,25 +333,11 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	if currentAppSetHash != stateData.AppSetHash {
 		stateData.AppSetHash = currentAppSetHash
 		if updateMapErr := r.updateStateMap(ctx, getStateMapNamespacedName(ps), stateData); err != nil {
-			log.Error(updateMapErr, "unabled to update state map after appset hash update")
+			log.Error(updateMapErr, "unable to update state map after appset hash update")
 			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateMapErr
 		}
 
-		ps = syncv1alpha1.ProgressiveSyncProgressing(ps)
-		if updateStatusErr := r.patchStatus(ctx, ps); updateStatusErr != nil {
-			log.Error(updateStatusErr, "unable to update status after appset hash update")
-			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateStatusErr
-		}
-	}
-
-	// Observe ProgressiveSync generation
-	if ps.Status.ObservedGeneration != ps.Generation {
-		ps.Status.ObservedGeneration = ps.Generation
-		ps = syncv1alpha1.ProgressiveSyncProgressing(ps)
-		if updateStatusErr := r.patchStatus(ctx, ps); updateStatusErr != nil {
-			log.Error(updateStatusErr, "unable to update status after generation update")
-			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateStatusErr
-		}
+		return syncv1alpha1.ProgressiveSyncProgressing(ps), ctrl.Result{Requeue: true}, nil
 	}
 
 	for _, stage := range ps.Spec.Stages {
@@ -360,7 +347,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 		// An error indicates the stage failed the reconciliation
 		if err != nil {
-			log.Error(err, "stage reconciliation failed", "stage", stage.Name)
+			log.Error(err, "unable to reconcile stage", "stage", stage.Name)
 			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusFailed
 			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StageFailedReason, err.Error()), ctrl.Result{Requeue: true}, err
 		}
