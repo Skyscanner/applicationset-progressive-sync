@@ -127,6 +127,7 @@ func (r *ProgressiveSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&syncv1alpha1.ProgressiveSync{}).
+		Owns(&corev1.ConfigMap{}).
 		Watches(
 			&source.Kind{Type: &argov1alpha1.Application{}},
 			handler.EnqueueRequestsFromMapFunc(r.requestsForApplicationChange)).
