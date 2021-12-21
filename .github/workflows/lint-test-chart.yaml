@@ -9,7 +9,7 @@ jobs:
       ARGOCD_VERSION: v1.8.6
     steps:
       - name: Checkout
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
 
@@ -20,7 +20,7 @@ jobs:
 
       # Python is required because `ct lint` runs Yamale (https://github.com/23andMe/Yamale) and
       # yamllint (https://github.com/adrienverge/yamllint) which require Python
-      - uses: actions/setup-python@v2.2.2
+      - uses: actions/setup-python@v2.3.1
         with:
           python-version: '3.x'
 
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v2.4.0
 
       - name: Run helm-docs
         uses: docker://jnorwood/helm-docs:v1.5.0
