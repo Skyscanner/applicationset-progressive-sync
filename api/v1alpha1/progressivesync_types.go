@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	"github.com/fluxcd/pkg/apis/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -103,12 +104,8 @@ type ProgressiveSyncStatus struct {
 
 // Owns returns true if the ProgressiveSync object has a reference to one of the owners.
 func (in *ProgressiveSync) Owns(owners []metav1.OwnerReference) bool {
-	// Can't point to a const
-	AppSetAPIGroup := "argoproj.io/v1alpha1"
-	AppSetAPIGroupPtr := &AppSetAPIGroup
-
 	for _, owner := range owners {
-		if owner.Kind == AppSetKind && owner.APIVersion == *AppSetAPIGroupPtr && owner.Name == in.Spec.AppSetRef.Name {
+		if owner.Kind == consts.AppSetKind && owner.APIVersion == consts.AppSetAPIVersion && owner.Name == in.Spec.AppSetRef.Name {
 			return true
 		}
 	}
