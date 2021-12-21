@@ -143,7 +143,7 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 	// the Application owner is referenced by a ProgressiveSync object
 
 	var requests []reconcile.Request
-	var list syncv1alpha1.ProgressiveSyncList
+	var psList syncv1alpha1.ProgressiveSyncList
 	ctx := context.Background()
 	log := log.FromContext(ctx)
 
@@ -154,17 +154,19 @@ func (r *ProgressiveSyncReconciler) requestsForApplicationChange(o client.Object
 		return nil
 	}
 
-	if err := r.List(ctx, &list); err != nil {
+	if err := r.List(ctx, &psList); err != nil {
 		log.Error(err, "unable to list argov1alpha1.ApplicationList")
 		return nil
 	}
 
-	for _, pr := range list.Items {
-		if pr.Owns(app.GetOwnerReferences()) {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
-				Namespace: pr.Namespace,
-				Name:      pr.Name,
-			}})
+	for _, ps := range psList.Items {
+		if ps.Owns(app.GetOwnerReferences()) {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: ps.Namespace,
+					Name:      ps.Name,
+				},
+			})
 		}
 	}
 

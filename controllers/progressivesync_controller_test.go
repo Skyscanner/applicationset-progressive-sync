@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func TestRequestsForApplicationChange(t *testing.T) {
@@ -31,8 +32,31 @@ func TestRequestsForApplicationChange(t *testing.T) {
 		g.Expect(deleteNamespace(namespace)).To(Succeed())
 	}()
 
-	err = createProgressiveSync("owner-ps", namespace, "owner-appset")
+	appSet := "owner-appset"
+	_, err = createProgressiveSync("owner-ps", namespace, appSet)
 	g.Expect(err).NotTo(HaveOccurred(), "unable to create progressivesync")
+
+	t.Run("forward events for owned applications", func(t *testing.T) {
+		app, err := createApplication("owned-app", namespace, appSet)
+		g.Expect(err).NotTo(HaveOccurred(), "unable to create applications")
+
+		var requests []reconcile.Request
+		g.Eventually(func() int {
+			requests = reconciler.requestsForApplicationChange(&app)
+			return len(requests)
+		}).Should(Equal(1))
+	})
+
+	t.Run("filter out events for non-owned applications", func(t *testing.T) {
+		app, err := createApplication("non-owned-app", namespace, "wrong-owner")
+		g.Expect(err).NotTo(HaveOccurred(), "unable to create applications")
+
+		var requests []reconcile.Request
+		g.Eventually(func() int {
+			requests = reconciler.requestsForApplicationChange(&app)
+			return len(requests)
+		}).Should(Equal(0))
+	})
 }
 
 func TestReconcileStage(t *testing.T) {

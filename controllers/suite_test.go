@@ -30,10 +30,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
@@ -44,11 +47,11 @@ import (
 )
 
 var (
-	k8sClient  client.Client
-	testEnv    *envtest.Environment
-	ctx        context.Context
 	cancel     context.CancelFunc
+	ctx        context.Context
+	k8sClient  client.Client
 	reconciler *ProgressiveSyncReconciler
+	testEnv    *envtest.Environment
 )
 
 func init() {
@@ -58,6 +61,8 @@ func init() {
 func TestMain(m *testing.M) {
 	var err error
 	ctx, cancel = context.WithCancel(context.TODO())
+
+	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
 	utilruntime.Must(syncv1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(applicationset.AddToScheme(scheme.Scheme))
@@ -98,18 +103,24 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("unabled to create reconciler: %v", err))
 	}
 
+	go func() {
+		fmt.Println("starting the manager")
+		if err := k8sManager.Start(ctx); err != nil {
+			panic(fmt.Sprintf("unabled to start k8sManager: %v", err))
+		}
+	}()
+
 	code := m.Run()
 
-	fmt.Println("Stopping the test environment")
-	if err := testEnv.Stop(); err != nil {
-		panic(fmt.Sprintf("Failed to stop the test environment: %v", err))
-	}
+	// fmt.Println("stopping the test environment")
+	// if err := testEnv.Stop(); err != nil {
+	// 	panic(fmt.Sprintf("unable to stop the test environment: %v", err))
+	// }
 
 	os.Exit(code)
 }
 
 var numbers = []rune("1234567890")
-var appSetAPIRef = consts.AppSetAPIGroup
 
 func randStringNumber(n int) string {
 	s := make([]rune, n)
@@ -143,7 +154,7 @@ func deleteNamespace(name string) error {
 	return nil
 }
 
-func createProgressiveSync(name, namespace, appSet string) error {
+func createProgressiveSync(name, namespace, appSet string) (syncv1alpha1.ProgressiveSync, error) {
 	ps := syncv1alpha1.ProgressiveSync{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -155,5 +166,22 @@ func createProgressiveSync(name, namespace, appSet string) error {
 			},
 		},
 	}
-	return k8sClient.Create(ctx, &ps)
+	return ps, k8sClient.Create(ctx, &ps)
+}
+
+func createApplication(name, namespace, appSet string) (argov1alpha1.Application, error) {
+	app := argov1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: consts.AppSetAPIVersion,
+				Kind:       consts.AppSetKind,
+				Name:       appSet,
+				UID:        uuid.NewUUID(),
+			}},
+		},
+		Spec: argov1alpha1.ApplicationSpec{},
+	}
+	return app, k8sClient.Create(ctx, &app)
 }
