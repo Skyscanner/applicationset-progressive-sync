@@ -112,11 +112,6 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	// fmt.Println("stopping the test environment")
-	// if err := testEnv.Stop(); err != nil {
-	// 	panic(fmt.Sprintf("unable to stop the test environment: %v", err))
-	// }
-
 	os.Exit(code)
 }
 
