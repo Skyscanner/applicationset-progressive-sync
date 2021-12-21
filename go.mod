@@ -8,7 +8,7 @@ require (
 	github.com/argoproj/gitops-engine v0.3.1-0.20210709004906-a4c77d5c70fb
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fluxcd/pkg/apis/meta v0.10.0
-	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo v1.16.4 // indirect
 	github.com/onsi/gomega v1.13.0
 	github.com/prometheus/client_golang v1.11.0 // indirect
 	go.uber.org/zap v1.17.0 // indirect
@@ -18,7 +18,7 @@ require (
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	k8s.io/kubernetes v1.21.0 // indirect
-	sigs.k8s.io/controller-runtime v0.9.0
+	sigs.k8s.io/controller-runtime v0.11.0
 )
 
 replace github.com/argoproj/gitops-engine => github.com/argoproj/gitops-engine v0.2.1-0.20210129183711-c5b7114c501f
