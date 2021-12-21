@@ -36,24 +36,14 @@ spec:
           spec:
             description: ProgressiveSyncSpec defines the desired state of ProgressiveSync
             properties:
-              sourceRef:
-                description: SourceRef defines the resource, example an ApplicationSet,
-                  which owns ArgoCD Applications
+              appSetRef:
+                description: AppSetRef point to the ApplicationSet which owns ArgoCD
+                  Applications
                 properties:
-                  apiGroup:
-                    description: APIGroup is the group for the resource being referenced.
-                      If APIGroup is not specified, the specified Kind must be in
-                      the core API group. For any other third-party types, APIGroup
-                      is required.
-                    type: string
-                  kind:
-                    description: Kind is the type of resource being referenced
-                    type: string
                   name:
-                    description: Name is the name of resource being referenced
+                    description: Name of the referent
                     type: string
                 required:
-                - kind
                 - name
                 type: object
               stages:
@@ -137,7 +127,7 @@ spec:
                   type: object
                 type: array
             required:
-            - sourceRef
+            - appSetRef
             type: object
           status:
             description: ProgressiveSyncStatus defines the observed state of ProgressiveSync

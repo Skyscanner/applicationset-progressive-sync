@@ -27,8 +27,11 @@ func TestRequestsForApplicationChange(t *testing.T) {
 	namespace := "progressivesync-test-" + randStringNumber(5)
 	err := createNamespace(namespace)
 	g.Expect(err).NotTo(HaveOccurred(), "unable to create namespace")
+	defer func() {
+		g.Expect(deleteNamespace(namespace)).To(Succeed())
+	}()
 
-	err = createProgressiveSync("owner-ps", namespace)
+	err = createProgressiveSync("owner-ps", namespace, "owner-appset")
 	g.Expect(err).NotTo(HaveOccurred(), "unable to create progressivesync")
 }
 
@@ -37,4 +40,7 @@ func TestReconcileStage(t *testing.T) {
 	namespace := "progressivesync-test-" + randStringNumber(5)
 	err := createNamespace(namespace)
 	g.Expect(err).NotTo(HaveOccurred(), "unable to create namespace")
+	defer func() {
+		g.Expect(deleteNamespace(namespace)).To(Succeed())
+	}()
 }

@@ -25,8 +25,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fluxcd/pkg/apis/meta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -125,17 +127,31 @@ func createNamespace(name string) error {
 
 }
 
-func createProgressiveSync(name string, namespace string) error {
+func deleteNamespace(name string) error {
+	var err error
+	var ns corev1.Namespace
+	err = k8sClient.Get(ctx, types.NamespacedName{
+		Name: name,
+	}, &ns)
+	if err != nil {
+		return err
+	}
+	err = k8sClient.Delete(ctx, &ns)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func createProgressiveSync(name, namespace, appSet string) error {
 	ps := syncv1alpha1.ProgressiveSync{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: syncv1alpha1.ProgressiveSyncSpec{
-			SourceRef: corev1.TypedLocalObjectReference{
-				APIGroup: &appSetAPIRef,
-				Kind:     consts.AppSetKind,
-				Name:     "owner-app-set",
+			AppSetRef: meta.LocalObjectReference{
+				Name: appSet,
 			},
 		},
 	}

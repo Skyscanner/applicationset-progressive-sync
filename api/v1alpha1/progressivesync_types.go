@@ -18,17 +18,19 @@ package v1alpha1
 
 import (
 	"github.com/fluxcd/pkg/apis/meta"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const ProgressiveSyncFinalizer = "finalizers.argoproj.skyscanner.net"
+const (
+	ProgressiveSyncFinalizer = "finalizers.argoproj.skyscanner.net"
+	AppSetKind               = "ApplicationSet"
+)
 
 // ProgressiveSyncSpec defines the desired state of ProgressiveSync
 type ProgressiveSyncSpec struct {
-	// SourceRef defines the resource, example an ApplicationSet, which owns ArgoCD Applications
+	// AppSetRef point to the ApplicationSet which owns ArgoCD Applications
 	//+kubebuilder:validation:Required
-	SourceRef corev1.TypedLocalObjectReference `json:"sourceRef"`
+	AppSetRef meta.LocalObjectReference `json:"appSetRef"`
 
 	// Stages defines a list of Progressive Rollout stages
 	//+kubebuilder:validation:Optional
@@ -101,8 +103,12 @@ type ProgressiveSyncStatus struct {
 
 // Owns returns true if the ProgressiveSync object has a reference to one of the owners.
 func (in *ProgressiveSync) Owns(owners []metav1.OwnerReference) bool {
+	// Can't point to a const
+	AppSetAPIGroup := "argoproj.io/v1alpha1"
+	AppSetAPIGroupPtr := &AppSetAPIGroup
+
 	for _, owner := range owners {
-		if owner.Kind == in.Spec.SourceRef.Kind && owner.APIVersion == *in.Spec.SourceRef.APIGroup && owner.Name == in.Spec.SourceRef.Name {
+		if owner.Kind == AppSetKind && owner.APIVersion == *AppSetAPIGroupPtr && owner.Name == in.Spec.AppSetRef.Name {
 			return true
 		}
 	}

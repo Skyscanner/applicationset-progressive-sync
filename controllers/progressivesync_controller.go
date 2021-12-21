@@ -320,7 +320,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	// Calculate the referenced ApplicationSet hash
 	var appSet applicationset.ApplicationSet
 	if err := r.Client.Get(ctx, types.NamespacedName{
-		Name:      ps.Spec.SourceRef.Name,
+		Name:      ps.Spec.AppSetRef.Name,
 		Namespace: ps.Namespace,
 	}, &appSet); err != nil {
 		log.Error(err, "unable to get the referenced application set")
