@@ -342,7 +342,6 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	}
 
 	for _, stage := range ps.Spec.Stages {
-
 		stageStatus, err := r.reconcileStage(ctx, ps, stage)
 		ps.Status.LastSyncedStage = stage.Name
 

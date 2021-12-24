@@ -22,6 +22,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -43,6 +44,7 @@ import (
 	"github.com/Skyscanner/applicationset-progressive-sync/mocks"
 	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
+	"github.com/argoproj/gitops-engine/pkg/health"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -165,7 +167,24 @@ func createProgressiveSync(name, namespace, appSet string) (syncv1alpha1.Progres
 	return ps, k8sClient.Create(ctx, &ps)
 }
 
+func createStage(name string, maxTargets, maxParallel int64, selector metav1.LabelSelector) syncv1alpha1.Stage {
+	stage := syncv1alpha1.Stage{
+		Name:        name,
+		MaxParallel: maxParallel,
+		MaxTargets:  maxTargets,
+		Targets: syncv1alpha1.Targets{
+			Clusters: syncv1alpha1.Clusters{
+				Selector: selector,
+			},
+		},
+	}
+	return stage
+}
+
+// createApplication creates an Application targeting a cluster.
+// The name MUST be in the format app_name-account_name-az_name-number.
 func createApplication(name, namespace, appSet string) (argov1alpha1.Application, error) {
+	cluster := strings.Join(strings.Split(name, "-")[1:], "-")
 	app := argov1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -177,7 +196,88 @@ func createApplication(name, namespace, appSet string) (argov1alpha1.Application
 				UID:        uuid.NewUUID(),
 			}},
 		},
-		Spec: argov1alpha1.ApplicationSpec{},
+		Spec: argov1alpha1.ApplicationSpec{
+			Destination: argov1alpha1.ApplicationDestination{
+				Server:    fmt.Sprintf("https://%s.kubernetes.io", cluster),
+				Namespace: namespace,
+				Name:      cluster,
+			}},
+		Status: argov1alpha1.ApplicationStatus{
+			Sync: argov1alpha1.SyncStatus{
+				Status: argov1alpha1.SyncStatusCodeOutOfSync,
+			},
+			Health: argov1alpha1.HealthStatus{
+				Status: health.HealthStatusHealthy,
+			},
+		},
 	}
 	return app, k8sClient.Create(ctx, &app)
+}
+
+func createApplications(names []string, namespace, appSet string) ([]argov1alpha1.Application, error) {
+	var apps []argov1alpha1.Application
+	for _, name := range names {
+		app, err := createApplication(name, namespace, appSet)
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, app)
+	}
+	return apps, nil
+}
+
+func setApplicationSyncStatus(name, namespace string, status argov1alpha1.SyncStatusCode) error {
+	var app argov1alpha1.Application
+
+	if err := k8sClient.Get(ctx,
+		types.NamespacedName{
+			Name:      name,
+			Namespace: namespace,
+		},
+		&app,
+	); err != nil {
+		return err
+	}
+
+	app.Status.Sync.Status = status
+	if err := k8sClient.Update(ctx, &app); err != nil {
+		return err
+	}
+	return nil
+}
+
+// createSecret creates a secret with labels.
+// The name MUST be in the format account_name-az_name-number,
+// for example account1-eu-west-1a-1
+func createSecret(name, namespace string) (corev1.Secret, error) {
+	az := strings.Join(strings.Split(name, "-")[1:len(strings.Split(name, "-"))-1], "-")
+	region := az[:len(az)-1]
+
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				consts.ArgoCDSecretTypeLabel: consts.ArgoCDSecretTypeCluster,
+				"region":                     region,
+				"az":                         az,
+				"cluster":                    name,
+			}},
+		Data: map[string][]byte{
+			"server": []byte(fmt.Sprintf("https://%s.kubernetes.io", name)),
+		},
+	}
+	return secret, k8sClient.Create(ctx, &secret)
+}
+
+func createSecrets(names []string, namespace string) ([]corev1.Secret, error) {
+	var secrets []corev1.Secret
+	for _, name := range names {
+		secret, err := createSecret(name, namespace)
+		if err != nil {
+			return nil, err
+		}
+		secrets = append(secrets, secret)
+	}
+	return secrets, nil
 }
