@@ -69,6 +69,7 @@ func TestMain(m *testing.M) {
 	utilruntime.Must(argov1alpha1.AddToScheme(scheme.Scheme))
 
 	testEnv = &envtest.Environment{
+		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join("..", "hack"),
