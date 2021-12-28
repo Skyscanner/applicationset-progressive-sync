@@ -42,7 +42,7 @@ type AppState struct {
 }
 
 // CreateStateMap creates the state configmap
-func (r *ProgressiveSyncReconciler) createStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, key client.ObjectKey) error {
+func (r *ProgressiveSyncReconciler) CreateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, key client.ObjectKey) error {
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,
@@ -64,7 +64,7 @@ func (r *ProgressiveSyncReconciler) createStateMap(ctx context.Context, ps syncv
 }
 
 // DeleteStateMap deletes the state configmap
-func (r *ProgressiveSyncReconciler) deleteStateMap(ctx context.Context, key client.ObjectKey) error {
+func (r *ProgressiveSyncReconciler) DeleteStateMap(ctx context.Context, key client.ObjectKey) error {
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,
@@ -78,7 +78,7 @@ func (r *ProgressiveSyncReconciler) deleteStateMap(ctx context.Context, key clie
 }
 
 // ReadStateMap reads the state configmap and returns the state data structure
-func (r *ProgressiveSyncReconciler) readStateMap(ctx context.Context, key client.ObjectKey) (StateData, error) {
+func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, key client.ObjectKey) (StateData, error) {
 	var stateData StateData
 	var cm corev1.ConfigMap
 
@@ -103,7 +103,7 @@ func (r *ProgressiveSyncReconciler) readStateMap(ctx context.Context, key client
 }
 
 // UpdateStateMap writes the state data structure into the state configmap
-func (r *ProgressiveSyncReconciler) updateStateMap(ctx context.Context, key client.ObjectKey, state StateData) error {
+func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, key client.ObjectKey, state StateData) error {
 
 	appSetHash, err := yaml.Marshal(state.AppSetHash)
 	if err != nil {

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/fluxcd/pkg/apis/meta"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,15 +50,23 @@ import (
 )
 
 var (
-	cancel     context.CancelFunc
-	ctx        context.Context
-	k8sClient  client.Client
-	reconciler *ProgressiveSyncReconciler
-	testEnv    *envtest.Environment
+	cancel       context.CancelFunc
+	ctx          context.Context
+	k8sClient    client.Client
+	reconciler   *ProgressiveSyncReconciler
+	testEnv      *envtest.Environment
+	mockedClient mocks.MockArgoCDAppClientCalledWith
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+
+	SetDefaultEventuallyTimeout(5 * time.Second)
+	SetDefaultEventuallyPollingInterval(1 * time.Second)
+
+	utilruntime.Must(syncv1alpha1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(applicationset.AddToScheme(scheme.Scheme))
+	utilruntime.Must(argov1alpha1.AddToScheme(scheme.Scheme))
 }
 
 func TestMain(m *testing.M) {
@@ -65,10 +74,6 @@ func TestMain(m *testing.M) {
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
-
-	utilruntime.Must(syncv1alpha1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(applicationset.AddToScheme(scheme.Scheme))
-	utilruntime.Must(argov1alpha1.AddToScheme(scheme.Scheme))
 
 	testEnv = &envtest.Environment{
 		ErrorIfCRDPathMissing: true,
@@ -83,6 +88,7 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("unabled to start envtest: %v", err))
 	}
 
+	// Uncached client
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	if err != nil {
 		panic(fmt.Sprintf("unabled to create k8sClient: %v", err))
@@ -98,7 +104,7 @@ func TestMain(m *testing.M) {
 	reconciler = &ProgressiveSyncReconciler{
 		Client:          k8sManager.GetClient(),
 		Scheme:          k8sManager.GetScheme(),
-		ArgoCDAppClient: &mocks.MockArgoCDAppClientCalledWith{},
+		ArgoCDAppClient: &mockedClient,
 	}
 
 	err = reconciler.SetupWithManager(k8sManager)
@@ -106,14 +112,23 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("unabled to create reconciler: %v", err))
 	}
 
+	// Start the manager
 	go func() {
 		fmt.Println("starting the manager")
 		if err := k8sManager.Start(ctx); err != nil {
 			panic(fmt.Sprintf("unabled to start k8sManager: %v", err))
 		}
 	}()
+	<-k8sManager.Elected()
 
+	// Run the tests
 	code := m.Run()
+
+	// Stop the manager and the test environment
+	cancel()
+	if err := testEnv.Stop(); err != nil {
+		panic(fmt.Sprintf("unable to stop the test environment: %v", err))
+	}
 
 	os.Exit(code)
 }
@@ -152,8 +167,8 @@ func deleteNamespace(name string) error {
 	return nil
 }
 
-func createProgressiveSync(name, namespace, appSet string) (syncv1alpha1.ProgressiveSync, error) {
-	ps := syncv1alpha1.ProgressiveSync{
+func newProgressiveSync(name, namespace, appSet string) syncv1alpha1.ProgressiveSync {
+	return syncv1alpha1.ProgressiveSync{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -164,11 +179,10 @@ func createProgressiveSync(name, namespace, appSet string) (syncv1alpha1.Progres
 			},
 		},
 	}
-	return ps, k8sClient.Create(ctx, &ps)
 }
 
-func createStage(name string, maxTargets, maxParallel int64, selector metav1.LabelSelector) syncv1alpha1.Stage {
-	stage := syncv1alpha1.Stage{
+func newStage(name string, maxTargets, maxParallel int64, selector metav1.LabelSelector) syncv1alpha1.Stage {
+	return syncv1alpha1.Stage{
 		Name:        name,
 		MaxParallel: maxParallel,
 		MaxTargets:  maxTargets,
@@ -178,7 +192,19 @@ func createStage(name string, maxTargets, maxParallel int64, selector metav1.Lab
 			},
 		},
 	}
-	return stage
+}
+
+func createApplicationSet(name, namespace string) (applicationset.ApplicationSet, error) {
+	appSet := applicationset.ApplicationSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: applicationset.ApplicationSetSpec{
+			Generators: []applicationset.ApplicationSetGenerator{},
+		},
+	}
+	return appSet, k8sClient.Create(ctx, &appSet)
 }
 
 // createApplication creates an Application targeting a cluster.
