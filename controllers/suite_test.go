@@ -143,28 +143,16 @@ func randStringNumber(n int) string {
 	return string(s)
 }
 
-func createNamespace(name string) error {
-	namespace := corev1.Namespace{
+func createNamespace(name string) (corev1.Namespace, error) {
+	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
-	return k8sClient.Create(ctx, &namespace)
+	return ns, k8sClient.Create(ctx, &ns)
 
 }
 
-func deleteNamespace(name string) error {
-	var err error
-	var ns corev1.Namespace
-	err = k8sClient.Get(ctx, types.NamespacedName{
-		Name: name,
-	}, &ns)
-	if err != nil {
-		return err
-	}
-	err = k8sClient.Delete(ctx, &ns)
-	if err != nil {
-		return err
-	}
-	return nil
+func deleteNamespace(ns corev1.Namespace) error {
+	return k8sClient.Delete(ctx, &ns)
 }
 
 func newProgressiveSync(name, namespace, appSet string) syncv1alpha1.ProgressiveSync {

@@ -429,6 +429,12 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		}
 	}
 
+	// Update the state map
+	if err := r.UpdateStateMap(ctx, getStateMapNamespacedName(ps), state); err != nil {
+		log.Error(err, "unabled to update the state map")
+		return syncv1alpha1.StageStatusFailed, err
+	}
+
 	// If any adopted app is failed, fail the stage
 	if len(utils.GetAppsByHealthStatusCode(syncedInCurrentStage, health.HealthStatusDegraded)) > 0 {
 		return syncv1alpha1.StageStatusFailed,

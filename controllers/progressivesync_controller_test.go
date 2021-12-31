@@ -65,22 +65,20 @@ import (
 // }
 
 func TestReconcile(t *testing.T) {
-	g := NewWithT(t)
-	namespace := "progressivesync-test-" + randStringNumber(5)
-	err := createNamespace(namespace)
-	g.Expect(err).NotTo(HaveOccurred(), "unable to create namespace")
-	defer func() {
-		g.Expect(deleteNamespace(namespace)).To(Succeed())
-		mockedClient.Reset()
-	}()
-
-	// Create an ApplicationSet which generated the Applications.
-	// This is going to be
-	appSet := "test-reconcile-appset"
-	_, err = createApplicationSet(appSet, namespace)
-	g.Expect(err).NotTo(HaveOccurred())
-
 	t.Run("multi stage happy path", func(t *testing.T) {
+		g := NewWithT(t)
+		ns, err := createNamespace("progressivesync-test-" + randStringNumber(5))
+		g.Expect(err).NotTo(HaveOccurred(), "unable to create namespace")
+		defer func() {
+			g.Expect(deleteNamespace(ns)).To(Succeed())
+			mockedClient.Reset()
+		}()
+
+		// Create an ApplicationSet which generated the Applications.
+		appSet := "test-reconcile-appset"
+		_, err = createApplicationSet(appSet, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
 		// Create eight ArgoCD clusters across multiple regions
 		secrets := []string{
 			"account1-eu-west-1a-1",
@@ -92,7 +90,7 @@ func TestReconcile(t *testing.T) {
 			"account4-ap-southeast-1a-1",
 			"account4-ap-southeast-1b-1",
 		}
-		_, err = createSecrets(secrets, namespace)
+		_, err = createSecrets(secrets, ns.Name)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Create eight Applications targeting the clusters
@@ -106,11 +104,11 @@ func TestReconcile(t *testing.T) {
 			"myservice-account4-ap-southeast-1a-1",
 			"myservice-account4-ap-southeast-1b-1",
 		}
-		_, err = createApplications(apps, namespace, appSet)
+		_, err = createApplications(apps, ns.Name, appSet)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Create a multi-stage progressive sync
-		ps := newProgressiveSync("multi-stage-ps", namespace, appSet)
+		ps := newProgressiveSync("multi-stage-ps", ns.Name, appSet)
 		ps.Spec.Stages = []syncv1alpha1.Stage{
 			newStage("one cluster as canary in eu-west-1", 1, 1, metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -139,7 +137,7 @@ func TestReconcile(t *testing.T) {
 		g.Expect(mockedClient.GetSyncedApps()).Should(ContainElement("myservice-account1-eu-west-1a-1"))
 
 		// Set myservice-account1-eu-west-1a-1 as synced
-		err = setApplicationSyncStatus("myservice-account1-eu-west-1a-1", namespace, argov1alpha1.SyncStatusCodeSynced)
+		err = setApplicationSyncStatus("myservice-account1-eu-west-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the controller moves to the second stage once the first is completed
@@ -158,11 +156,11 @@ func TestReconcile(t *testing.T) {
 		}))
 
 		// Set the second stage Applications as synced
-		err = setApplicationSyncStatus("myservice-account2-eu-central-1a-1", namespace, argov1alpha1.SyncStatusCodeSynced)
+		err = setApplicationSyncStatus("myservice-account2-eu-central-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
 		g.Expect(err).NotTo(HaveOccurred())
-		err = setApplicationSyncStatus("myservice-account2-eu-central-1b-1", namespace, argov1alpha1.SyncStatusCodeSynced)
+		err = setApplicationSyncStatus("myservice-account2-eu-central-1b-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
 		g.Expect(err).NotTo(HaveOccurred())
-		err = setApplicationSyncStatus("myservice-account3-ap-northeast-1a-1", namespace, argov1alpha1.SyncStatusCodeSynced)
+		err = setApplicationSyncStatus("myservice-account3-ap-northeast-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the controller moves to the third stage once the second stage is completed
@@ -180,9 +178,9 @@ func TestReconcile(t *testing.T) {
 		}))
 
 		// Set the first 2 Applications as synced
-		err = setApplicationSyncStatus("myservice-account1-eu-west-1b-1", namespace, argov1alpha1.SyncStatusCodeSynced)
+		err = setApplicationSyncStatus("myservice-account1-eu-west-1b-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
 		g.Expect(err).NotTo(HaveOccurred())
-		err = setApplicationSyncStatus("myservice-account3-ap-northeast-1b-1", namespace, argov1alpha1.SyncStatusCodeSynced)
+		err = setApplicationSyncStatus("myservice-account3-ap-northeast-1b-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the controller synced the remaining Applications
@@ -195,9 +193,9 @@ func TestReconcile(t *testing.T) {
 		}))
 
 		// Set the remaining Applications as synced
-		err = setApplicationSyncStatus("myservice-account4-ap-southeast-1a-1", namespace, argov1alpha1.SyncStatusCodeSynced)
+		err = setApplicationSyncStatus("myservice-account4-ap-southeast-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
 		g.Expect(err).NotTo(HaveOccurred())
-		err = setApplicationSyncStatus("myservice-account4-ap-southeast-1b-1", namespace, argov1alpha1.SyncStatusCodeSynced)
+		err = setApplicationSyncStatus("myservice-account4-ap-southeast-1b-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the reconcile loop is completed
@@ -222,46 +220,68 @@ func TestReconcile(t *testing.T) {
 		g.Expect(stateMap.Apps["myservice-account4-ap-southeast-1a-1"].SyncedAtStage).To(Equal("remaining clusters"))
 		g.Expect(stateMap.Apps["myservice-account4-ap-southeast-1b-1"].SyncedAtStage).To(Equal("remaining clusters"))
 	})
+
+	t.Run("no OutOfSync apps handling", func(t *testing.T) {
+		g := NewWithT(t)
+		ns, err := createNamespace("progressivesync-test-" + randStringNumber(5))
+		g.Expect(err).NotTo(HaveOccurred(), "unable to create namespace")
+		defer func() {
+			g.Expect(deleteNamespace(ns)).To(Succeed())
+			mockedClient.Reset()
+		}()
+
+		// Create an ApplicationSet which generated the Applications.
+		appSet := "no-out-of-sync"
+		_, err = createApplicationSet(appSet, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create clusters
+		secrets := []string{
+			"account1-eu-west-1a-1",
+			"account1-eu-west-1b-1",
+		}
+		_, err = createSecrets(secrets, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create Applications targeting the clusters
+		apps := []string{
+			"myservice-account1-eu-west-1a-1",
+			"myservice-account1-eu-west-1b-1",
+		}
+		_, err = createApplications(apps, ns.Name, appSet)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Set the Applications as synced
+		err = setApplicationSyncStatus("myservice-account1-eu-west-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationSyncStatus("myservice-account1-eu-west-1b-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		ps := newProgressiveSync("no-out-of-sync", ns.Name, appSet)
+		ps.Spec.Stages = []syncv1alpha1.Stage{
+			newStage("stage one", 1, 1, metav1.LabelSelector{}),
+		}
+		g.Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
+
+		// Ensure the reconciliation is completed
+		g.Eventually(func() bool {
+			var resultPs syncv1alpha1.ProgressiveSync
+			_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &resultPs)
+			stage := resultPs.Status.LastSyncedStage == "stage one"
+			status := resultPs.Status.LastSyncedStageStatus == syncv1alpha1.StageStatusCompleted
+			ready := apimeta.IsStatusConditionTrue(resultPs.Status.Conditions, meta.ReadyCondition)
+			return stage && status && ready
+		}).Should(BeTrue())
+
+		// Ensure the controller didn't sync any Application
+		g.Eventually(func() int {
+			return len(mockedClient.GetSyncedApps())
+		}).Should(Equal(0))
+
+		// Ensure we adopted the synced Application
+		g.Eventually(func() string {
+			stateMap, _ := reconciler.ReadStateMap(ctx, getStateMapNamespacedName(ps))
+			return stateMap.Apps["myservice-account1-eu-west-1a-1"].SyncedAtStage
+		}).Should(Equal("stage one"))
+	})
 }
-
-// func TestReconcileStage(t *testing.T) {
-// 	g := NewWithT(t)
-// 	namespace := "progressivesync-test-" + randStringNumber(5)
-// 	err := createNamespace(namespace)
-// 	g.Expect(err).NotTo(HaveOccurred(), "unable to create namespace")
-// 	defer func() {
-// 		g.Expect(deleteNamespace(namespace)).To(Succeed())
-// 	}()
-
-// 	// Create a ProgressiveSync object with its own state configmap
-// 	appSet := "test-stage-appset"
-// 	ps, err := createProgressiveSync("test-stage", namespace, appSet)
-// 	g.Expect(err).NotTo(HaveOccurred())
-// 	err = reconciler.createStateMap(ctx, ps, getStateMapNamespacedName(ps))
-// 	g.Expect(err).NotTo(HaveOccurred())
-
-// 	t.Run("stage completed when no OutOfSync apps", func(t *testing.T) {
-// 		// Create an ArgoCD cluster
-// 		_, err := createSecret("account1-eu-west-1a-1", namespace)
-// 		g.Expect(err).NotTo(HaveOccurred())
-
-// 		// Create a synced ArgoCD Application targeting the cluster
-// 		name := "myservice-account1-eu-west-1a-1"
-// 		_, err = createApplication(name, namespace, appSet)
-// 		g.Expect(err).NotTo(HaveOccurred())
-
-// 		// Set the Application as Synced so there are no OutOfSync apps
-// 		err = setApplicationSyncStatus(name, namespace, argov1alpha1.SyncStatusCodeSynced)
-// 		g.Expect(err).NotTo(HaveOccurred())
-
-// 		// Add a stage to the ProgressiveSync targeting the cluster
-// 		ps := ps.DeepCopy()
-// 		stage := createStage("stage-one", 1, 1, metav1.LabelSelector{})
-// 		ps.Spec.Stages = []syncv1alpha1.Stage{
-// 			stage,
-// 		}
-// 		stageStatus, err := reconciler.reconcileStage(ctx, *ps, stage)
-// 		g.Expect(err).NotTo(HaveOccurred())
-// 		g.Expect(stageStatus).To(Equal(syncv1alpha1.StageStatusCompleted))
-// 	})
-// }
