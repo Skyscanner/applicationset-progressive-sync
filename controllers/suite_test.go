@@ -29,6 +29,7 @@ import (
 	"github.com/fluxcd/pkg/apis/meta"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -294,4 +295,58 @@ func createSecrets(names []string, namespace string) ([]corev1.Secret, error) {
 		secrets = append(secrets, secret)
 	}
 	return secrets, nil
+}
+
+func assertHaveStageStatus(g *WithT, ps syncv1alpha1.ProgressiveSync, stage string, status syncv1alpha1.StageStatus) {
+	g.EventuallyWithOffset(1, func() bool {
+		var resultPs syncv1alpha1.ProgressiveSync
+		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &resultPs); err != nil {
+			return false
+		}
+		resultStage := resultPs.Status.LastSyncedStage == stage
+		resultStatus := resultPs.Status.LastSyncedStageStatus == status
+		return resultStage && resultStatus
+	}).Should(BeTrue())
+}
+
+func assertHaveCondition(g *WithT, ps syncv1alpha1.ProgressiveSync, condition string) {
+	g.EventuallyWithOffset(1, func() bool {
+		var resultPs syncv1alpha1.ProgressiveSync
+		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &resultPs); err != nil {
+			return false
+		}
+		return apimeta.IsStatusConditionTrue(*resultPs.GetStatusConditions(), condition)
+	}).Should(BeTrue())
+}
+
+func assertHaveSyncedApp(g *WithT, name string) {
+	g.EventuallyWithOffset(1, func() bool {
+		for _, app := range mockedClient.GetSyncedApps() {
+			if name == app {
+				return true
+			}
+		}
+		return false
+	}).Should(BeTrue())
+}
+
+func assertHaveNotSyncedApp(g *WithT, name string) {
+	g.EventuallyWithOffset(1, func() bool {
+		for _, app := range mockedClient.GetSyncedApps() {
+			if name == app {
+				return true
+			}
+		}
+		return false
+	}).ShouldNot(BeTrue())
+}
+
+func assertHaveSyncedAtStage(g *WithT, ps syncv1alpha1.ProgressiveSync, app, stage string) {
+	g.EventuallyWithOffset(1, func() bool {
+		stateMap, err := reconciler.ReadStateMap(ctx, ps)
+		if err != nil {
+			return false
+		}
+		return stateMap.Apps[app].SyncedAtStage == stage
+	}).Should(BeTrue())
 }

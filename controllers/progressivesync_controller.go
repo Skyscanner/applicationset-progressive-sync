@@ -307,13 +307,13 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	}
 
 	// Create the progressive sync state configmap if it doesn't exist
-	if err := r.CreateStateMap(ctx, ps, getStateMapNamespacedName(ps)); err != nil {
+	if err := r.CreateStateMap(ctx, ps); err != nil {
 		log.Error(err, "unable to create state map")
 		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 	}
 
 	// Read the latest state
-	stateData, err := r.ReadStateMap(ctx, getStateMapNamespacedName(ps))
+	stateData, err := r.ReadStateMap(ctx, ps)
 	if err != nil {
 		log.Error(err, "unabled to read state map")
 		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
@@ -333,7 +333,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	currentAppSetHash := utils.ComputeHash(appSet.Spec)
 	if currentAppSetHash != stateData.AppSetHash {
 		stateData.AppSetHash = currentAppSetHash
-		if updateMapErr := r.UpdateStateMap(ctx, getStateMapNamespacedName(ps), stateData); err != nil {
+		if updateMapErr := r.UpdateStateMap(ctx, ps, stateData); err != nil {
 			log.Error(updateMapErr, "unable to update state map after appset hash update")
 			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateMapErr
 		}
@@ -388,7 +388,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	var syncedInCurrentStage []argov1alpha1.Application
 
 	// Load the state map
-	state, err := r.ReadStateMap(ctx, getStateMapNamespacedName(ps))
+	state, err := r.ReadStateMap(ctx, ps)
 	if err != nil {
 		log.Error(err, "unabled to load the state map")
 		return syncv1alpha1.StageStatusFailed, err
@@ -430,7 +430,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	}
 
 	// Update the state map
-	if err := r.UpdateStateMap(ctx, getStateMapNamespacedName(ps), state); err != nil {
+	if err := r.UpdateStateMap(ctx, ps, state); err != nil {
 		log.Error(err, "unabled to update the state map")
 		return syncv1alpha1.StageStatusFailed, err
 	}
@@ -501,7 +501,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	}
 
 	// Update the state map
-	if err := r.UpdateStateMap(ctx, getStateMapNamespacedName(ps), state); err != nil {
+	if err := r.UpdateStateMap(ctx, ps, state); err != nil {
 		log.Error(err, "unabled to update the state map")
 		return syncv1alpha1.StageStatusFailed, err
 	}
@@ -514,7 +514,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 func (r *ProgressiveSyncReconciler) reconcileDelete(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	if err := r.DeleteStateMap(ctx, getStateMapNamespacedName(ps)); err != nil {
+	if err := r.DeleteStateMap(ctx, ps); err != nil {
 		log.Error(err, "unable to delete the state configmap")
 		return ctrl.Result{Requeue: true}, err
 	}

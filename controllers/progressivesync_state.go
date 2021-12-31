@@ -42,7 +42,8 @@ type AppState struct {
 }
 
 // CreateStateMap creates the state configmap
-func (r *ProgressiveSyncReconciler) CreateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, key client.ObjectKey) error {
+func (r *ProgressiveSyncReconciler) CreateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) error {
+	key := getStateMapNamespacedName(ps)
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,
@@ -50,21 +51,27 @@ func (r *ProgressiveSyncReconciler) CreateStateMap(ctx context.Context, ps syncv
 		},
 	}
 
-	// Set the ownership
-	if err := controllerutil.SetControllerReference(&ps, &cm, r.Scheme); err != nil {
-		return err
-	}
-
-	if err := r.Create(ctx, &cm); err != nil {
-		if !errors.IsAlreadyExists(err) {
+	// Check if the configmap already exists
+	if err := r.Get(ctx, key, &cm); err != nil {
+		if !errors.IsNotFound(err) {
 			return err
+		} else {
+			// Set the ownership and create the configmap
+			if refErr := controllerutil.SetControllerReference(&ps, &cm, r.Scheme); refErr != nil {
+				return refErr
+			}
+			if cErr := r.Create(ctx, &cm); cErr != nil {
+				return cErr
+			}
 		}
 	}
+
 	return nil
 }
 
 // DeleteStateMap deletes the state configmap
-func (r *ProgressiveSyncReconciler) DeleteStateMap(ctx context.Context, key client.ObjectKey) error {
+func (r *ProgressiveSyncReconciler) DeleteStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) error {
+	key := getStateMapNamespacedName(ps)
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,
@@ -78,9 +85,11 @@ func (r *ProgressiveSyncReconciler) DeleteStateMap(ctx context.Context, key clie
 }
 
 // ReadStateMap reads the state configmap and returns the state data structure
-func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, key client.ObjectKey) (StateData, error) {
+func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (StateData, error) {
 	var stateData StateData
 	var cm corev1.ConfigMap
+
+	key := getStateMapNamespacedName(ps)
 
 	if err := r.Get(ctx, key, &cm); err != nil {
 		return stateData, err
@@ -103,7 +112,7 @@ func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, key client
 }
 
 // UpdateStateMap writes the state data structure into the state configmap
-func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, key client.ObjectKey, state StateData) error {
+func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, state StateData) error {
 
 	appSetHash, err := yaml.Marshal(state.AppSetHash)
 	if err != nil {
@@ -114,6 +123,8 @@ func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, key clie
 	if err != nil {
 		return err
 	}
+
+	key := getStateMapNamespacedName(ps)
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
