@@ -23,6 +23,7 @@ import (
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/fluxcd/pkg/apis/meta"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -194,6 +195,25 @@ func TestReconcile(t *testing.T) {
 		assertHaveSyncedAtStage(g, ps, "myservice-account3-ap-northeast-1b-1", "remaining clusters")
 		assertHaveSyncedAtStage(g, ps, "myservice-account4-ap-southeast-1a-1", "remaining clusters")
 		assertHaveSyncedAtStage(g, ps, "myservice-account4-ap-southeast-1b-1", "remaining clusters")
+
+		// Ownership test for deletion
+		// See https://book.kubebuilder.io/reference/envtest.html#testing-considerations
+		boolTrue := true
+		expectedOwnerReference := metav1.OwnerReference{
+			Kind:               "ProgressiveSync",
+			APIVersion:         "argoproj.skyscanner.net/v1alpha1",
+			UID:                ps.GetUID(),
+			Name:               ps.Name,
+			Controller:         &boolTrue,
+			BlockOwnerDeletion: &boolTrue,
+		}
+		g.Eventually(func() []metav1.OwnerReference {
+			key := getStateMapNamespacedName(ps)
+			cm := corev1.ConfigMap{}
+			_ = k8sClient.Get(ctx, key, &cm)
+			return cm.ObjectMeta.OwnerReferences
+		}).Should(ContainElement(expectedOwnerReference))
+
 	})
 
 	t.Run("complete when no OutOfSync apps", func(t *testing.T) {

@@ -44,23 +44,24 @@ type AppState struct {
 // CreateStateMap creates the state configmap
 func (r *ProgressiveSyncReconciler) CreateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) error {
 	key := getStateMapNamespacedName(ps)
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-	}
+	readCm := corev1.ConfigMap{}
 
 	// Check if the configmap already exists
-	if err := r.Get(ctx, key, &cm); err != nil {
+	if err := r.Get(ctx, key, &readCm); err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		} else {
+			writeCm := corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      key.Name,
+					Namespace: key.Namespace,
+				},
+			}
 			// Set the ownership and create the configmap
-			if refErr := controllerutil.SetControllerReference(&ps, &cm, r.Scheme); refErr != nil {
+			if refErr := controllerutil.SetControllerReference(&ps, &writeCm, r.Scheme); refErr != nil {
 				return refErr
 			}
-			if cErr := r.Create(ctx, &cm); cErr != nil {
+			if cErr := r.Create(ctx, &writeCm); cErr != nil {
 				return cErr
 			}
 		}
@@ -78,17 +79,18 @@ func (r *ProgressiveSyncReconciler) DeleteStateMap(ctx context.Context, ps syncv
 			Namespace: key.Namespace,
 		},
 	}
+
 	if err := r.Delete(ctx, &cm, &client.DeleteOptions{}); err != nil {
 		return err
 	}
+
 	return nil
 }
 
 // ReadStateMap reads the state configmap and returns the state data structure
 func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (StateData, error) {
-	var stateData StateData
-	var cm corev1.ConfigMap
-
+	stateData := StateData{}
+	cm := corev1.ConfigMap{}
 	key := getStateMapNamespacedName(ps)
 
 	if err := r.Get(ctx, key, &cm); err != nil {
@@ -126,15 +128,14 @@ func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, ps syncv
 
 	key := getStateMapNamespacedName(ps)
 
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-		Data: map[string]string{
-			"appSetHash": string(appSetHash),
-			"apps":       string(apps),
-		},
+	cm := corev1.ConfigMap{}
+	if err := r.Get(ctx, key, &cm); err != nil {
+		return err
+	}
+
+	cm.Data = map[string]string{
+		"appSetHash": string(appSetHash),
+		"apps":       string(apps),
 	}
 
 	if err := r.Update(ctx, &cm, &client.UpdateOptions{}); err != nil {
