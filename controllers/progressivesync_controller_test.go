@@ -243,4 +243,42 @@ func TestReconcile(t *testing.T) {
 		// Ensure we adopted the synced Application
 		assertHaveSyncedAtStage(g, ps, "myservice-account5-eu-west-1a-1", "stage one")
 	})
+
+	t.Run("complete when a stage is targeting zero clusters", func(t *testing.T) {
+		defer mockedClient.Reset()
+
+		// Create an ApplicationSet which generated the Applications.
+		appSet := "zero-clusters"
+		_, err = createApplicationSet(appSet, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create a cluster
+		_, err = createSecret("account6-eu-west-1a-1", ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create an Application targeting the cluster
+		_, err = createApplication("myservice-account6-eu-west-1a-1", ns.Name, appSet)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		ps := newProgressiveSync("zero-clusters", ns.Name, appSet)
+		ps.Spec.Stages = []syncv1alpha1.Stage{
+			newStage("stage one cluster", 1, 1, metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"cluster": "account6-eu-west-1a-1",
+				}}),
+			newStage("stage other regions", 3, 3, metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"region": "eu-west-1",
+				}}),
+		}
+		g.Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
+
+		// Set the Application as synced
+		err = setApplicationSyncStatus("myservice-account6-eu-west-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Ensure the reconciliation is completed
+		assertHaveStageStatus(g, ps, "stage other regions", syncv1alpha1.StageStatusCompleted)
+		assertHaveCondition(g, ps, meta.ReadyCondition)
+	})
 }
