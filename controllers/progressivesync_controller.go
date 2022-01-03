@@ -349,7 +349,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		if err != nil {
 			log.Error(err, "unable to reconcile stage", "stage", stage.Name)
 			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusFailed
-			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StageFailedReason, err.Error()), ctrl.Result{Requeue: true}, err
+			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StageFailedReason, err.Error()), ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 		}
 
 		switch stageStatus {
@@ -438,7 +438,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// If any adopted app is failed, fail the stage
 	if len(utils.GetAppsByHealthStatusCode(syncedInCurrentStage, health.HealthStatusDegraded)) > 0 {
 		return syncv1alpha1.StageStatusFailed,
-			fmt.Errorf("app %s failed",
+			fmt.Errorf("apps %s health status degraded",
 				utils.GetAppsName(utils.GetAppsByHealthStatusCode(syncedInCurrentStage, health.HealthStatusDegraded)))
 	}
 

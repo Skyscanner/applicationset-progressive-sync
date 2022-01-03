@@ -261,6 +261,26 @@ func setApplicationSyncStatus(name, namespace string, status argov1alpha1.SyncSt
 	return nil
 }
 
+func setApplicationHealthStatus(name, namespace string, health health.HealthStatusCode) error {
+	var app argov1alpha1.Application
+
+	if err := k8sClient.Get(ctx,
+		types.NamespacedName{
+			Name:      name,
+			Namespace: namespace,
+		},
+		&app,
+	); err != nil {
+		return err
+	}
+
+	app.Status.Health.Status = health
+	if err := k8sClient.Update(ctx, &app); err != nil {
+		return err
+	}
+	return nil
+}
+
 // createSecret creates a secret with labels.
 // The name MUST be in the format account_name-az_name-number,
 // for example account1-eu-west-1a-1

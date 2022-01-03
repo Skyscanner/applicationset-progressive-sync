@@ -28,7 +28,7 @@ func TestIsArgoCDCluster(t *testing.T) {
 		labels:   map[string]string{"foo": "bar", "wrong-label": "wrong-value", "key": "value"},
 		expected: false,
 	}, {
-		name:     "correct secret label value but wrong key ",
+		name:     "correct secret label value but wrong key",
 		labels:   map[string]string{"foo": "bar", "wrong-label": consts.ArgoCDSecretTypeCluster, "key": "value"},
 		expected: false,
 	}, {

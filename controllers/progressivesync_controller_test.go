@@ -21,6 +21,7 @@ import (
 
 	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
+	"github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/fluxcd/pkg/apis/meta"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -300,5 +301,40 @@ func TestReconcile(t *testing.T) {
 		// Ensure the reconciliation is completed
 		assertHaveStageStatus(g, ps, "stage other regions", syncv1alpha1.StageStatusCompleted)
 		assertHaveCondition(g, ps, meta.ReadyCondition)
+	})
+
+	t.Run("handle failure", func(t *testing.T) {
+		defer mockedClient.Reset()
+
+		// Create an ApplicationSet which generated the Applications.
+		appSet := "failure"
+		_, err = createApplicationSet(appSet, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create clusters
+		_, err = createSecret("account7-eu-west-1a-1", ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create Applications targeting the clusters
+		_, err = createApplication("myservice-account7-eu-west-1a-1", ns.Name, appSet)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		ps := newProgressiveSync("failure", ns.Name, appSet)
+		ps.Spec.Stages = []syncv1alpha1.Stage{
+			newStage("stage one", 1, 1, metav1.LabelSelector{}),
+		}
+		g.Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
+
+		// Ensure the reconciliation is progressing
+		assertHaveStageStatus(g, ps, "stage one", syncv1alpha1.StageStatusProgressing)
+
+		// Set the Applications as synced but degraded
+		err = setApplicationSyncStatus("myservice-account7-eu-west-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationHealthStatus("myservice-account7-eu-west-1a-1", ns.Name, health.HealthStatusDegraded)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Ensure the reconciliation is completed
+		assertHaveStageStatus(g, ps, "stage one", syncv1alpha1.StageStatusFailed)
 	})
 }
