@@ -80,3 +80,5 @@ config:
   argoCDServerAddr: "argocd-server"
   # -- Allow insecure connection with ArgoCD server
   argoCDInsecure: "true"
+  # -- Allow http connection with ArgoCD server
+  argoCDPlaintext: "false"
