@@ -18,6 +18,7 @@ func GetArgoCDAppClient(c Configuration) ArgoCDAppClient {
 		ServerAddr: c.ArgoCDServerAddr,
 		Insecure:   c.ArgoCDInsecure,
 		AuthToken:  c.ArgoCDAuthToken,
+		PlainText:  c.ArgoCDPlaintext,
 	}
 
 	acdClient := argocdclient.NewClientOrDie(&acdClientOpts)
