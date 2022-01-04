@@ -345,7 +345,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		stageStatus, err := r.reconcileStage(ctx, ps, stage)
 		ps.Status.LastSyncedStage = stage.Name
 
-		// An error indicates the stage failed the reconciliation
+		// An error indicates the stage failed to reconcile
 		if err != nil {
 			log.Error(err, "unable to reconcile stage", "stage", stage.Name)
 			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusFailed

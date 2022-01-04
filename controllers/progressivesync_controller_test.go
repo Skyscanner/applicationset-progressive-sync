@@ -365,7 +365,7 @@ func TestReconcile(t *testing.T) {
 				MatchLabels: map[string]string{
 					"cluster": "account6-eu-west-1a-1",
 				}}),
-			newStage("stage other regions", 3, 3, metav1.LabelSelector{
+			newStage("stage other clusters", 3, 3, metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"region": "eu-west-1",
 				}}),
@@ -377,7 +377,7 @@ func TestReconcile(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the reconciliation is completed
-		assertHaveStageStatus(g, ps, "stage other regions", syncv1alpha1.StageStatusCompleted)
+		assertHaveStageStatus(g, ps, "stage other clusters", syncv1alpha1.StageStatusCompleted)
 		assertHaveCondition(g, ps, meta.ReadyCondition)
 	})
 

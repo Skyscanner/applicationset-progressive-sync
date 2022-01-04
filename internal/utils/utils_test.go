@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
+	applicationset "github.com/argoproj-labs/applicationset/api/v1alpha1"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -90,4 +91,28 @@ func TestSortAppsByName(t *testing.T) {
 	g := NewWithT(t)
 	SortAppsByName(testCase.apps)
 	g.Expect(testCase.apps).Should(Equal(testCase.expected))
+}
+
+func TestHash(t *testing.T) {
+	g := NewWithT(t)
+	appSet := applicationset.ApplicationSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo",
+			Namespace: "bar",
+		},
+		Spec: applicationset.ApplicationSetSpec{
+			Generators: []applicationset.ApplicationSetGenerator{},
+		},
+	}
+	appSetHash := ComputeHash(appSet.Spec)
+	g.Expect(appSetHash).NotTo(BeNil())
+
+	appSet.Spec.SyncPolicy = &applicationset.ApplicationSetSyncPolicy{
+		PreserveResourcesOnDeletion: true,
+	}
+	newAppSetHash := ComputeHash(appSet.Spec)
+	g.Expect(newAppSetHash).NotTo(BeNil())
+
+	g.Expect(appSetHash).NotTo(Equal(newAppSetHash))
+
 }
