@@ -114,5 +114,33 @@ func TestHash(t *testing.T) {
 	g.Expect(newAppSetHash).NotTo(BeNil())
 
 	g.Expect(appSetHash).NotTo(Equal(newAppSetHash))
+}
 
+func TestMin(t *testing.T) {
+	testCases := []struct {
+		name     string
+		x        int
+		y        int
+		expected int
+	}{
+		{
+			name:     "x smaller than y",
+			x:        3,
+			y:        5,
+			expected: 3,
+		},
+		{
+			name:     "y smaller than x",
+			x:        7,
+			y:        5,
+			expected: 5,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			g := NewWithT(t)
+			got := Min(testCase.x, testCase.y)
+			g.Expect(got).To(Equal(testCase.expected))
+		})
+	}
 }
