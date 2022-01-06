@@ -62,8 +62,8 @@ var (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 
-	SetDefaultEventuallyTimeout(5 * time.Second)
-	SetDefaultEventuallyPollingInterval(1 * time.Second)
+	SetDefaultEventuallyTimeout(10 * time.Second)
+	// SetDefaultEventuallyPollingInterval(1 * time.Second)
 
 	utilruntime.Must(syncv1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(applicationset.AddToScheme(scheme.Scheme))
@@ -318,15 +318,17 @@ func createSecrets(names []string, namespace string) ([]corev1.Secret, error) {
 }
 
 func assertHaveStageStatus(g *WithT, ps syncv1alpha1.ProgressiveSync, stage string, status syncv1alpha1.StageStatus) {
+	var resultPs syncv1alpha1.ProgressiveSync
 	g.EventuallyWithOffset(1, func() bool {
-		var resultPs syncv1alpha1.ProgressiveSync
 		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&ps), &resultPs); err != nil {
 			return false
 		}
 		resultStage := resultPs.Status.LastSyncedStage == stage
 		resultStatus := resultPs.Status.LastSyncedStageStatus == status
 		return resultStage && resultStatus
-	}).Should(BeTrue())
+	}).Should(BeTrue(), "assetion failed because wrong stage status."+
+		"LastSyncedStage: got "+resultPs.Status.LastSyncedStage+", wanted "+stage+". "+
+		"LastSyncedStageStatus: got "+string(resultPs.Status.LastSyncedStageStatus), ", wanted "+status)
 }
 
 func assertHaveCondition(g *WithT, ps syncv1alpha1.ProgressiveSync, condition string) {
@@ -336,7 +338,7 @@ func assertHaveCondition(g *WithT, ps syncv1alpha1.ProgressiveSync, condition st
 			return false
 		}
 		return apimeta.IsStatusConditionTrue(*resultPs.GetStatusConditions(), condition)
-	}).Should(BeTrue())
+	}).Should(BeTrue(), "assertion failed because the condition "+condition+" is False")
 }
 
 func assertHaveSyncedApp(g *WithT, name string) {
@@ -347,7 +349,7 @@ func assertHaveSyncedApp(g *WithT, name string) {
 			}
 		}
 		return false
-	}).Should(BeTrue())
+	}).Should(BeTrue(), "assertion failed because the controller didn't sync app "+name)
 }
 
 func assertHaveNotSyncedApp(g *WithT, name string) {
@@ -358,15 +360,17 @@ func assertHaveNotSyncedApp(g *WithT, name string) {
 			}
 		}
 		return false
-	}).ShouldNot(BeTrue())
+	}).ShouldNot(BeTrue(), "assertion failed because the controller synced app "+name)
 }
 
 func assertHaveSyncedAtStage(g *WithT, ps syncv1alpha1.ProgressiveSync, app, stage string) {
+	var got string
 	g.EventuallyWithOffset(1, func() bool {
 		stateMap, err := reconciler.ReadStateMap(ctx, ps)
 		if err != nil {
 			return false
 		}
+		got = stateMap.Apps[app].SyncedAtStage
 		return stateMap.Apps[app].SyncedAtStage == stage
-	}).Should(BeTrue())
+	}).Should(BeTrue(), "assertion failed because app "+app+" didn't sync at the correct stage. Got "+got+", wanted "+stage)
 }
