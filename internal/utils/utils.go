@@ -14,13 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 )
 
-func Min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 // IsArgoCDCluster returns true if one of the labels is the ArgoCD secret label with the secret type cluster as value
 func IsArgoCDCluster(labels map[string]string) bool {
 	val, ok := labels[consts.ArgoCDSecretTypeLabel]

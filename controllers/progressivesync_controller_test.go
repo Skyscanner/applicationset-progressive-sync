@@ -199,7 +199,8 @@ func TestReconcile(t *testing.T) {
 		g.Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
 
 		// Ensure the controller started the reconciliation
-		assertHaveStageStatus(g, ps, "one cluster as canary in eu-west-1", syncv1alpha1.StageStatusProgressing)
+		assertHaveLastSyncedStage(g, ps, "one cluster as canary in eu-west-1")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusProgressing)
 
 		// Ensure the controller synced the correct Application
 		assertHaveSyncedApp(g, "myservice-account1-eu-west-1a-1")
@@ -216,7 +217,8 @@ func TestReconcile(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the controller moves to the second stage once the first is completed
-		assertHaveStageStatus(g, ps, "one cluster as canary in every other region", syncv1alpha1.StageStatusProgressing)
+		assertHaveLastSyncedStage(g, ps, "one cluster as canary in every other region")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusProgressing)
 
 		//Ensure the controller synced the correct Applications
 		assertHaveSyncedApp(g, "myservice-account2-eu-central-1a-1")
@@ -236,7 +238,8 @@ func TestReconcile(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the controller moved to the third stage once the second stage is completed
-		assertHaveStageStatus(g, ps, "remaining clusters", syncv1alpha1.StageStatusProgressing)
+		assertHaveLastSyncedStage(g, ps, "remaining clusters")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusProgressing)
 
 		// Ensure the controller synced only the first 2 out of 4 Applications
 		assertHaveSyncedApp(g, "myservice-account1-eu-west-1b-1")
@@ -262,7 +265,7 @@ func TestReconcile(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the reconcile loop is completed
-		assertHaveStageStatus(g, ps, "remaining clusters", syncv1alpha1.StageStatusCompleted)
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusCompleted)
 		assertHaveCondition(g, ps, meta.ReadyCondition)
 
 		// Ensure the state map is correct
@@ -332,7 +335,8 @@ func TestReconcile(t *testing.T) {
 		g.Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
 
 		// Ensure the reconciliation is completed
-		assertHaveStageStatus(g, ps, "stage one", syncv1alpha1.StageStatusCompleted)
+		assertHaveLastSyncedStage(g, ps, "stage one")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusCompleted)
 		assertHaveCondition(g, ps, meta.ReadyCondition)
 
 		// Ensure the controller didn't sync any Application
@@ -377,7 +381,9 @@ func TestReconcile(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the reconciliation is completed
-		assertHaveStageStatus(g, ps, "stage other clusters", syncv1alpha1.StageStatusCompleted)
+		assertHaveLastSyncedStage(g, ps, "stage other clusters")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusCompleted)
+
 		assertHaveCondition(g, ps, meta.ReadyCondition)
 	})
 
@@ -404,7 +410,8 @@ func TestReconcile(t *testing.T) {
 		g.Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
 
 		// Ensure the reconciliation is progressing
-		assertHaveStageStatus(g, ps, "stage one", syncv1alpha1.StageStatusProgressing)
+		assertHaveLastSyncedStage(g, ps, "stage one")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusProgressing)
 
 		// Set the Applications as synced but degraded
 		err = setApplicationSyncStatus("myservice-account7-eu-west-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
@@ -413,6 +420,100 @@ func TestReconcile(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Ensure the reconciliation is completed
-		assertHaveStageStatus(g, ps, "stage one", syncv1alpha1.StageStatusFailed)
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusFailed)
+	})
+
+	t.Run("handle an external process triggering a sync", func(t *testing.T) {
+		// Create an ApplicationSet which generated the Applications.
+		appSet := "progressing-appset"
+		_, err = createApplicationSet(appSet, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create clusters
+		secrets := []string{
+			"account8-eu-central-1a-1",
+			"account8-eu-central-1b-1",
+			"account8-eu-west-1a-1",
+			"account8-eu-west-1b-1",
+		}
+		_, err = createSecrets(secrets, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create Applications targeting the clusters
+		apps := []string{
+			"myservice-account8-eu-central-1a-1",
+			"myservice-account8-eu-central-1b-1",
+			"myservice-account8-eu-west-1a-1",
+			"myservice-account8-eu-west-1b-1",
+		}
+		_, err = createApplications(apps, ns.Name, appSet)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Set the Applications as synced and progressing
+		err = setApplicationSyncStatus("myservice-account8-eu-west-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationHealthStatus("myservice-account8-eu-west-1a-1", ns.Name, health.HealthStatusProgressing)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationSyncStatus("myservice-account8-eu-west-1b-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationHealthStatus("myservice-account8-eu-west-1b-1", ns.Name, health.HealthStatusProgressing)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationSyncStatus("myservice-account8-eu-central-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationHealthStatus("myservice-account8-eu-central-1a-1", ns.Name, health.HealthStatusProgressing)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		ps := newProgressiveSync("progressing", ns.Name, appSet)
+		ps.Spec.Stages = []syncv1alpha1.Stage{
+			newStage("stage one", 1, 1, metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"region": "eu-west-1",
+				},
+			}),
+			newStage("stage two", 2, 2, metav1.LabelSelector{}),
+			newStage("stage three", 3, 2, metav1.LabelSelector{}),
+		}
+		g.Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
+
+		// Ensure the controller didn't sync the selected Application
+		assertHaveNotSyncedApp(g, "myservice-account8-eu-central-1a-1")
+		assertHaveNotSyncedApp(g, "myservice-account8-eu-central-1b-1")
+		assertHaveNotSyncedApp(g, "myservice-account8-eu-west-1a-1")
+		assertHaveNotSyncedApp(g, "myservice-account8-eu-west-1b-1")
+
+		// Ensure the controller started the reconciliation
+		assertHaveLastSyncedStage(g, ps, "stage one")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusProgressing)
+
+		// Ensure the Applications selected by the stage label selector are synced
+		err = setApplicationHealthStatus("myservice-account8-eu-west-1a-1", ns.Name, health.HealthStatusHealthy)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationHealthStatus("myservice-account8-eu-west-1b-1", ns.Name, health.HealthStatusHealthy)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Ensure the controller moves to the next stage
+		assertHaveLastSyncedStage(g, ps, "stage two")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusProgressing)
+
+		// Ensure the controller synced the correct Applications
+		assertHaveNotSyncedApp(g, "myservice-account8-eu-central-1a-1")
+		assertHaveSyncedApp(g, "myservice-account8-eu-central-1b-1")
+
+		// Set the Applications healthy
+		err = setApplicationHealthStatus("myservice-account8-eu-central-1a-1", ns.Name, health.HealthStatusHealthy)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationSyncStatus("myservice-account8-eu-central-1b-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Ensure the reconciliation is completed
+		assertHaveLastSyncedStage(g, ps, "stage three")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusCompleted)
+		assertHaveCondition(g, ps, meta.ReadyCondition)
+
+		// Ensure the state map is correct
+		assertHaveSyncedAtStage(g, ps, "myservice-account8-eu-central-1a-1", "stage two")
+		assertHaveSyncedAtStage(g, ps, "myservice-account8-eu-central-1b-1", "stage two")
+		assertHaveSyncedAtStage(g, ps, "myservice-account8-eu-west-1a-1", "stage one")
+		assertHaveSyncedAtStage(g, ps, "myservice-account8-eu-west-1b-1", "stage one")
 	})
 }
