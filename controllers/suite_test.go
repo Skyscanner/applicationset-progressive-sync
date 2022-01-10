@@ -63,7 +63,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
-	// SetDefaultEventuallyPollingInterval(1 * time.Second)
+	SetDefaultEventuallyPollingInterval(1 * time.Second)
 
 	utilruntime.Must(syncv1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(applicationset.AddToScheme(scheme.Scheme))
@@ -136,6 +136,7 @@ func TestMain(m *testing.M) {
 
 var numbers = []rune("1234567890")
 
+// randStringNumber returns n random numbers
 func randStringNumber(n int) string {
 	s := make([]rune, n)
 	for i := range s {
@@ -144,6 +145,7 @@ func randStringNumber(n int) string {
 	return string(s)
 }
 
+// createNamespace creates the target namespace
 func createNamespace(name string) (corev1.Namespace, error) {
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -152,10 +154,12 @@ func createNamespace(name string) (corev1.Namespace, error) {
 
 }
 
+// deleteNamespace deletes the target namespace
 func deleteNamespace(ns corev1.Namespace) error {
 	return k8sClient.Delete(ctx, &ns)
 }
 
+// newProgressiveSync builds the target ProgressiveSync
 func newProgressiveSync(name, namespace, appSet string) syncv1alpha1.ProgressiveSync {
 	return syncv1alpha1.ProgressiveSync{
 		ObjectMeta: metav1.ObjectMeta{
@@ -170,6 +174,7 @@ func newProgressiveSync(name, namespace, appSet string) syncv1alpha1.Progressive
 	}
 }
 
+// newStage builds the target Stage
 func newStage(name string, maxTargets, maxParallel int64, selector metav1.LabelSelector) syncv1alpha1.Stage {
 	return syncv1alpha1.Stage{
 		Name:        name,
@@ -183,6 +188,7 @@ func newStage(name string, maxTargets, maxParallel int64, selector metav1.LabelS
 	}
 }
 
+// createApplicationSet creates the target ApplicationSet
 func createApplicationSet(name, namespace string) (applicationset.ApplicationSet, error) {
 	appSet := applicationset.ApplicationSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -229,6 +235,7 @@ func createApplication(name, namespace, appSet string) (argov1alpha1.Application
 	return app, k8sClient.Create(ctx, &app)
 }
 
+// createApplications creates multiple Applications created by the same ApplicationSet
 func createApplications(names []string, namespace, appSet string) ([]argov1alpha1.Application, error) {
 	var apps []argov1alpha1.Application
 	for _, name := range names {
@@ -241,6 +248,7 @@ func createApplications(names []string, namespace, appSet string) ([]argov1alpha
 	return apps, nil
 }
 
+// setApplicationSyncStatus sets the desired SyncStatusCode in the target Application
 func setApplicationSyncStatus(name, namespace string, status argov1alpha1.SyncStatusCode) error {
 	var app argov1alpha1.Application
 
@@ -261,6 +269,7 @@ func setApplicationSyncStatus(name, namespace string, status argov1alpha1.SyncSt
 	return nil
 }
 
+// setApplicationHealthStatus sets the desired HealthStatusCode in the target Application
 func setApplicationHealthStatus(name, namespace string, health health.HealthStatusCode) error {
 	var app argov1alpha1.Application
 
@@ -305,6 +314,7 @@ func createSecret(name, namespace string) (corev1.Secret, error) {
 	return secret, k8sClient.Create(ctx, &secret)
 }
 
+// createSecrets creates multiple secrets
 func createSecrets(names []string, namespace string) ([]corev1.Secret, error) {
 	var secrets []corev1.Secret
 	for _, name := range names {
@@ -317,6 +327,7 @@ func createSecrets(names []string, namespace string) ([]corev1.Secret, error) {
 	return secrets, nil
 }
 
+// assertHaveLastSyncedStage ensures the target ProgressiveSync has the desired Stage as LastSyncedStage
 func assertHaveLastSyncedStage(g *WithT, ps syncv1alpha1.ProgressiveSync, stage string) {
 	g.EventuallyWithOffset(1, func() string {
 		var resultPs syncv1alpha1.ProgressiveSync
@@ -327,6 +338,7 @@ func assertHaveLastSyncedStage(g *WithT, ps syncv1alpha1.ProgressiveSync, stage 
 	}).Should(Equal(stage))
 }
 
+// assertHaveLastSyncedStageStatus ensures the target ProgressiveSync has the desired StageStatus as LastSyncedStageStatus
 func assertHaveLastSyncedStageStatus(g *WithT, ps syncv1alpha1.ProgressiveSync, status syncv1alpha1.StageStatus) {
 	g.EventuallyWithOffset(1, func() syncv1alpha1.StageStatus {
 		var resultPs syncv1alpha1.ProgressiveSync
@@ -337,6 +349,7 @@ func assertHaveLastSyncedStageStatus(g *WithT, ps syncv1alpha1.ProgressiveSync, 
 	}).Should(Equal(status))
 }
 
+// assertHaveCondition ensures the target ProgressiveSync has the desired condition as true
 func assertHaveCondition(g *WithT, ps syncv1alpha1.ProgressiveSync, condition string) {
 	g.EventuallyWithOffset(1, func() bool {
 		var resultPs syncv1alpha1.ProgressiveSync
@@ -344,9 +357,10 @@ func assertHaveCondition(g *WithT, ps syncv1alpha1.ProgressiveSync, condition st
 			return false
 		}
 		return apimeta.IsStatusConditionTrue(*resultPs.GetStatusConditions(), condition)
-	}).Should(BeTrue(), "assertion failed because the condition "+condition+" is False")
+	}).Should(BeTrue(), "assertion failed because the condition "+condition+" is false")
 }
 
+// assertHaveSyncedApp ensures the controller synced the target Application
 func assertHaveSyncedApp(g *WithT, name string) {
 	g.EventuallyWithOffset(1, func() bool {
 		for _, app := range mockedClient.GetSyncedApps() {
@@ -355,9 +369,10 @@ func assertHaveSyncedApp(g *WithT, name string) {
 			}
 		}
 		return false
-	}).Should(BeTrue(), "assertion failed because the controller didn't sync app "+name)
+	}).Should(BeTrue(), "assertion failed because the controller didn't sync the app "+name)
 }
 
+// assertHaveSyncedApp ensures the controller didn't sync the target Application
 func assertHaveNotSyncedApp(g *WithT, name string) {
 	g.EventuallyWithOffset(1, func() bool {
 		for _, app := range mockedClient.GetSyncedApps() {
@@ -366,9 +381,10 @@ func assertHaveNotSyncedApp(g *WithT, name string) {
 			}
 		}
 		return false
-	}).ShouldNot(BeTrue(), "assertion failed because the controller synced app "+name)
+	}).ShouldNot(BeTrue(), "assertion failed because the controller synced the app "+name)
 }
 
+// assertHaveSyncedAtStage ensures the target Application synced at the desired Stage
 func assertHaveSyncedAtStage(g *WithT, ps syncv1alpha1.ProgressiveSync, app, stage string) {
 	g.EventuallyWithOffset(1, func() string {
 		stateMap, err := reconciler.ReadStateMap(ctx, ps)
@@ -376,5 +392,5 @@ func assertHaveSyncedAtStage(g *WithT, ps syncv1alpha1.ProgressiveSync, app, sta
 			return err.Error()
 		}
 		return stateMap.Apps[app].SyncedAtStage
-	}).Should(Equal(stage))
+	}).Should(Equal(stage), "assertion failed because the app "+app+" didn't sync at stage "+stage)
 }
