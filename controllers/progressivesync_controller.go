@@ -319,7 +319,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 	}
 
-	// Calculate the referenced ApplicationSet hash
+	// Get the reference ApplicationSet
 	var appSet applicationset.ApplicationSet
 	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name:      ps.Spec.AppSetRef.Name,
