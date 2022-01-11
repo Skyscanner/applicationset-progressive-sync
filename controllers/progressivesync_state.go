@@ -31,7 +31,7 @@ import (
 )
 
 // state holds a state for the stage reconciliation
-type state struct {
+type State struct {
 	AppSetHash string              `yaml:"appSetHash"`
 	Apps       map[string]AppState `yaml:"apps"`
 }
@@ -88,8 +88,8 @@ func (r *ProgressiveSyncReconciler) DeleteStateMap(ctx context.Context, ps syncv
 }
 
 // ReadStateMap reads the state configmap and returns the state data structure
-func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (state, error) {
-	state := state{}
+func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (State, error) {
+	state := State{}
 	cm := corev1.ConfigMap{}
 	key := getStateMapNamespacedName(ps)
 
@@ -114,7 +114,7 @@ func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, ps syncv1a
 }
 
 // UpdateStateMap writes the state data structure into the state configmap
-func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, state state) error {
+func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, state State) error {
 
 	appSetHash, err := yaml.Marshal(state.AppSetHash)
 	if err != nil {

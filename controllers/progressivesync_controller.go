@@ -473,7 +473,8 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// If there is an external process triggering a sync,
 	// maxParallel - len(progressingApps) might actually be greater than len(outOfSyncApps)
 	// causing the runtime to panic
-	if maxParallel-len(progressingApps) > len(outOfSyncApps) {
+	maxParallel = maxParallel - len(progressingApps)
+	if maxParallel > len(outOfSyncApps) {
 		maxParallel = len(outOfSyncApps)
 	}
 
