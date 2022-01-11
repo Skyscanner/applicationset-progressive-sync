@@ -461,20 +461,20 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return syncv1alpha1.StageStatusCompleted, nil
 	}
 
-
-	// If there is an external process triggering a sync,
-	// maxParallel - len(progressingApps) might actually be greater than len(outOfSyncApps)
-	// causing the runtime to panic
-	maxSync := maxParallel - len(progressingApps)
-	if maxSync > len(outOfSyncApps) {
-		maxSync = len(outOfSyncApps)
-	}
-
 	// If the number of apps synced in the current stage
 	// is equal or greater than the maximum number of targets to sync,
 	// there is nothing else to do.
 	if len(syncedInCurrentStage) >= maxTargets {
 		return syncv1alpha1.StageStatusCompleted, nil
+	}
+
+	log.Info("apps summary", "progressingApps", utils.GetAppsName(progressingApps), "syncedInCurrentStage", utils.GetAppsName(syncedInCurrentStage), "OutOfSync", utils.GetAppsName(outOfSyncApps), "stage", stage.Name)
+
+	// If there is an external process triggering a sync,
+	// maxParallel - len(progressingApps) might actually be greater than len(outOfSyncApps)
+	// causing the runtime to panic
+	if maxParallel-len(progressingApps) > len(outOfSyncApps) {
+		maxParallel = len(outOfSyncApps)
 	}
 
 	// Consider the following scenario
@@ -485,16 +485,14 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	// syncedInCurrentStage = 2
 	// progressingApps = 1
 	//
-	// This scenario makes maxSync = 2
-	//
 	// Without the following logic we would end up
 	// with a total of 4 applications synced in the stage
-	if maxSync+len(syncedInCurrentStage) > maxTargets {
-		maxSync = maxTargets - len(syncedInCurrentStage)
+	if maxParallel+len(syncedInCurrentStage) > maxTargets {
+		maxParallel = maxTargets - len(syncedInCurrentStage)
 	}
 
 	// Sync the desired number of apps
-	for i := 0; i < maxSync; i++ {
+	for i := 0; i < maxParallel; i++ {
 		if err := r.syncApp(ctx, outOfSyncApps[i]); err != nil {
 			return syncv1alpha1.StageStatusFailed, err
 		}
