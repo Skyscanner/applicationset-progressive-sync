@@ -426,7 +426,7 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 				SyncedAtStage: stage.Name,
 			}
 			syncedInCurrentStage = append(syncedInCurrentStage, app)
-			break
+			continue
 		}
 
 		// If the synced app has an entry in the state map,
