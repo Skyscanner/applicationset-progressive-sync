@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// StateData holds a state for the stage reconciliation
-type StateData struct {
+// state holds a state for the stage reconciliation
+type state struct {
 	AppSetHash string              `yaml:"appSetHash"`
 	Apps       map[string]AppState `yaml:"apps"`
 }
@@ -88,33 +88,33 @@ func (r *ProgressiveSyncReconciler) DeleteStateMap(ctx context.Context, ps syncv
 }
 
 // ReadStateMap reads the state configmap and returns the state data structure
-func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (StateData, error) {
-	stateData := StateData{}
+func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (state, error) {
+	state := state{}
 	cm := corev1.ConfigMap{}
 	key := getStateMapNamespacedName(ps)
 
 	if err := r.Get(ctx, key, &cm); err != nil {
-		return stateData, err
+		return state, err
 	}
 
-	if err := yaml.Unmarshal([]byte(cm.Data["appSetHash"]), &stateData.AppSetHash); err != nil {
-		return stateData, err
+	if err := yaml.Unmarshal([]byte(cm.Data["appSetHash"]), &state.AppSetHash); err != nil {
+		return state, err
 	}
 
-	if err := yaml.Unmarshal([]byte(cm.Data["apps"]), &stateData.Apps); err != nil {
-		return stateData, err
+	if err := yaml.Unmarshal([]byte(cm.Data["apps"]), &state.Apps); err != nil {
+		return state, err
 	}
 
 	// Make sure we initiliaze the map before adding any element to it
-	if stateData.Apps == nil {
-		stateData.Apps = make(map[string]AppState)
+	if state.Apps == nil {
+		state.Apps = make(map[string]AppState)
 	}
 
-	return stateData, nil
+	return state, nil
 }
 
 // UpdateStateMap writes the state data structure into the state configmap
-func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, state StateData) error {
+func (r *ProgressiveSyncReconciler) UpdateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync, state state) error {
 
 	appSetHash, err := yaml.Marshal(state.AppSetHash)
 	if err != nil {

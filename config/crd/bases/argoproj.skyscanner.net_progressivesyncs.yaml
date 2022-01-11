@@ -133,7 +133,7 @@ spec:
             description: ProgressiveSyncStatus defines the observed state of ProgressiveSync
             properties:
               conditions:
-                description: Conditions holds the condition for the ProgressiveSync.
+                description: Conditions holds the condition for the ProgressiveSync
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -203,14 +203,14 @@ spec:
                   type: object
                 type: array
               lastSyncedStage:
-                description: LastSyncedStage is the name of the last synced stage.
+                description: LastSyncedStage is the name of the last synced stage
                 type: string
               lastSyncedStageStatus:
                 description: LastSyncedStageStatus is the status of the last synced
-                  stage.
+                  stage
                 type: string
               observedGeneration:
-                description: ObservedGeneration is the last observed generation.
+                description: ObservedGeneration is the last observed generation
                 format: int64
                 type: integer
             type: object

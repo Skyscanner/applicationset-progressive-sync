@@ -313,7 +313,7 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	}
 
 	// Read the latest state
-	stateData, err := r.ReadStateMap(ctx, ps)
+	state, err := r.ReadStateMap(ctx, ps)
 	if err != nil {
 		log.Error(err, "unabled to read state map")
 		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
@@ -331,9 +331,9 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 
 	// Observe ApplicationSet hash
 	currentAppSetHash := utils.ComputeHash(appSet.Spec)
-	if currentAppSetHash != stateData.AppSetHash {
-		stateData.AppSetHash = currentAppSetHash
-		if updateMapErr := r.UpdateStateMap(ctx, ps, stateData); err != nil {
+	if currentAppSetHash != state.AppSetHash {
+		state.AppSetHash = currentAppSetHash
+		if updateMapErr := r.UpdateStateMap(ctx, ps, state); err != nil {
 			log.Error(updateMapErr, "unable to update state map after appset hash update")
 			return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, updateMapErr
 		}
@@ -342,24 +342,19 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 	}
 
 	for _, stage := range ps.Spec.Stages {
-		stageStatus, err := r.reconcileStage(ctx, ps, stage)
-		ps.Status.LastSyncedStage = stage.Name
-
 		// An error indicates the stage failed to reconcile
+		stageStatus, err := r.reconcileStage(ctx, ps, stage)
 		if err != nil {
 			log.Error(err, "unable to reconcile stage", "stage", stage.Name)
 			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusFailed
 			return syncv1alpha1.ProgressiveSyncNotReady(ps, syncv1alpha1.StageFailedReason, err.Error()), ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 		}
 
-		switch stageStatus {
-		case syncv1alpha1.StageStatusCompleted:
-			log.Info("stage reconciled", "stage", stage.Name, "status", stageStatus)
-			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusCompleted
+		ps.Status.LastSyncedStage = stage.Name
+		ps.Status.LastSyncedStageStatus = stageStatus
+		log.Info("stage reconciled", "stage", stage.Name, "status", stageStatus)
 
-		case syncv1alpha1.StageStatusProgressing:
-			log.Info("stage reconciled", "stage", stage.Name, "status", stageStatus)
-			ps.Status.LastSyncedStageStatus = syncv1alpha1.StageStatusProgressing
+		if stageStatus == syncv1alpha1.StageStatusProgressing {
 			return syncv1alpha1.ProgressiveSyncProgressing(ps), ctrl.Result{Requeue: true}, nil
 		}
 	}
@@ -374,12 +369,12 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	// A cluster is represented in ArgoCD by a secret
 	// Get the ArgoCD secrets selected by the label selector
-	selectedCluster, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
+	selectedClusters, err := r.getClustersFromSelector(ctx, stage.Targets.Clusters.Selector)
 	if err != nil {
 		return syncv1alpha1.StageStatusFailed, err
 	}
 	// Get the ArgoCD apps targeting the selected clusters
-	selectedApps, err := r.getOwnedAppsFromClusters(ctx, selectedCluster, ps)
+	selectedApps, err := r.getOwnedAppsFromClusters(ctx, selectedClusters, ps)
 	if err != nil {
 		return syncv1alpha1.StageStatusFailed, err
 	}
