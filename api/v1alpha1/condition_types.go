@@ -18,6 +18,6 @@ package v1alpha1
 
 const (
 
-	// StageFailedReason rapresents the fact the stage reconciliation failed
+	// StageFailedReason represents the fact the stage reconciliation failed
 	StageFailedReason string = "StageFailed"
 )
