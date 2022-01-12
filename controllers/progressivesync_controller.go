@@ -306,16 +306,10 @@ func (r *ProgressiveSyncReconciler) reconcile(ctx context.Context, ps syncv1alph
 		return syncv1alpha1.ProgressiveSyncProgressing(ps), ctrl.Result{Requeue: true}, nil
 	}
 
-	// Create the progressive sync state configmap if it doesn't exist
-	if err := r.CreateStateMap(ctx, ps); err != nil {
-		log.Error(err, "unable to create state map")
-		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
-	}
-
 	// Read the latest state
 	state, err := r.ReadStateMap(ctx, ps)
 	if err != nil {
-		log.Error(err, "unabled to read state map")
+		log.Error(err, "unable to read state configmap")
 		return ps, ctrl.Result{RequeueAfter: RequeueDelayOnError}, err
 	}
 

@@ -44,26 +44,24 @@ type AppState struct {
 // CreateStateMap creates the state configmap
 func (r *ProgressiveSyncReconciler) CreateStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) error {
 	key := getStateMapNamespacedName(ps)
-	readCm := corev1.ConfigMap{}
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+		},
+		Data: map[string]string{},
+	}
 
-	// Check if the configmap already exists
-	if err := r.Get(ctx, key, &readCm); err != nil {
-		if !errors.IsNotFound(err) {
-			return err
+	if err := controllerutil.SetControllerReference(&ps, &cm, r.Scheme); err != nil {
+		return err
+	}
+
+	// If the state configmap already exists, ignore the error
+	if err := r.Create(ctx, &cm); err != nil {
+		if errors.IsAlreadyExists(err) {
+			return nil
 		} else {
-			writeCm := corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      key.Name,
-					Namespace: key.Namespace,
-				},
-			}
-			// Set the ownership and create the configmap
-			if refErr := controllerutil.SetControllerReference(&ps, &writeCm, r.Scheme); refErr != nil {
-				return refErr
-			}
-			if cErr := r.Create(ctx, &writeCm); cErr != nil {
-				return cErr
-			}
+			return err
 		}
 	}
 
@@ -89,12 +87,19 @@ func (r *ProgressiveSyncReconciler) DeleteStateMap(ctx context.Context, ps syncv
 
 // ReadStateMap reads the state configmap and returns the state data structure
 func (r *ProgressiveSyncReconciler) ReadStateMap(ctx context.Context, ps syncv1alpha1.ProgressiveSync) (State, error) {
+	key := getStateMapNamespacedName(ps)
 	state := State{}
 	cm := corev1.ConfigMap{}
-	key := getStateMapNamespacedName(ps)
 
+	// Create the state configmap if it doesn't exist
 	if err := r.Get(ctx, key, &cm); err != nil {
-		return state, err
+		if errors.IsNotFound(err) {
+			if cErr := r.CreateStateMap(ctx, ps); cErr != nil {
+				return state, cErr
+			}
+		} else {
+			return state, err
+		}
 	}
 
 	if err := yaml.Unmarshal([]byte(cm.Data["appSetHash"]), &state.AppSetHash); err != nil {
