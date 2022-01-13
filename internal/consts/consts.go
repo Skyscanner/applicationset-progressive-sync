@@ -9,5 +9,5 @@ const (
 	ArgoCDInsecureKey       = "ARGOCD_INSECURE"
 	ArgoCDPlaintextKey      = "ARGOCD_PLAINTEXT"
 	ArgoCDServerAddrKey     = "ARGOCD_SERVER_ADDR"
-	ConfigDirectory         = "/etc/prcconfig/"
+	ConfigDirectory         = "/etc/applicationset-progressive-sync/"
 )

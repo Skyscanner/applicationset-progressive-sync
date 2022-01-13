@@ -78,11 +78,11 @@ ARGOCD_SERVER_ADDR=argocd-server
 ARGOCD_INSECURE=true
 ```
 
-1. Files in the Config Directory (`/etc/prc-config/`).
+1. Files in the Config Directory (`/etc/applicationset-progressive-sync/`).
 
 ```console
 /etc/
-├── prcconfig/
+├── applicationset-progressive-sync/
 │   ├── ARGOCD_AUTH_TOKEN  # file content: ey...
 │   ├── ARGOCD_SERVER_ADDR # file content: argocd-server
 │   ├── ARGOCD_INSECURE    # file content: true
