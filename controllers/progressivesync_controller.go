@@ -464,8 +464,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return syncv1alpha1.StageStatusCompleted, nil
 	}
 
-	log.Info("apps summary", "progressingApps", utils.GetAppsName(progressingApps), "syncedInCurrentStage", utils.GetAppsName(syncedInCurrentStage), "OutOfSync", utils.GetAppsName(outOfSyncApps), "stage", stage.Name)
-
 	// If there is an external process triggering a sync,
 	// maxParallel - len(progressingApps) might actually be greater than len(outOfSyncApps)
 	// causing the runtime to panic
