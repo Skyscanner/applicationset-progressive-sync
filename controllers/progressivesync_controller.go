@@ -106,6 +106,8 @@ func (r *ProgressiveSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	mapOwnerKey := ".metadata.controller"
 	apiGVStr := syncv1alpha1.GroupVersion.String()
 
+	// Add an index to allow our reconciler to quickly look up configmaps by their owner.
+	// See https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.ConfigMap{}, mapOwnerKey, func(rawObj client.Object) []string {
 		// Get the object and extract the owner
 		cm := rawObj.(*corev1.ConfigMap)
