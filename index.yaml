@@ -3,6 +3,26 @@ entries:
   applicationset-progressive-sync:
   - apiVersion: v2
     appVersion: v0.5.0-prealpha
+    created: "2022-01-18T16:23:37.635949753Z"
+    description: A Helm chart to install the applicationset-progressive-sync controller.
+    digest: e0cb21175869e3a805f638a611b9ba2902450349fab8d943f560d4c72978da17
+    home: https://github.com/Skyscanner/applicationset-progressive-sync
+    keywords:
+    - argoproj
+    - appset
+    - gitops
+    maintainers:
+    - email: matteo.ruina@gmail.com
+      name: maruina
+    name: applicationset-progressive-sync
+    sources:
+    - https://github.com/Skyscanner/applicationset-progressive-sync
+    type: application
+    urls:
+    - https://github.com/Skyscanner/applicationset-progressive-sync/releases/download/applicationset-progressive-sync-0.5.2-prealpha/applicationset-progressive-sync-0.5.2-prealpha.tgz
+    version: 0.5.2-prealpha
+  - apiVersion: v2
+    appVersion: v0.5.0-prealpha
     created: "2022-01-03T20:25:55.922000337Z"
     description: A Helm chart to install the applicationset-progressive-sync controller.
     digest: 527d1234c29117a89c6d6115621ac9e94c6fa3b75d03c9912a54ed58f735d79c
@@ -222,4 +242,4 @@ entries:
     urls:
     - https://github.com/Skyscanner/argocd-progressive-rollout/releases/download/argocd-progressive-rollout-0.1.0-prealpha/argocd-progressive-rollout-0.1.0-prealpha.tgz
     version: 0.1.0-prealpha
-generated: "2022-01-03T20:25:55.922050738Z"
+generated: "2022-01-18T16:23:37.636002853Z"
