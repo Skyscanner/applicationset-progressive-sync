@@ -20,13 +20,11 @@ The `applicationset-progressive-sync` controller allows operators and developers
 apiVersion: argoproj.skyscanner.net/v1alpha1
 kind: ProgressiveSync
 metadata:
-  name: myprogressiverollout
+  name: myprogressivesync
   namespace: argocd
 spec:
-  # a reference to the target ApplicationSet
-  sourceRef:
-    apiVersion: argoproj.io/v1alpha1
-    kind: ApplicationSet
+  # a reference to the target ApplicationSet in the same namespace
+  appSetRef:
     name: myappset
     # the rollout steps
   stages:
@@ -45,8 +43,8 @@ spec:
             matchLabels:
               area: emea
     - name: rollout to remaining clusters
-      maxParallel: 25%
-      maxTargets: 100%
+      maxParallel: 2
+      maxTargets: 4
       targets:
         clusters:
           selector: {}
@@ -63,7 +61,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 ## Configuration
 
 The controller connects to an Argo CD server and requires configuration to do so:
-```
+
+```console
 ARGOCD_AUTH_TOKEN: <token of the Argo CD user>
 ARGOCD_SERVER_ADDR: <address of the Argo CD server>
 ARGOCD_INSECURE: <true/false>
@@ -73,18 +72,17 @@ The above configuration is loaded taking into account the following priority ord
 
 1. Environment Variables.
 
-
-```
+```console
 ARGOCD_AUTH_TOKEN=ey...
 ARGOCD_SERVER_ADDR=argocd-server
 ARGOCD_INSECURE=true
 ```
 
+1. Files in the Config Directory (`/etc/applicationset-progressive-sync/`).
 
-2. Files in the Config Directory (`/etc/prc-config/`).
-```
+```console
 /etc/
-├── prcconfig/
+├── applicationset-progressive-sync/
 │   ├── ARGOCD_AUTH_TOKEN  # file content: ey...
 │   ├── ARGOCD_SERVER_ADDR # file content: argocd-server
 │   ├── ARGOCD_INSECURE    # file content: true
@@ -107,10 +105,10 @@ Please remember the `ARGOCD_AUTH_TOKEN`, `ARGOCD_SERVER_ADDR` and `ARGOCD_INSECU
 to run against a Kubernetes cluster with Argo CD. If the cluster was configured using the `hack/setup-dev.sh` script,
 these variables are part of the `.env.local` file.
 
-
 ### Deploying to a Kubernetes cluster
 
 To deploy the controller to a Kubernetes cluster, run:
+
 ```shell
 make install
 make docker-build
@@ -154,37 +152,41 @@ make deploy
 this will install all the dependencies (`pre-commit`, `kubebuilder`, `argocd`, `kind`) and it will install the correct version of ArgoCD Application API package for you. If you omit `argocd-version` and/or `appset-version` it will default to the latest stable/tested versions of ArgoCD and Appset controller.
 
 After running the script, you will have 3 kind clusters created locally:
- - `kind-argocd-control-plane` - cluster hosting the argocd installation and the progressive sync operator. This cluster is also registered with Argo so that we can simulate using the same process for deploying to control cluster as well
- - `kind-prc-cluster-1` and `kind-prc-cluster-2` - are the target clusters for deploying the apps to.
 
- This gives us a total of 3 clusters allowing us to play with multiple stages of deploying. It will also log you in argocd cli. You can find additional login details in `.env.local` file that will be generated for your convenience.
+- `kind-argocd-control-plane` - cluster hosting the argocd installation and the progressive sync operator. This cluster is also registered with Argo so that we can simulate using the same process for deploying to control cluster as well
+- `kind-prc-cluster-1` and `kind-prc-cluster-2` - are the target clusters for deploying the apps to.
+
+This gives us a total of 3 clusters allowing us to play with multiple stages of deploying. It will also log you in argocd cli. You can find additional login details in `.env.local` file that will be generated for your convenience.
 
 #### Regenerating your access
 
- In case that your access to the local argocd has become broken, you can regenerate it by running
+In case that your access to the local argocd has become broken, you can regenerate it by running
 
- ```shell
- bash hack/login-argocd-local.sh
- ```
+```shell
+bash hack/login-argocd-local.sh
+```
 
- This will create a socat link in kind docker network allowing you to access argocd server UI through your localhost.
- The exact port will be outputted after the command has been run. Running this command will also update the values in `.env.local`.
+This will create a socat link in kind docker network allowing you to access argocd server UI through your localhost.
+The exact port will be outputted after the command has been run. Running this command will also update the values in `.env.local`.
 
- #### Registering additional clusters
+#### Registering additional clusters
 
- If you want to create additional clusters, you can do so by running
- ```shell
- bash hack/add-cluster <cluster-name> <recreate> <labels>
- ```
- This will spin up another kind cluster and register it against ArgoCD running in `kind-argocd-control-plane`
+If you want to create additional clusters, you can do so by running:
 
- #### Deploying local test resources
+```shell
+bash hack/add-cluster <cluster-name> <recreate> <labels>
+```
+
+This will spin up another kind cluster and register it against ArgoCD running in `kind-argocd-control-plane`
+
+#### Deploying local test resources
 
 You can deploy a test appset and a progressive sync object to your kind environment via:
 
 ```shell
 bash hack/redeploy-dev-resources.sh
 ```
+
 Feel free to extend the cluster generation section of the appset spec if you want to deploy it clusters that you have manually created.
 
 ### Debugging
@@ -199,7 +201,7 @@ Invoking the command above should spin up a Delve debugger server in headless mo
 
 ``` shell
 bash ./hack/kill-debug.sh
-``` 
+```
 
 or
 
@@ -212,6 +214,7 @@ from another terminal session to kill the debugger.
 ### Debugging tests
 
 Delve can be used to debug tests as well. See `Test` launch configuration in `.vscode/launch.json`. Something similar should be achievable in your IDE of choice as well.
+
 #### Update ArgoCD Application API package
 
 Because of [https://github.com/argoproj/argo-cd/issues/4055](https://github.com/argoproj/argo-cd/issues/4055) we can't just run `go get github.com/argoproj/argo-cd`.

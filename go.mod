@@ -6,15 +6,19 @@ require (
 	github.com/argoproj-labs/applicationset v0.2.0
 	github.com/argoproj/argo-cd v0.8.1-0.20210218100039-a4ee25b59d8d
 	github.com/argoproj/gitops-engine v0.3.1-0.20210709004906-a4c77d5c70fb
-	github.com/go-logr/logr v0.4.0
-	github.com/onsi/ginkgo v1.16.4
+	github.com/davecgh/go-spew v1.1.1
+	github.com/fluxcd/pkg/apis/meta v0.10.0
+	github.com/onsi/ginkgo v1.16.4 // indirect
 	github.com/onsi/gomega v1.13.0
+	github.com/prometheus/client_golang v1.11.0 // indirect
+	go.uber.org/zap v1.17.0
 	google.golang.org/grpc v1.33.1
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	k8s.io/kubernetes v1.21.0 // indirect
-	sigs.k8s.io/controller-runtime v0.9.0
+	sigs.k8s.io/controller-runtime v0.11.0
 )
 
 replace github.com/argoproj/gitops-engine => github.com/argoproj/gitops-engine v0.2.1-0.20210129183711-c5b7114c501f

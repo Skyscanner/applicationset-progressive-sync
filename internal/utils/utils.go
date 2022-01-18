@@ -2,14 +2,16 @@ package utils
 
 import (
 	"fmt"
+	"hash/fnv"
 	"sort"
 	"strings"
 
-	syncv1alpha1 "github.com/Skyscanner/applicationset-progressive-sync/api/v1alpha1"
 	"github.com/Skyscanner/applicationset-progressive-sync/internal/consts"
 	argov1alpha1 "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
+	"github.com/davecgh/go-spew/spew"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 // IsArgoCDCluster returns true if one of the labels is the ArgoCD secret label with the secret type cluster as value
@@ -54,19 +56,6 @@ func GetAppsByHealthStatusCode(apps []argov1alpha1.Application, code health.Heal
 	return result
 }
 
-// GetSyncedAppsByStage returns the Applications that synced during the given stage
-func GetSyncedAppsByStage(apps []argov1alpha1.Application, stage syncv1alpha1.ProgressiveSyncStage, pss ProgressiveSyncState) []argov1alpha1.Application {
-	var result []argov1alpha1.Application
-
-	for _, app := range apps {
-		if app.Status.Sync.Status == argov1alpha1.SyncStatusCodeSynced && pss.IsAppMarkedInStage(app, stage) {
-			result = append(result, app)
-		}
-	}
-
-	return result
-}
-
 // GetAppsName returns a string containing a comma-separated list of names of the given apps
 func GetAppsName(apps []argov1alpha1.Application) string {
 	var names []string
@@ -83,4 +72,28 @@ func GetClustersName(clusters []corev1.Secret) string {
 		names = append(names, c.GetName())
 	}
 	return fmt.Sprint(strings.Join(names, ", "))
+}
+
+// ComputeHash returns a hash value calculated from a spec using the spew library
+// which follows pointers and prints actual values of the nested objects
+// ensuring the hash does not change when a pointer changes.
+func ComputeHash(spec interface{}) string {
+	hasher := fnv.New32a()
+	printer := spew.ConfigState{
+		Indent:         " ",
+		SortKeys:       true,
+		DisableMethods: true,
+		SpewKeys:       true,
+	}
+	printer.Fprintf(hasher, "%#v", spec)
+
+	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32()))
+}
+
+// Min returns the minumum between to int
+func Min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
 }
