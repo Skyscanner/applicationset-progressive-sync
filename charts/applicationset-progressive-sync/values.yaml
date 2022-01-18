@@ -4,8 +4,6 @@
 
 replicaCount: 1
 
-installCRDs: false
-
 image:
   repository: ghcr.io/skyscanner/applicationset-progressive-sync
   pullPolicy: IfNotPresent
@@ -17,8 +15,6 @@ args:
   metricsAddr: :8080
   # -- Enable leader election for controller manager.
   enableLeaderElection: false
-  # --  The namespace where ArgoCD and the ApplicationSet controller are deployed to.
-  argoNamespace: argocd
 
 imagePullSecrets: []
 nameOverride: ""

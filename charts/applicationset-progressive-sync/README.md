@@ -1,6 +1,6 @@
 # applicationset-progressive-sync
 
-![Version: 0.5.0-prealpha](https://img.shields.io/badge/Version-0.5.0--prealpha-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v0.4.0-prealpha](https://img.shields.io/badge/AppVersion-v0.4.0--prealpha-informational?style=flat-square)
+![Version: 0.6.0-prealpha](https://img.shields.io/badge/Version-0.6.0--prealpha-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: sha-f70b92b](https://img.shields.io/badge/AppVersion-sha--f70b92b-informational?style=flat-square)
 
 A Helm chart to install the applicationset-progressive-sync controller.
 
@@ -14,11 +14,6 @@ To install the chart with the release name `my-release`:
 helm repo add applicationset-progressive-sync https://skyscanner.github.io/applicationset-progressive-sync/
 helm upgrade -i my-release applicationset-progressive-sync/applicationset-progressive-sync --namespace argocd
 ```
-
-### Helm v2 Compatibility
-
-Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
-
 ## Values
 
 ## Values
@@ -26,12 +21,12 @@ Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
-| args.argoNamespace | string | `"argocd"` | The namespace where ArgoCD and the ApplicationSet controller are deployed to. |
 | args.enableLeaderElection | bool | `false` | Enable leader election for controller manager. |
 | args.metricsAddr | string | `":8080"` | The address the metric endpoint binds to. |
-| config | object | `{"argoCDAuthToken":"example-token","argoCDInsecure":"true","argoCDServerAddr":"argocd-server"}` | Config options |
+| config | object | `{"argoCDAuthToken":"example-token","argoCDInsecure":"true","argoCDPlaintext":"false","argoCDServerAddr":"argocd-server"}` | Config options |
 | config.argoCDAuthToken | string | `"example-token"` | ArgoCD token |
 | config.argoCDInsecure | string | `"true"` | Allow insecure connection with ArgoCD server |
+| config.argoCDPlaintext | string | `"false"` | Allow http connection with ArgoCD server |
 | config.argoCDServerAddr | string | `"argocd-server"` | ArgoCD server service address |
 | configSecret | object | `{"annotations":{},"name":""}` | configSecret is a secret object which supplies tokens, configs, etc. |
 | configSecret.name | string | `""` | If this value is not provided, a secret will be generated |
@@ -40,7 +35,6 @@ Users of Helm v2 should use `--set installCRDs=true` to install the CRDs.
 | image.repository | string | `"ghcr.io/skyscanner/applicationset-progressive-sync"` |  |
 | image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[]` |  |
-| installCRDs | bool | `false` |  |
 | nameOverride | string | `""` |  |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |

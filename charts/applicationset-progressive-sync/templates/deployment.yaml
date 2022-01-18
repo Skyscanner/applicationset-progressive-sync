@@ -48,8 +48,7 @@ spec:
             {{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
             - --enable-leader-election=true
             {{- end }}
-            - --ctrl-namespace={{ .Release.Namespace }}
-            - --argo-namespace={{ .Values.args.argoNamespace }}
+            - --namespace={{ .Release.Namespace }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
