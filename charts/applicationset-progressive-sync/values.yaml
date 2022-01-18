@@ -12,7 +12,7 @@ image:
 
 args:
   # -- The address the metric endpoint binds to.
-  metricsAddr: :8080
+  metricsBindAddr: :8080
   # -- Enable leader election for controller manager.
   enableLeaderElection: false
 

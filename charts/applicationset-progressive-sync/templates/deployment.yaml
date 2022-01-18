@@ -44,7 +44,7 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
             - /manager
-            - --metrics-addr={{ .Values.args.metricsAddr }}
+            - --metrics-bind-address={{ .Values.args.metricsBindAddr }}
             {{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
             - --enable-leader-election=true
             {{- end }}
@@ -53,7 +53,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http-metrics
-              containerPort: {{ (split ":" .Values.args.metricsAddr)._1 }}
+              containerPort: {{ (split ":" .Values.args.metricsBindAddr)._1 }}
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
