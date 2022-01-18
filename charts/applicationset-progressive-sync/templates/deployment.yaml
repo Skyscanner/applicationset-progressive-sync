@@ -44,21 +44,21 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
             - /manager
-            - --metrics-bind-address={{ .Values.args.metricsBindAddr }}
+            - --metrics-bind-address={{ .Values.args.metricsBindAddress }}
             {{- if or (gt ( .Values.replicaCount | int64) 1) .Values.args.enableLeaderElection }}
-            - --enable-leader-election=true
+            - --leader-elect=true
             {{- end }}
             - --namespace={{ .Release.Namespace }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http-metrics
-              containerPort: {{ (split ":" .Values.args.metricsBindAddr)._1 }}
+              containerPort: {{ (split ":" .Values.args.metricsBindAddress)._1 }}
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-            - mountPath: /etc/prcconfig
+            - mountPath: /etc/applicationset-progressive-sync
               {{- if .Values.configSecret.name }}
               name: {{ .Values.configSecret.name }}
               {{- else }}
