@@ -21,8 +21,8 @@ helm upgrade -i my-release applicationset-progressive-sync/applicationset-progre
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
-| args.enableLeaderElection | bool | `false` | Enable leader election for controller manager. |
-| args.metricsAddr | string | `":8080"` | The address the metric endpoint binds to. |
+| args.leaderElect | bool | `false` | Enable leader election for controller manager. |
+| args.metricsBindAddress | string | `":8080"` | The address the metric endpoint binds to. |
 | config | object | `{"argoCDAuthToken":"example-token","argoCDInsecure":"true","argoCDPlaintext":"false","argoCDServerAddr":"argocd-server"}` | Config options |
 | config.argoCDAuthToken | string | `"example-token"` | ArgoCD token |
 | config.argoCDInsecure | string | `"true"` | Allow insecure connection with ArgoCD server |
