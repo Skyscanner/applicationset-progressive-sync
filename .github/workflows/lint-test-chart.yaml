@@ -6,7 +6,7 @@ jobs:
   lint-test-chart:
     runs-on: ubuntu-latest
     env:
-      ARGOCD_VERSION: v1.8.6
+      ARGOCD_VERSION: v2.2.3
     steps:
       - name: Checkout
         uses: actions/checkout@v2.4.0
