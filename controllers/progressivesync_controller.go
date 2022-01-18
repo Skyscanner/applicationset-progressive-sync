@@ -464,13 +464,13 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return syncv1alpha1.StageStatusCompleted, nil
 	}
 
+	// parallel is the number of Applications to sync at this stage
+	parallel := maxParallel - len(progressingApps)
+
 	// If there is an external process triggering a sync,
 	// maxParallel - len(progressingApps) might actually be greater than len(outOfSyncApps)
 	// causing the runtime to panic
-	maxParallel = maxParallel - len(progressingApps)
-	if maxParallel > len(outOfSyncApps) {
-		maxParallel = len(outOfSyncApps)
-	}
+	parallel = utils.Min(parallel, len(outOfSyncApps))
 
 	// Consider the following scenario
 	//
@@ -482,12 +482,10 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	//
 	// Without the following logic we would end up
 	// with a total of 4 applications synced in the stage
-	if maxParallel+len(syncedInCurrentStage) > maxTargets {
-		maxParallel = maxTargets - len(syncedInCurrentStage)
-	}
+	parallel = utils.Min(parallel, maxTargets-len(syncedInCurrentStage))
 
 	// Sync the desired number of apps
-	for i := 0; i < maxParallel; i++ {
+	for i := 0; i < parallel; i++ {
 		if err := r.syncApp(ctx, outOfSyncApps[i]); err != nil {
 			return syncv1alpha1.StageStatusFailed, err
 		}

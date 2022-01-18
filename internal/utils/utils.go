@@ -89,3 +89,11 @@ func ComputeHash(spec interface{}) string {
 
 	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32()))
 }
+
+// Min returns the minumum between to int
+func Min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
