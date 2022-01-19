@@ -6,7 +6,7 @@ jobs:
   lint-test-chart:
     runs-on: ubuntu-latest
     env:
-      ARGOCD_VERSION: v1.8.6
+      ARGOCD_VERSION: v2.2.3
     steps:
       - name: Checkout
         uses: actions/checkout@v2.4.0
@@ -44,14 +44,14 @@ jobs:
         uses: helm/kind-action@v1.2.0
         if: steps.list-changed.outputs.changed == 'true'
 
-      - name: Install ArgoCD Application CRD
-        run: kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/$ARGOCD_VERSION/manifests/crds/application-crd.yaml
+      - name: Install ArgoCD
+        run: |
+          kubectl create namespace argocd
+          kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/$ARGOCD_VERSION/manifests/install.yaml -n argocd
         if: steps.list-changed.outputs.changed == 'true'
 
       - name: Install external secret for chart testing
-        run: |
-          kubectl create namespace argocd
-          kubectl apply -f charts/applicationset-progressive-sync/ci/external-secret.yaml
+        run: kubectl apply -f charts/applicationset-progressive-sync/ci/external-secret.yaml
         if: steps.list-changed.outputs.changed == 'true'
 
       - name: Run chart-testing (install)
