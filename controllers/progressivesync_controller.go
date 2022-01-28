@@ -375,6 +375,21 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 		return syncv1alpha1.StageStatusFailed, err
 	}
 
+	// There might be a race condition where:
+	// 1. The repoURL points to a new revision
+	// 2. ArgoCD starts marking the Applications as OutOfSync
+	// 3. As soon as the first Application is updated,
+	//	  the progressive sync controller starts the reconciliation loop
+	// 4. The controller picks up the first stage and makes decision based on the state of the world
+	//
+	// In this case, the controller might take a decision
+	// while ArgoCD is still updating the Applications Status.
+	// To prevent this scenario, we make sure all the selectedApps
+	// have the same revision before progressing with the stage.
+	if !utils.HaveSameRevision(selectedApps) {
+		return syncv1alpha1.StageStatusProgressing, nil
+	}
+
 	// Load the state map
 	state, err := r.ReadStateMap(ctx, ps)
 	if err != nil {

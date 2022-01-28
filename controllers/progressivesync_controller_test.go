@@ -516,4 +516,69 @@ func TestReconcile(t *testing.T) {
 		assertHaveSyncedAtStage(g, ps, "myservice-account8-eu-west-1a-1", "stage one")
 		assertHaveSyncedAtStage(g, ps, "myservice-account8-eu-west-1b-1", "stage one")
 	})
+
+	t.Run("handle different revisions", func(t *testing.T) {
+		// Create an ApplicationSet which generated the Applications
+		appSet := "revision-appset"
+		_, err = createApplicationSet(appSet, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create the clusters
+		secrets := []string{
+			"account9-eu-central-1a-1",
+			"account9-eu-central-1b-1",
+		}
+		_, err = createSecrets(secrets, ns.Name)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create the Applications targeting the clusters
+		apps := []string{
+			"myservice-account9-eu-central-1a-1",
+			"myservice-account9-eu-central-1b-1",
+		}
+		_, err = createApplications(apps, ns.Name, appSet)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Change one Application revision
+		err = setApplicationRevision("myservice-account9-eu-central-1a-1", ns.Name, "zxcvbnm")
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Create the ProgressiveSync
+		ps := newProgressiveSync("revision", ns.Name, appSet)
+		ps.Spec.Stages = []syncv1alpha1.Stage{
+			newStage("single stage", 2, 2, metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"region": "eu-central-1",
+				},
+			}),
+		}
+		g.Expect(k8sClient.Create(ctx, &ps)).To(Succeed())
+
+		// Ensure the controller didn't sync the selected Applications
+		assertHaveNotSyncedApp(g, "myservice-account9-eu-central-1a-1")
+		assertHaveNotSyncedApp(g, "myservice-account9-eu-central-1b-1")
+
+		// Ensure the stage is progressing
+		assertHaveLastSyncedStage(g, ps, "single stage")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusProgressing)
+
+		// Fix the Application revision
+		err = setApplicationRevision("myservice-account9-eu-central-1a-1", ns.Name, Revision)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Ensure the controller sync the selected Applications
+		assertHaveSyncedApp(g, "myservice-account9-eu-central-1a-1")
+		assertHaveSyncedApp(g, "myservice-account9-eu-central-1b-1")
+
+		// Set the Applications as synced
+		err = setApplicationSyncStatus("myservice-account9-eu-central-1a-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+		err = setApplicationSyncStatus("myservice-account9-eu-central-1b-1", ns.Name, argov1alpha1.SyncStatusCodeSynced)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Ensure the reconciliation is completed
+		assertHaveLastSyncedStage(g, ps, "single stage")
+		assertHaveLastSyncedStageStatus(g, ps, syncv1alpha1.StageStatusCompleted)
+		assertHaveCondition(g, ps, meta.ReadyCondition)
+	})
 }
