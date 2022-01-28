@@ -97,3 +97,17 @@ func Min(x, y int) int {
 	}
 	return y
 }
+
+// HaveSameRevision returns true if the given Applications have the same status.sync.revision
+func HaveSameRevision(apps []argov1alpha1.Application) bool {
+	set := make(map[string]struct{})
+
+	for _, app := range apps {
+		revision := app.Status.Sync.Revision
+		if _, ok := set[revision]; !ok {
+			set[revision] = struct{}{}
+		}
+	}
+
+	return len(set) == 1
+}

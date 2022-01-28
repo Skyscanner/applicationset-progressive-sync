@@ -59,6 +59,8 @@ var (
 	mockedClient mocks.MockArgoCDAppClientCalledWith
 )
 
+const Revision = "asdfghjkl"
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
 
@@ -225,7 +227,8 @@ func createApplication(name, namespace, appSet string) (argov1alpha1.Application
 			}},
 		Status: argov1alpha1.ApplicationStatus{
 			Sync: argov1alpha1.SyncStatus{
-				Status: argov1alpha1.SyncStatusCodeOutOfSync,
+				Status:   argov1alpha1.SyncStatusCodeOutOfSync,
+				Revision: Revision,
 			},
 			Health: argov1alpha1.HealthStatus{
 				Status: health.HealthStatusHealthy,
@@ -284,6 +287,27 @@ func setApplicationHealthStatus(name, namespace string, health health.HealthStat
 	}
 
 	app.Status.Health.Status = health
+	if err := k8sClient.Update(ctx, &app); err != nil {
+		return err
+	}
+	return nil
+}
+
+// setApplicationRevision sets the desired Revision in the target Application
+func setApplicationRevision(name, namespace string, revision string) error {
+	var app argov1alpha1.Application
+
+	if err := k8sClient.Get(ctx,
+		types.NamespacedName{
+			Name:      name,
+			Namespace: namespace,
+		},
+		&app,
+	); err != nil {
+		return err
+	}
+
+	app.Status.Sync.Revision = revision
 	if err := k8sClient.Update(ctx, &app); err != nil {
 		return err
 	}

@@ -11,6 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const Namespace = "default"
+
 func TestIsArgoCDCluster(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -48,24 +50,23 @@ func TestIsArgoCDCluster(t *testing.T) {
 }
 
 func TestSortSecretsByName(t *testing.T) {
-	namespace := "default"
 	testCase := struct {
 		secretList *corev1.SecretList
 		expected   *corev1.SecretList
 	}{
 		secretList: &corev1.SecretList{Items: []corev1.Secret{{
-			ObjectMeta: metav1.ObjectMeta{Name: "clusterA", Namespace: namespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "clusterA", Namespace: Namespace},
 		}, {
-			ObjectMeta: metav1.ObjectMeta{Name: "clusterC", Namespace: namespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "clusterC", Namespace: Namespace},
 		}, {
-			ObjectMeta: metav1.ObjectMeta{Name: "clusterB", Namespace: namespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "clusterB", Namespace: Namespace},
 		}}},
 		expected: &corev1.SecretList{Items: []corev1.Secret{{
-			ObjectMeta: metav1.ObjectMeta{Name: "clusterA", Namespace: namespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "clusterA", Namespace: Namespace},
 		}, {
-			ObjectMeta: metav1.ObjectMeta{Name: "clusterB", Namespace: namespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "clusterB", Namespace: Namespace},
 		}, {
-			ObjectMeta: metav1.ObjectMeta{Name: "clusterC", Namespace: namespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "clusterC", Namespace: Namespace},
 		}}}}
 	g := NewWithT(t)
 	SortSecretsByName(testCase.secretList)
@@ -73,19 +74,18 @@ func TestSortSecretsByName(t *testing.T) {
 }
 
 func TestSortAppsByName(t *testing.T) {
-	namespace := "default"
 	testCase := struct {
 		apps     []argov1alpha1.Application
 		expected []argov1alpha1.Application
 	}{
 		apps: []argov1alpha1.Application{{
-			ObjectMeta: metav1.ObjectMeta{Name: "appA", Namespace: namespace}}, {
-			ObjectMeta: metav1.ObjectMeta{Name: "appC", Namespace: namespace}}, {
-			ObjectMeta: metav1.ObjectMeta{Name: "appB", Namespace: namespace}}},
+			ObjectMeta: metav1.ObjectMeta{Name: "appA", Namespace: Namespace}}, {
+			ObjectMeta: metav1.ObjectMeta{Name: "appC", Namespace: Namespace}}, {
+			ObjectMeta: metav1.ObjectMeta{Name: "appB", Namespace: Namespace}}},
 		expected: []argov1alpha1.Application{{
-			ObjectMeta: metav1.ObjectMeta{Name: "appA", Namespace: namespace}}, {
-			ObjectMeta: metav1.ObjectMeta{Name: "appB", Namespace: namespace}}, {
-			ObjectMeta: metav1.ObjectMeta{Name: "appC", Namespace: namespace}}},
+			ObjectMeta: metav1.ObjectMeta{Name: "appA", Namespace: Namespace}}, {
+			ObjectMeta: metav1.ObjectMeta{Name: "appB", Namespace: Namespace}}, {
+			ObjectMeta: metav1.ObjectMeta{Name: "appC", Namespace: Namespace}}},
 	}
 
 	g := NewWithT(t)
@@ -98,7 +98,7 @@ func TestHash(t *testing.T) {
 	appSet := applicationset.ApplicationSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
-			Namespace: "bar",
+			Namespace: Namespace,
 		},
 		Spec: applicationset.ApplicationSetSpec{
 			Generators: []applicationset.ApplicationSetGenerator{},
@@ -140,6 +140,42 @@ func TestMin(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			g := NewWithT(t)
 			got := Min(testCase.x, testCase.y)
+			g.Expect(got).To(Equal(testCase.expected))
+		})
+	}
+}
+
+func TestHaveSameRevision(t *testing.T) {
+	testCases := []struct {
+		name     string
+		apps     []argov1alpha1.Application
+		expected bool
+	}{
+		{
+			name: "same revision",
+			apps: []argov1alpha1.Application{
+				{ObjectMeta: metav1.ObjectMeta{Name: "appA", Namespace: Namespace},
+					Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Revision: "abcdef"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "appB", Namespace: Namespace},
+					Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Revision: "abcdef"}}},
+			},
+			expected: true,
+		},
+		{
+			name: "different revision",
+			apps: []argov1alpha1.Application{
+				{ObjectMeta: metav1.ObjectMeta{Name: "appC", Namespace: Namespace},
+					Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Revision: "abcdef"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "appD", Namespace: Namespace},
+					Status: argov1alpha1.ApplicationStatus{Sync: argov1alpha1.SyncStatus{Revision: "ghilmn"}}},
+			},
+			expected: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			g := NewWithT(t)
+			got := HaveSameRevision(testCase.apps)
 			g.Expect(got).To(Equal(testCase.expected))
 		})
 	}
