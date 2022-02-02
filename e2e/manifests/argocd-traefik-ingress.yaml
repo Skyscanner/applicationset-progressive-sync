@@ -5,21 +5,18 @@ metadata:
   namespace: argocd
 spec:
   entryPoints:
-    - websecure
+    - web
   routes:
     - kind: Rule
-      match: Host(`argocd.progressivesync.io`)
+      match: Pathprefix(`/`)
       priority: 10
       services:
         - name: argocd-server
           port: 80
     - kind: Rule
-      match: Host(`argocd.progressivesync.io`) && Headers(`Content-Type`, `application/grpc`)
+      match: Pathprefix(`/`) && Headers(`Content-Type`, `application/grpc`)
       priority: 11
       services:
         - name: argocd-server
           port: 80
           scheme: h2c
-  tls:
-    certResolver: default
-    options: {}
