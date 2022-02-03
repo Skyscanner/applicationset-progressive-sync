@@ -81,6 +81,8 @@ const (
 	StageStatusProgressing StageStatus = "StageProgressing"
 
 	StageStatusFailed StageStatus = "StageFailed"
+
+	StageStatusSkipped StageStatus = "StageSkipped"
 )
 
 // ProgressiveSyncStatus defines the observed state of ProgressiveSync
