@@ -372,7 +372,6 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	// Skip stage if no clusters targeted
 	if len(selectedClusters.Items) == 0 {
-		log.Info("Skip stage as no clusters targeted", "stage", stage.Name)
 		return syncv1alpha1.StageStatusCompleted, nil
 	}
 
