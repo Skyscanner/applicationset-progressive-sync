@@ -369,6 +369,12 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 	if err != nil {
 		return syncv1alpha1.StageStatusFailed, err
 	}
+
+	// Skip stage if no clusters targeted
+	if len(selectedClusters.Items) == 0 {
+		return syncv1alpha1.StageStatusCompleted, nil
+	}
+
 	// Get the ArgoCD apps targeting the selected clusters
 	selectedApps, err := r.getOwnedAppsFromClusters(ctx, selectedClusters, ps)
 	if err != nil {
