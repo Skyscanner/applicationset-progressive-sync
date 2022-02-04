@@ -365,7 +365,7 @@ func TestReconcile(t *testing.T) {
 
 		ps := newProgressiveSync("zero-clusters", ns.Name, appSet)
 		ps.Spec.Stages = []syncv1alpha1.Stage{
-			newStage("stage-missing-cluster", 1, 1, metav1.LabelSelector{
+			newStage("stage missing cluster", 1, 1, metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"cluster": "missing-cluster",
 				}}),
