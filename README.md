@@ -42,6 +42,10 @@ spec:
           selector:
             matchLabels:
               area: emea
+      # app sync options
+      syncOptions:
+        # enable prune resources during sync, disabled by default
+        prune: true
     - name: rollout to remaining clusters
       maxParallel: 2
       maxTargets: 4

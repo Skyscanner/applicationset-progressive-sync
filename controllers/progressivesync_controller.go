@@ -284,11 +284,7 @@ func (r *ProgressiveSyncReconciler) getOwnedAppsFromClusters(ctx context.Context
 }
 
 // syncApp sends a sync request for the target app
-func (r *ProgressiveSyncReconciler) syncApp(ctx context.Context, app argov1alpha1.Application) error {
-	syncReq := applicationpkg.ApplicationSyncRequest{
-		Name: &app.Name,
-	}
-
+func (r *ProgressiveSyncReconciler) syncApp(ctx context.Context, syncReq applicationpkg.ApplicationSyncRequest) error {
 	_, err := r.ArgoCDAppClient.Sync(ctx, &syncReq)
 	if err != nil && !strings.Contains(err.Error(), "another operation is already in progress") {
 		return err
@@ -507,7 +503,11 @@ func (r *ProgressiveSyncReconciler) reconcileStage(ctx context.Context, ps syncv
 
 	// Sync the desired number of apps
 	for i := 0; i < parallel; i++ {
-		if err := r.syncApp(ctx, outOfSyncApps[i]); err != nil {
+		syncReq := applicationpkg.ApplicationSyncRequest{
+			Name:  &outOfSyncApps[i].Name,
+			Prune: stage.SyncOptions.Prune,
+		}
+		if err := r.syncApp(ctx, syncReq); err != nil {
 			return syncv1alpha1.StageStatusFailed, err
 		}
 		state.Apps[outOfSyncApps[i].Name] = AppState{
