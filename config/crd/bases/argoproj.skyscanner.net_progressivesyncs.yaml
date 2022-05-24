@@ -63,14 +63,6 @@ spec:
                     name:
                       description: Name is a human friendly name for the stage
                       type: string
-                    syncOptions:
-                      description: SyncOptions is the options for sync operation executed
-                        for the stage
-                      properties:
-                        prune:
-                          description: Prune is to enable prune resources during sync
-                          type: boolean
-                      type: object
                     targets:
                       description: Targets is the targets to sync in the stage
                       properties:
@@ -134,6 +126,13 @@ spec:
                   - name
                   type: object
                 type: array
+              syncOptions:
+                description: SyncOptions for sync operations executed in all stages
+                properties:
+                  prune:
+                    description: Prune is to enable prune resources during sync
+                    type: boolean
+                type: object
             required:
             - appSetRef
             type: object
