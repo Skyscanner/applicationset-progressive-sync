@@ -27,6 +27,10 @@ spec:
   appSetRef:
     name: myappset
     # the rollout steps
+  # app sync options
+  syncOptions:
+    # enable prune resources during sync, disabled by default
+    prune: true
   stages:
       # human friendly name
     - name: two clusters as canary in EMEA
@@ -42,10 +46,6 @@ spec:
           selector:
             matchLabels:
               area: emea
-      # app sync options
-      syncOptions:
-        # enable prune resources during sync, disabled by default
-        prune: true
     - name: rollout to remaining clusters
       maxParallel: 2
       maxTargets: 4
