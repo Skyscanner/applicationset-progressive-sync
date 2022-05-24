@@ -36,6 +36,10 @@ type ProgressiveSyncSpec struct {
 	// Stages defines a list of Progressive Rollout stages
 	//+kubebuilder:validation:Optional
 	Stages []Stage `json:"stages,omitempty"`
+
+	// SyncOptions for sync operations executed in all stages
+	//+kubebuilder:validation:Optional
+	SyncOptions SyncOptions `json:"syncOptions,omitempty"`
 }
 
 // Stage defines a rollout stage
@@ -57,6 +61,13 @@ type Stage struct {
 	// Targets is the targets to sync in the stage
 	//+kubebuilder:validation:Optional
 	Targets Targets `json:"targets,omitempty"`
+}
+
+// SyncOptions defines the options of the progressive sync operation
+type SyncOptions struct {
+	// Prune is to enable prune resources during sync
+	//+kubebuilder:validation:Optional
+	Prune bool `json:"prune"`
 }
 
 // Targets defines the targets of the progressive sync operation
