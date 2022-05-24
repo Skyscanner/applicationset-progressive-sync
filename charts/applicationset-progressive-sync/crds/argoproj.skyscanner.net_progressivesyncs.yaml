@@ -126,6 +126,13 @@ spec:
                   - name
                   type: object
                 type: array
+              syncOptions:
+                description: SyncOptions for sync operations executed in all stages
+                properties:
+                  prune:
+                    description: Prune is to enable prune resources during sync
+                    type: boolean
+                type: object
             required:
             - appSetRef
             type: object
